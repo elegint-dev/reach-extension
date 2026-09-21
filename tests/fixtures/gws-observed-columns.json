@@ -1,0 +1,17 @@
+{
+ "description": "Observed columns for the three Google Workspace containers the gws pack binds, flattened from real attack_data captures (splunk/attack_data, media.githubusercontent.com). login and admin share the Reports API's nested id/actor/event shape; drive is the flattened shape this capture's own source (http:gsuite) lands.",
+ "containers": {
+  "gws:reports:login": {
+   "source": "datasets/attack_techniques/T1078.004/gcp_single_factor_auth/gws_login.log",
+   "columns": ["kind", "id.time", "id.uniqueQualifier", "id.applicationName", "id.customerId", "etag", "actor.email", "actor.profileId", "ipAddress", "event.type", "event.name", "event.parameters"]
+  },
+  "gws:reports:admin": {
+   "source": "datasets/attack_techniques/T1556/gcp_disable_mfa/gws_admin.log",
+   "columns": ["kind", "id.time", "id.uniqueQualifier", "id.applicationName", "id.customerId", "etag", "actor.callerType", "actor.email", "actor.profileId", "ipAddress", "event.type", "event.name", "event.parameters"]
+  },
+  "gws:reports:drive": {
+   "source": "datasets/attack_techniques/T1566.001/gdrive_susp_file_share/gdrive_susp_attach.log",
+   "columns": ["type", "name", "parameters", "email", "unique_id", "ip_address", "timestamp"]
+  }
+ }
+}

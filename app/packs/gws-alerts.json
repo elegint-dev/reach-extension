@@ -1,0 +1,685 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "gws-alerts",
+  "name": "Google Workspace Alert Center",
+  "pack_version": "0.1.0",
+  "description": "Google Workspace Alert Center alerts: what kind of alert, who or what it names, and what Alert Center itself did about it. One feed for the gws:alerts sourcetype (Splunk Add-on for Google Workspace).",
+  "source": "Google Workspace Alert Center API v1beta1 (Alert, AlertMetadata, MailPhishing and related resources); Splunk Add-on for Google Workspace source types reference; the Splunk Common Information Model Alerts data model",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "gws_alert_center",
+    "label": "Google Workspace Alert Center",
+    "description": "Google Workspace Alert Center alerts: one record per alert, covering its type, severity, workflow status and (for Gmail phishing alerts) the flagged message and Alert Center's own automated response.",
+    "tags": [
+      "identity",
+      "gws",
+      "saas",
+      "email",
+      "alerts"
+    ],
+    "discriminator": "alert_type"
+  },
+  "concepts": {
+    "alert_id": {
+      "label": "Alert id",
+      "type": "event_id",
+      "description": "The alert's own unique identifier.",
+      "hazards": [
+        "gws_alert_id_lookalikes"
+      ]
+    },
+    "create_time": {
+      "label": "Create time",
+      "type": "event_time",
+      "description": "When Alert Center created the alert record.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "gws_alert_time_fields",
+        "gws_alert_index_time"
+      ]
+    },
+    "start_time": {
+      "label": "Start time",
+      "type": "event_time",
+      "description": "When the event that caused the alert began or was detected.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "gws_alert_time_fields"
+      ]
+    },
+    "end_time": {
+      "label": "End time",
+      "type": "event_time",
+      "description": "When the event that caused the alert stopped being active; absent means the alert is still ongoing.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "gws_alert_time_fields"
+      ]
+    },
+    "update_time": {
+      "label": "Update time",
+      "type": "event_time",
+      "description": "When the alert or its metadata was last updated.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "gws_alert_time_fields"
+      ]
+    },
+    "customer_id": {
+      "label": "Customer id",
+      "type": "account_id",
+      "description": "The Google Workspace customer account the alert belongs to."
+    },
+    "etag": {
+      "label": "Etag",
+      "type": "identifier",
+      "description": "An optimistic-concurrency token for the alert or its metadata; used to avoid overwriting a concurrent update, not a lookup key.",
+      "hazards": [
+        "gws_alert_id_lookalikes"
+      ]
+    },
+    "status": {
+      "label": "Status",
+      "type": "enum",
+      "description": "The alert's workflow status."
+    },
+    "severity": {
+      "label": "Severity",
+      "type": "enum",
+      "description": "How severe Alert Center rates the alert."
+    },
+    "cim_alert_kind": {
+      "label": "CIM alert kind",
+      "type": "enum",
+      "description": "The Alerts data model's own category for the record (alarm, alert, event, task, warning or unknown), computed by this environment's search-time field rather than read from the Alert Center payload.",
+      "hazards": [
+        "gws_alert_id_lookalikes"
+      ]
+    },
+    "alert_type": {
+      "label": "Alert type",
+      "type": "record_type",
+      "description": "The specific kind of alert, for example Phishing reclassification; decides what the data object carries."
+    },
+    "description": {
+      "label": "Description",
+      "type": "text",
+      "description": "A human-readable summary of the alert."
+    },
+    "dest_type": {
+      "label": "Destination type",
+      "type": "enum",
+      "description": "What kind of object the alert's destination is, for example an account."
+    },
+    "src_type": {
+      "label": "Source type",
+      "type": "enum",
+      "description": "What kind of object the alert's actor is, for example a user."
+    },
+    "message_recipient": {
+      "label": "Message recipient",
+      "type": "principal",
+      "description": "The email address the flagged message was sent to.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "user_name": {
+      "label": "User name",
+      "type": "user_name",
+      "description": "The display name of the user involved in the alert."
+    },
+    "src": {
+      "label": "Source actor",
+      "type": "principal",
+      "description": "The object that is the actor of the alert event."
+    },
+    "src_ip": {
+      "label": "Source IP",
+      "type": "source_ip",
+      "description": "Presumed to carry the request address behind the alert, following the src/src_ip pairing this repo's own Reports sourcetypes use; not populated on the one seeded record so unconfirmed here."
+    },
+    "src_user": {
+      "label": "Source user",
+      "type": "principal",
+      "description": "Presumed to carry an actor account tied to the alert, paired with src by CIM convention; not populated on the one seeded record so unconfirmed here."
+    },
+    "app": {
+      "label": "Reporting app",
+      "type": "event_source",
+      "description": "The system, service or application that generated the alert event, as the Alerts data model names it."
+    },
+    "reporting_system": {
+      "label": "Reporting system",
+      "type": "event_source",
+      "description": "Alert Center's own identifier for the subsystem that reported the alert, for example Gmail phishing."
+    },
+    "payload_type": {
+      "label": "Payload type",
+      "type": "identifier",
+      "description": "The protobuf Any type URL naming the shape of the alert's data object, for example a MailPhishing payload."
+    },
+    "system_action": {
+      "label": "System action",
+      "type": "enum",
+      "description": "What Alert Center's own automation did to the flagged messages."
+    },
+    "customer_domain": {
+      "label": "Customer domain",
+      "type": "domain",
+      "description": "The customer's primary domain named by the alert's domain id."
+    },
+    "malicious_sender": {
+      "label": "Malicious sender",
+      "type": "principal",
+      "description": "The From header of the message that triggered a Gmail phishing alert; attacker-controlled and trivially spoofed.",
+      "hazards": [
+        "names_not_stable",
+        "client_supplied"
+      ]
+    },
+    "message_id": {
+      "label": "Message id",
+      "type": "identifier",
+      "description": "The flagged Gmail message's own id.",
+      "hazards": [
+        "gws_alert_id_lookalikes"
+      ]
+    },
+    "message_time": {
+      "label": "Message time",
+      "type": "event_time",
+      "description": "The date of the event related to the flagged email, for example when it was sent or reported.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "gws_alert_time_fields"
+      ]
+    },
+    "message_body_hash": {
+      "label": "Message body hash",
+      "type": "identifier",
+      "description": "An MD5 hash of the flagged message's body text."
+    },
+    "message_subject_hash": {
+      "label": "Message subject hash",
+      "type": "identifier",
+      "description": "An MD5 hash of the flagged message's subject, when the message was user-reported."
+    },
+    "attachment_hash": {
+      "label": "Attachment hash",
+      "type": "file_hash",
+      "description": "A SHA256 hash of one attachment or MIME part of the flagged message."
+    }
+  },
+  "containers": {
+    "gws:alerts": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Google Workspace Alert Center alerts as the Splunk Add-on for Google Workspace indexes them: the Alert resource JSON, plus the add-on's CIM Alerts field aliases.",
+      "note": "The one seeded record is a Gmail phishing alert (data type MailPhishing); record_types lists the Gmail-phishing-source alert types the alert_type concept documents, not the full Alert Center catalogue."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "alertId",
+      "concept": "alert_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "metadata.alertId",
+      "concept": "alert_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "id",
+      "concept": "alert_id",
+      "alias_of": "alertId",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's CIM Alerts id field; equal to alertId on the seeded record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "createTime",
+      "concept": "create_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "startTime",
+      "concept": "start_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "endTime",
+      "concept": "end_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "updateTime",
+      "concept": "update_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "metadata.updateTime",
+      "concept": "update_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "customerId",
+      "concept": "customer_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "metadata.customerId",
+      "concept": "customer_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "vendor_account",
+      "concept": "customer_id",
+      "alias_of": "customerId",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's CIM Alerts vendor_account field; equal to customerId on the seeded record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "etag",
+      "concept": "etag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "metadata.etag",
+      "concept": "etag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "metadata.status",
+      "concept": "status",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "severity",
+      "concept": "severity",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "A lower-cased copy of metadata.severity (observed: metadata.severity=MEDIUM, severity=medium); the mechanism is not documented, only observed on the seeded record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "metadata.severity",
+      "concept": "severity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "type",
+      "concept": "cim_alert_kind",
+      "note": "Observed value: alert.",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Not the raw Alert.type value. entry.json's own investigation of this dev Splunk found that a search-time computed field shadows the raw JSON 'type' key, resolving it to the Alerts data model's category (observed: 'alert') instead of Google's alert type string; the FIELDALIAS-based event_type/signature/signature_id aliases exist precisely to recover the raw value."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "event_type",
+      "concept": "alert_type",
+      "alias_of": "type",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Recovers the raw Alert.type value ahead of the search-time shadowing described on the type binding; observed equal to signature and signature_id on the seeded record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "signature",
+      "concept": "alert_type",
+      "alias_of": "type",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed equal to event_type and signature_id on the seeded record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "signature_id",
+      "concept": "alert_type",
+      "alias_of": "type",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed equal to event_type and signature on the seeded record; CIM's signature_id is usually a policy/rule id distinct from signature, but this add-on copies the same alert-type string into both."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "description",
+      "concept": "description",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "A human sentence keyed to the alert type, observed on the seeded record; the add-on's own mapping is not documented."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "dest",
+      "concept": "message_recipient",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed equal to user and to data.messages{}.recipient on the seeded record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "dest_type",
+      "concept": "dest_type",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed value: account."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "src_type",
+      "concept": "src_type",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed value: user."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "user",
+      "concept": "message_recipient",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed equal to dest and to data.messages{}.recipient on the seeded record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "user_name",
+      "concept": "user_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Defined by the add-on's CIM mapping; not populated on the one seeded record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "src",
+      "concept": "src",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Defined by the add-on's CIM mapping; not populated on the one seeded record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "src_ip",
+      "concept": "src_ip",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Defined by the add-on's CIM mapping; not populated on the one seeded record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "src_user",
+      "concept": "src_user",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Defined by the add-on's CIM mapping; not populated on the one seeded record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "app",
+      "concept": "app",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed constant on the seeded record: 'Google Alert Center'."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "source",
+      "concept": "reporting_system",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Alert resource's own source field; observed as a doubled multivalue ('Gmail phishing' twice) on the seeded record, a double-load artifact of this dev environment rather than two distinct sources."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "data.@type",
+      "concept": "payload_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "data.systemActionType",
+      "concept": "system_action",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "data.domainId.customerPrimaryDomain",
+      "concept": "customer_domain",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "data.maliciousEntity.fromHeader",
+      "concept": "malicious_sender",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "data.messages{}.messageId",
+      "concept": "message_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "data.messages{}.date",
+      "concept": "message_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "data.messages{}.md5HashMessageBody",
+      "concept": "message_body_hash",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "data.messages{}.md5HashSubject",
+      "concept": "message_subject_hash",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "data.messages{}.recipient",
+      "concept": "message_recipient",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:alerts",
+      "column": "data.messages{}.attachmentsSha256Hash{}",
+      "concept": "attachment_hash",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on indexes the Alert resource as JSON; the raw field lands under this dotted path."
+      }
+    }
+  ],
+  "hazards": {
+    "gws_alert_time_fields": {
+      "text": "One alert carries five timestamps: createTime (record created), startTime/endTime (the underlying event's window), updateTime (metadata last changed) and the flagged message's own date. They can differ by months; pick the one the question needs.",
+      "level": "note"
+    },
+    "gws_alert_id_lookalikes": {
+      "text": "alertId, messageId and etag are all opaque strings of similar shape. Only alertId identifies the alert; messageId identifies one email inside it; etag is a concurrency token, not a key to pivot on.",
+      "level": "caution"
+    },
+    "gws_alert_index_time": {
+      "text": "props.conf's [gws:alerts] stanza sets DATETIME_CONFIG = NONE with no TIME_PREFIX, so _time is index time, not createTime. A time-bounded search can miss or misplace real events even though createTime is present in the JSON.",
+      "level": "caution"
+    }
+  },
+  "edges": [],
+  "templates": []
+}

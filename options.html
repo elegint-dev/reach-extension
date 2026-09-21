@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Reach - Settings</title>
+  <script src="./boot.js"></script>
+  <link rel="stylesheet" href="./app/styles/tokens.css">
+  <link rel="stylesheet" href="./app/styles/base.css">
+  <link rel="stylesheet" href="./app/styles/components.css">
+  <style>
+    .r-options { max-width: 520px; margin: 32px auto; padding: 0 16px; }
+    .r-options__lead { color: var(--fg-2); margin: 0 0 24px; }
+  </style>
+</head>
+<body>
+  <main class="r-options" id="options">
+    <h1>Reach</h1>
+    <p class="r-options__lead">Every module Reach is made of, on or off, with what it sends and where. The side panel's Settings fold draws the same list. Nothing here leaves this browser except what a module's sends line says, and only on a click.</p>
+    <p class="r-options__lead" id="platform"></p>
+    <div id="modules"></div>
+  </main>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

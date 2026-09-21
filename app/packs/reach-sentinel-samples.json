@@ -1,0 +1,914 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "reach-sentinel-samples",
+  "name": "Reach sample tables (Sentinel)",
+  "pack_version": "0.3.0",
+  "description": "The three custom tables the development workspace seeds, bound to the CloudTrail, Entra sign-in and Falcon feeds. Bindings and KQL templates only; the meanings live with the feeds.",
+  "source": "splunk/attack_data captures (T1110.003 password_spraying_azuread, T1003.001 atomic_red_team crowdstrike_falcon, T1078 aws_createaccesskey); Microsoft Entra sign-in log reference; CrowdStrike event data dictionary; AWS CloudTrail record contents reference; the Splunk-side aws-cloudtrail pack",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h",
+      "hint": "On TimeGenerated (replay time for these samples, the connector's event time in production). SourceEventTime keeps the capture's own timestamp."
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now",
+      "hint": "Optional. Ingestion lags event time by minutes; a tight bound can miss the newest rows."
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "reach_samples",
+    "label": "Reach sample loader",
+    "description": "Provenance columns the loader adds to every sample row.",
+    "tags": [
+      "sample"
+    ]
+  },
+  "concepts": {
+    "dataset_id": {
+      "label": "Dataset id",
+      "type": "identifier",
+      "description": "Which public sample dataset the row came from. Loader provenance, not a fact about the source system.",
+      "role": "other"
+    },
+    "load_id": {
+      "label": "Load id",
+      "type": "identifier",
+      "description": "Deterministic id of the load that wrote this row (hash of loader version, dataset and source content). Same id → same content; two copies of it → the dataset was replayed.",
+      "role": "identifier"
+    },
+    "raw_event": {
+      "label": "Raw event",
+      "type": "raw_object",
+      "description": "The complete source record as ingested, as a dynamic object. Anything not projected into a column is reachable here by path.",
+      "role": "other"
+    }
+  },
+  "containers": {
+    "ReachAzureAD_CL": {
+      "platform": "sentinel",
+      "kind": "sample",
+      "description": "Microsoft Entra ID (Azure AD) sign-in log records, one per authentication attempt: who signed in, from where, with which client and app, and how it ended (ResultType). The capture is a password spray: many users, one caller address, one failure code. In production the same shape is the SigninLogs table.",
+      "tags": [
+        "sample"
+      ],
+      "hazards": [
+        "replay_time"
+      ]
+    },
+    "ReachCrowdStrike_CL": {
+      "platform": "sentinel",
+      "kind": "sample",
+      "description": "CrowdStrike Falcon sensor telemetry, one row per sensor event; EventSimpleName says which kind (ProcessRollup2 for a process start, DmpFileWritten for a memory dump landing on disk…). The capture is an LSASS credential-dump attempt. In production the same telemetry lands via the Falcon Data Replicator connector.",
+      "tags": [
+        "sample"
+      ],
+      "hazards": [
+        "replay_time"
+      ],
+      "note": "SHA256HashData and ImageFileName carry the Falcon feed's names, so the known-good hash and path checks work here. The seeded capture has no SigningId, TeamId, CodeSigningFlags or CsValidationCategory column; those bind on Splunk's crowdstrike:events:sensor only until a real Falcon-for-Sentinel ingest is checked for them."
+    },
+    "ReachCloudTrail_CL": {
+      "platform": "sentinel",
+      "kind": "sample",
+      "description": "AWS CloudTrail records, one per API call: the caller (PrincipalArn, UserIdentity), the operation (EventSource + EventName), where it came from (SourceIpAddress, UserAgent), the request and response objects, and the outcome (ErrorCode). The capture is access-key creation for an IAM user. In production the AWS S3 connector lands this as AWSCloudTrail with the same columns flattened.",
+      "tags": [
+        "sample"
+      ],
+      "hazards": [
+        "replay_time"
+      ]
+    }
+  },
+  "bindings": [
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "SourceEventTime",
+      "concept": "aws-cloudtrail/event_time",
+      "note": "The record's eventTime; TimeGenerated is replay time in the dev workspace."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "EventVersion",
+      "concept": "aws-cloudtrail/event_version"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "IdentityType",
+      "concept": "aws-cloudtrail/identity_type"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "PrincipalId",
+      "concept": "aws-cloudtrail/principal_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "PrincipalArn",
+      "concept": "aws-cloudtrail/principal_arn"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "AccountId",
+      "concept": "aws-cloudtrail/caller_account_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "AccessKeyId",
+      "concept": "aws-cloudtrail/access_key_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserName",
+      "concept": "aws-cloudtrail/user_name"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity",
+      "concept": "aws-cloudtrail/user_identity"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "EventSource",
+      "concept": "aws-cloudtrail/event_source"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "EventName",
+      "concept": "aws-cloudtrail/event_name"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "AwsRegion",
+      "concept": "aws-cloudtrail/aws_region"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "SourceIpAddress",
+      "concept": "aws-cloudtrail/source_ip"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserAgent",
+      "concept": "aws-cloudtrail/user_agent"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "RequestParameters",
+      "concept": "aws-cloudtrail/request_parameters"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "ResponseElements",
+      "concept": "aws-cloudtrail/response_elements"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "RequestId",
+      "concept": "aws-cloudtrail/request_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "EventId",
+      "concept": "aws-cloudtrail/event_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "ReadOnly",
+      "concept": "aws-cloudtrail/read_only"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "EventType",
+      "concept": "aws-cloudtrail/event_type"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "ManagementEvent",
+      "concept": "aws-cloudtrail/management_event"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "RecipientAccountId",
+      "concept": "aws-cloudtrail/recipient_account_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "EventCategory",
+      "concept": "aws-cloudtrail/event_category"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "ErrorCode",
+      "concept": "aws-cloudtrail/error_code"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "ErrorMessage",
+      "concept": "aws-cloudtrail/error_message"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "TlsDetails",
+      "concept": "aws-cloudtrail/tls_details"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "SessionCredentialFromConsole",
+      "concept": "aws-cloudtrail/session_credential_from_console"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.type",
+      "concept": "aws-cloudtrail/identity_type",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.principalId",
+      "concept": "aws-cloudtrail/principal_id",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.arn",
+      "concept": "aws-cloudtrail/principal_arn",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.accountId",
+      "concept": "aws-cloudtrail/caller_account_id",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.accessKeyId",
+      "concept": "aws-cloudtrail/access_key_id",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.userName",
+      "concept": "aws-cloudtrail/user_name",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.invokedBy",
+      "concept": "aws-cloudtrail/invoked_by",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.sessionContext.sessionIssuer.type",
+      "concept": "aws-cloudtrail/session_issuer_type",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.sessionContext.sessionIssuer.arn",
+      "concept": "aws-cloudtrail/session_issuer_arn",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.sessionContext.sessionIssuer.userName",
+      "concept": "aws-cloudtrail/session_issuer_user_name",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.sessionContext.sessionIssuer.principalId",
+      "concept": "aws-cloudtrail/session_issuer_principal_id",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.sessionContext.sessionIssuer.accountId",
+      "concept": "aws-cloudtrail/session_issuer_account_id",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.sessionContext.attributes.mfaAuthenticated",
+      "concept": "aws-cloudtrail/session_mfa_authenticated",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.sessionContext.attributes.creationDate",
+      "concept": "aws-cloudtrail/session_creation_date",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.sessionContext.webIdFederationData.federatedProvider",
+      "concept": "aws-cloudtrail/federated_provider",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.sessionContext.ec2RoleDelivery",
+      "concept": "aws-cloudtrail/ec2_role_delivery",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.identityProvider",
+      "concept": "aws-cloudtrail/identity_provider",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "UserIdentity.onBehalfOf.userId",
+      "concept": "aws-cloudtrail/on_behalf_of_user_id",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "TlsDetails.tlsVersion",
+      "concept": "aws-cloudtrail/tls_version",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "TlsDetails.cipherSuite",
+      "concept": "aws-cloudtrail/tls_cipher_suite",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "TlsDetails.clientProvidedHostHeader",
+      "concept": "aws-cloudtrail/tls_client_host_header",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "RequestParameters.userName",
+      "concept": "aws-cloudtrail/target_user_name",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "RequestParameters.roleArn",
+      "concept": "aws-cloudtrail/requested_role_arn",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "RequestParameters.roleSessionName",
+      "concept": "aws-cloudtrail/role_session_name",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "RequestParameters.policyArn",
+      "concept": "aws-cloudtrail/policy_arn",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "RequestParameters.bucketName",
+      "concept": "aws-cloudtrail/bucket_name",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "RequestParameters.key",
+      "concept": "aws-cloudtrail/object_key",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "RequestParameters.instanceType",
+      "concept": "aws-cloudtrail/instance_type",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "RequestParameters.groupId",
+      "concept": "aws-cloudtrail/security_group_id",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "ResponseElements.credentials.accessKeyId",
+      "concept": "aws-cloudtrail/issued_temp_key_id",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "ResponseElements.credentials.expiration",
+      "concept": "aws-cloudtrail/issued_credential_expiration",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "ResponseElements.assumedRoleUser.arn",
+      "concept": "aws-cloudtrail/assumed_role_session_arn",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "ResponseElements.assumedRoleUser.assumedRoleId",
+      "concept": "aws-cloudtrail/assumed_role_session_id",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "ResponseElements.user.userName",
+      "concept": "aws-cloudtrail/created_user_name",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "ResponseElements.accessKey.accessKeyId",
+      "concept": "aws-cloudtrail/created_access_key_id",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "ResponseElements.ConsoleLogin",
+      "concept": "aws-cloudtrail/console_login_result",
+      "note": "A path into the dynamic column; tostring() it before comparing."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "DatasetId",
+      "concept": "dataset_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "DatasetId",
+      "concept": "dataset_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "DatasetId",
+      "concept": "dataset_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "ReachLoadId",
+      "concept": "load_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "ReachLoadId",
+      "concept": "load_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "ReachLoadId",
+      "concept": "load_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCloudTrail_CL",
+      "column": "RawEvent",
+      "concept": "raw_event"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "RawEvent",
+      "concept": "raw_event"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "RawEvent",
+      "concept": "raw_event"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "SourceEventTime",
+      "concept": "entra-signin/created_date_time",
+      "note": "The capture's createdDateTime; TimeGenerated is replay time in the dev workspace."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "OperationName",
+      "concept": "entra-signin/operation_name"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "Category",
+      "concept": "entra-signin/category"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "SourceTenantId",
+      "concept": "entra-signin/tenant_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "ResultType",
+      "concept": "entra-signin/result_type"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "ResultSignature",
+      "concept": "entra-signin/result_signature"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "ResultDescription",
+      "concept": "entra-signin/result_description"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "DurationMs",
+      "concept": "entra-signin/duration_ms"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "CallerIpAddress",
+      "concept": "entra-signin/caller_ip"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "CorrelationId",
+      "concept": "entra-signin/correlation_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "Identity",
+      "concept": "entra-signin/identity"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "SeverityLevel",
+      "concept": "entra-signin/severity_level"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "Country",
+      "concept": "entra-signin/country"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "UserDisplayName",
+      "concept": "entra-signin/user_display_name"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "UserPrincipalName",
+      "concept": "entra-signin/user_principal_name"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "UserId",
+      "concept": "entra-signin/user_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "AppId",
+      "concept": "entra-signin/app_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "AppDisplayName",
+      "concept": "entra-signin/app_display_name"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "ClientAppUsed",
+      "concept": "entra-signin/client_app_used"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "UserAgent",
+      "concept": "entra-signin/user_agent"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "ConditionalAccessStatus",
+      "concept": "entra-signin/conditional_access_status"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "IsInteractive",
+      "concept": "entra-signin/is_interactive"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "Status",
+      "concept": "entra-signin/status"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "DeviceDetail",
+      "concept": "entra-signin/device_detail"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "LocationDetails",
+      "concept": "entra-signin/location_details"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "AuthenticationDetails",
+      "concept": "entra-signin/authentication_details"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "Properties",
+      "concept": "entra-signin/properties"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachAzureAD_CL",
+      "column": "IpAddress",
+      "concept": "entra-signin/caller_ip",
+      "alias_of": "CallerIpAddress",
+      "note": "Same as CallerIpAddress in these records (the capture carries both). Prefer CallerIpAddress; it is the column the Entra connector populates consistently."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "SourceEventTime",
+      "concept": "crowdstrike-falcon/event_time",
+      "note": "The sensor's timestamp; TimeGenerated is replay time in the dev workspace."
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "EventSimpleName",
+      "concept": "crowdstrike-falcon/event_simple_name"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "Aid",
+      "concept": "crowdstrike-falcon/aid"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "Aip",
+      "concept": "crowdstrike-falcon/aip"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "EventPlatform",
+      "concept": "crowdstrike-falcon/event_platform"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "ComputerName",
+      "concept": "crowdstrike-falcon/computer_name"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "UserSid",
+      "concept": "crowdstrike-falcon/user_sid"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "UserName",
+      "concept": "crowdstrike-falcon/user_name"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "RawProcessId",
+      "concept": "crowdstrike-falcon/raw_process_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "TargetProcessId",
+      "concept": "crowdstrike-falcon/target_process_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "ParentProcessId",
+      "concept": "crowdstrike-falcon/parent_process_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "SourceProcessId",
+      "concept": "crowdstrike-falcon/source_process_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "ContextProcessId",
+      "concept": "crowdstrike-falcon/context_process_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "ContextThreadId",
+      "concept": "crowdstrike-falcon/context_thread_id"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "ProcessStartTime",
+      "concept": "crowdstrike-falcon/process_start_time"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "ProcessEndTime",
+      "concept": "crowdstrike-falcon/process_end_time"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "ImageFileName",
+      "concept": "crowdstrike-falcon/image_file_name"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "CommandLine",
+      "concept": "crowdstrike-falcon/command_line"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "ParentBaseFileName",
+      "concept": "crowdstrike-falcon/parent_base_file_name"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "GrandParentBaseFileName",
+      "concept": "crowdstrike-falcon/grand_parent_base_file_name"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "SHA256HashData",
+      "concept": "crowdstrike-falcon/sha256"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "SHA1HashData",
+      "concept": "crowdstrike-falcon/sha1"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "MD5HashData",
+      "concept": "crowdstrike-falcon/md5"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "IntegrityLevel",
+      "concept": "crowdstrike-falcon/integrity_level"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "WindowTitle",
+      "concept": "crowdstrike-falcon/window_title"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "FileName",
+      "concept": "crowdstrike-falcon/file_name"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "TargetFileName",
+      "concept": "crowdstrike-falcon/target_file_name"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "TemplateDisposition",
+      "concept": "crowdstrike-falcon/template_disposition"
+    },
+    {
+      "platform": "sentinel",
+      "container": "ReachCrowdStrike_CL",
+      "column": "DesiredAccess",
+      "concept": "crowdstrike-falcon/desired_access"
+    }
+  ],
+  "hazards": {
+    "replay_time": {
+      "level": "note",
+      "text": "In this dev workspace TimeGenerated is replay time: the loader shifted each capture so its newest event lands at load time. Order and spacing are real; the clock is not. SourceEventTime is the capture's own."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

@@ -1,0 +1,1781 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "google-gcp-audit",
+  "name": "Google Cloud audit logs",
+  "pack_version": "0.1.0",
+  "description": "Google Cloud audit logs via Pub/Sub, including Workspace login audit: Admin Activity, Data Access and System Event records for Google Cloud, plus Google Workspace login success/failure, as Splunk_TA_google-cloudplatform indexes them.",
+  "source": "Cloud Audit Logs / LogEntry / AuditLog reference (cloud.google.com/logging); BigQuery audit logs AuditData reference; Workspace Admin console Login Audit Activity Events appendix; field names and CIM aliases as observed in the dev Splunk index (Splunk_TA_google-cloudplatform)",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "google_gcp_audit",
+    "label": "Google Cloud audit logs",
+    "description": "Cloud Audit Logs (Admin Activity, Data Access, System Event) and Google Workspace login audit events, delivered to Splunk over Cloud Pub/Sub by Splunk_TA_google-cloudplatform: who called what Google Cloud or Workspace API, from where, against which resource, and how it came out.",
+    "tags": [
+      "gcp",
+      "google-cloud",
+      "audit",
+      "identity",
+      "cloud"
+    ],
+    "discriminator": "method_name"
+  },
+  "concepts": {
+    "publish_time": {
+      "label": "Publish time",
+      "type": "event_time",
+      "description": "When Pub/Sub's server received the publish call that delivered this record; on every sample here it was computed from the record's own timestamp, not read as an independent delivery time.",
+      "hazards": [
+        "clock_family"
+      ]
+    },
+    "insert_id": {
+      "label": "Insert id",
+      "type": "event_id",
+      "description": "A unique identifier for one log entry, used to deduplicate and order entries that share a logName and timestamp.",
+      "hazards": [
+        "id_family"
+      ]
+    },
+    "log_name": {
+      "label": "Log name",
+      "type": "identifier",
+      "description": "The log's resource name, projects/<project>/logs/<log id> (or organizations/<org>/logs/... on auth); the <log id> segment names the audit log type (activity, data_access, system_event)."
+    },
+    "event_time": {
+      "label": "Event time",
+      "type": "event_time",
+      "description": "The time the audited operation itself happened, as the source recorded it.",
+      "role": "timestamp",
+      "hazards": [
+        "clock_family"
+      ]
+    },
+    "receive_time": {
+      "label": "Receive time",
+      "type": "event_time",
+      "description": "The time Cloud Logging received the entry; an output-only field the system sets, not the caller.",
+      "hazards": [
+        "clock_family"
+      ]
+    },
+    "severity": {
+      "label": "Severity",
+      "type": "enum",
+      "description": "Cloud Logging's standard severity level for the entry."
+    },
+    "method_name": {
+      "label": "Method name",
+      "type": "record_type",
+      "description": "The specific API method invoked; the field this pack uses to tell one kind of audit record from another."
+    },
+    "service_name": {
+      "label": "Service name",
+      "type": "event_source",
+      "description": "The Google Cloud (or Workspace) service that generated the audit log entry."
+    },
+    "principal_email": {
+      "label": "Principal email",
+      "type": "principal",
+      "description": "The email address of the principal (user, service account or system actor) that made the request."
+    },
+    "caller_ip": {
+      "label": "Caller IP",
+      "type": "source_ip",
+      "description": "The IP address of the caller, as the receiving service saw it; can also read a placeholder like \"private\" for an internal call."
+    },
+    "caller_user_agent": {
+      "label": "Caller user agent",
+      "type": "user_agent",
+      "description": "The user agent string the caller supplied with the request."
+    },
+    "resource_name": {
+      "label": "Resource name",
+      "type": "resource_id",
+      "description": "The full path of the Google Cloud (or Workspace organization) resource the operation acted on."
+    },
+    "request_resource": {
+      "label": "Request resource",
+      "type": "resource_id",
+      "description": "The resource path named inside the API request body itself; observed on SetIamPolicy, where the AuditLog's shared resourceName field is not populated and the request object names the project instead."
+    },
+    "resource_type": {
+      "label": "Resource type",
+      "type": "enum",
+      "description": "The monitored resource type that produced the entry: which kind of Google Cloud resource this is, by Cloud Monitoring's resource taxonomy."
+    },
+    "project_id": {
+      "label": "Project id",
+      "type": "account_id",
+      "description": "A Google Cloud project id. The same concept names the log's own project, a BigQuery job's project, and a BigQuery table's project; see the project_id_family hazard before assuming one query only touches one project.",
+      "hazards": [
+        "project_id_family"
+      ]
+    },
+    "instance_id": {
+      "label": "Instance id",
+      "type": "resource_id",
+      "description": "The Compute Engine instance's numeric id, a gce_instance monitored-resource label."
+    },
+    "zone": {
+      "label": "Zone",
+      "type": "region",
+      "description": "The Compute Engine zone the instance runs in, a gce_instance monitored-resource label."
+    },
+    "operation_id": {
+      "label": "Operation id",
+      "type": "request_id",
+      "description": "An arbitrary identifier shared by every log entry that is part of the same long-running operation.",
+      "hazards": [
+        "id_family"
+      ]
+    },
+    "status_message": {
+      "label": "Status message",
+      "type": "text",
+      "description": "The operation's own human-readable status text, when the API set one."
+    },
+    "cim_action": {
+      "label": "CIM action",
+      "type": "outcome",
+      "description": "The TA's own coarse classification of what happened to the resource: modified, success, failure or unknown. Computed from the record, not copied from a single source field.",
+      "hazards": [
+        "status_constant"
+      ]
+    },
+    "cim_status": {
+      "label": "CIM status",
+      "type": "outcome",
+      "description": "The TA's CIM status field. Read 'success' on every sample in this pack regardless of what happened; see the status_constant hazard.",
+      "hazards": [
+        "status_constant"
+      ]
+    },
+    "iam_role": {
+      "label": "IAM role",
+      "type": "identifier",
+      "description": "The IAM role a policy binding grants or revokes, for example roles/logging.privateLogViewer."
+    },
+    "iam_member": {
+      "label": "IAM member",
+      "type": "identifier",
+      "description": "The principal a policy binding names, in IAM's type:identifier form, for example user:user@example.com.",
+      "hazards": [
+        "member_prefix_stripped"
+      ]
+    },
+    "iam_delta_action": {
+      "label": "IAM delta action",
+      "type": "enum",
+      "description": "Whether this policyDelta entry added or removed the binding."
+    },
+    "bq_job_id": {
+      "label": "BigQuery job id",
+      "type": "identifier",
+      "description": "The BigQuery job's own id, unique within its project and location."
+    },
+    "bq_query_text": {
+      "label": "BigQuery query text",
+      "type": "text",
+      "description": "The SQL text of the query the job ran."
+    },
+    "bq_statement_type": {
+      "label": "BigQuery statement type",
+      "type": "enum",
+      "description": "The kind of SQL statement the query job ran, for example SELECT."
+    },
+    "bq_query_priority": {
+      "label": "BigQuery query priority",
+      "type": "enum",
+      "description": "Whether the query ran at interactive or batch priority."
+    },
+    "bq_create_disposition": {
+      "label": "BigQuery create disposition",
+      "type": "enum",
+      "description": "Whether the job is allowed to create the destination table if it does not already exist."
+    },
+    "bq_write_disposition": {
+      "label": "BigQuery write disposition",
+      "type": "enum",
+      "description": "What the job does to the destination table's existing data: truncate, append or require it be empty."
+    },
+    "bq_job_state": {
+      "label": "BigQuery job state",
+      "type": "enum",
+      "description": "The job's own lifecycle state: pending, running or done."
+    },
+    "bq_dataset_id": {
+      "label": "BigQuery dataset id",
+      "type": "identifier",
+      "description": "A BigQuery dataset id, either the query's destination dataset or one it read from."
+    },
+    "bq_table_id": {
+      "label": "BigQuery table id",
+      "type": "identifier",
+      "description": "A BigQuery table id, either the query's destination table or one it read from."
+    },
+    "bq_bytes_processed": {
+      "label": "BigQuery bytes processed",
+      "type": "count",
+      "description": "The number of bytes the query scanned."
+    },
+    "bq_bytes_billed": {
+      "label": "BigQuery bytes billed",
+      "type": "count",
+      "description": "The number of bytes BigQuery billed for the query, rounded up to its billing quantum."
+    },
+    "login_event_name": {
+      "label": "Login event name",
+      "type": "record_type",
+      "description": "The Workspace Reports API event name for the login attempt, for example login_success."
+    },
+    "login_type": {
+      "label": "Login type",
+      "type": "enum",
+      "description": "The kind of credential the user presented to authenticate."
+    },
+    "cim_authentication_method": {
+      "label": "CIM authentication method",
+      "type": "enum",
+      "description": "The TA's own authentication-method field. Read 'unknown' on the loginFailure sample despite a login_type of google_password on the same record; see the auth_method_mismatch hazard.",
+      "hazards": [
+        "auth_method_mismatch"
+      ]
+    }
+  },
+  "containers": {
+    "google:gcp:pubsub:audit:admin_activity": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Admin Activity audit logs delivered over Cloud Pub/Sub, as Splunk_TA_google-cloudplatform indexes the envelope: user-driven API calls that change a resource's configuration or metadata.",
+      "note": "Always on; cannot be disabled. The AuditLog sits at data.protoPayload; the TA also writes its own CIM alias fields (action, dest, user, vendor_account, ...) alongside the dotted JSON paths."
+    },
+    "google:gcp:pubsub:audit:data_access": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Data Access audit logs delivered over Cloud Pub/Sub: API calls that read a resource's configuration or metadata, and calls that create, modify or read user-provided data such as a BigQuery query.",
+      "note": "Off by default for most services except BigQuery, where it is always on. Google Workspace login events are also Data Access audit logs at the API level but this TA indexes them to google:gsuite:pubsub:audit:auth instead; see the gsuite_routes_to_data_access hazard."
+    },
+    "google:gcp:pubsub:audit:system_event": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "System Event audit logs delivered over Cloud Pub/Sub: entries Google Cloud systems and managed service agents write when they change a resource's configuration without direct user action, for example a live VM migration.",
+      "note": "Always on; cannot be disabled. Carries data.operation to tie together every entry of one system-driven operation."
+    },
+    "google:gsuite:pubsub:audit:auth": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Google Workspace login audit events (login.googleapis.com) delivered over Cloud Pub/Sub: sign-in successes and failures against a Workspace organization.",
+      "note": "See the gsuite_routes_to_data_access hazard: Google's own docs class these as Data Access audit logs, but the TA gives them a separate sourcetype from google:gcp:pubsub:audit:data_access."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "publish_time",
+      "concept": "publish_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.insertId",
+      "concept": "insert_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.logName",
+      "concept": "log_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.timestamp",
+      "concept": "event_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.severity",
+      "concept": "severity",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.protoPayload.methodName",
+      "concept": "method_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "command",
+      "concept": "method_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "result",
+      "concept": "method_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.protoPayload.serviceName",
+      "concept": "service_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "dvc",
+      "concept": "service_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed as iam.googleapis.com while serviceName read appengine.googleapis.com on the SetIamPolicy sample: the TA maps dvc to the API family the method belongs to, not the resource-owning service; the two need not match."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.protoPayload.authenticationInfo.principalEmail",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "user",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "user_id",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "user_name",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "src_user_name",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.protoPayload.request.resource",
+      "concept": "request_resource",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.resource.type",
+      "concept": "resource_type",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "instance_type",
+      "concept": "resource_type",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.resource.labels.project_id",
+      "concept": "project_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "dest",
+      "concept": "project_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "vendor_account",
+      "concept": "project_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "action",
+      "concept": "cim_action",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "The TA classifies the record from methodName; 'modified' does not copy any single source field verbatim."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "status",
+      "concept": "cim_status",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Constant 'success' on this sample; see the status_constant hazard."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.protoPayload.response.bindings{}.role",
+      "concept": "iam_role",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.protoPayload.serviceData.policyDelta.bindingDeltas{}.role",
+      "concept": "iam_role",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.protoPayload.response.bindings{}.members{}",
+      "concept": "iam_member",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.protoPayload.serviceData.policyDelta.bindingDeltas{}.member",
+      "concept": "iam_member",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "object",
+      "concept": "iam_member",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Carries the member's bare identity without the 'user:' prefix the binding fields keep; see the member_prefix_stripped hazard."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "object_id",
+      "concept": "iam_member",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Same value as object on this sample."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:admin_activity",
+      "column": "data.protoPayload.serviceData.policyDelta.bindingDeltas{}.action",
+      "concept": "iam_delta_action",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "publish_time",
+      "concept": "publish_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.insertId",
+      "concept": "insert_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.logName",
+      "concept": "log_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.timestamp",
+      "concept": "event_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.receiveTimestamp",
+      "concept": "receive_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.severity",
+      "concept": "severity",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.methodName",
+      "concept": "method_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "command",
+      "concept": "method_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "result",
+      "concept": "method_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "signature",
+      "concept": "method_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceName",
+      "concept": "service_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "dvc",
+      "concept": "service_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "app",
+      "concept": "service_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "authentication_service",
+      "concept": "service_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.authenticationInfo.principalEmail",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "user",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.requestMetadata.callerIp",
+      "concept": "caller_ip",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "src",
+      "concept": "caller_ip",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "src_ip",
+      "concept": "caller_ip",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.requestMetadata.callerSuppliedUserAgent",
+      "concept": "caller_user_agent",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "user_agent",
+      "concept": "caller_user_agent",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.resourceName",
+      "concept": "resource_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.resource.type",
+      "concept": "resource_type",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "instance_type",
+      "concept": "resource_type",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.resource.labels.project_id",
+      "concept": "project_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "dest",
+      "concept": "project_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "vendor_account",
+      "concept": "project_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "action",
+      "concept": "cim_action",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "The TA classifies the record from methodName; 'success' does not copy any single source field verbatim."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "status",
+      "concept": "cim_status",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Constant 'success' on this sample; see the status_constant hazard."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobName.jobId",
+      "concept": "bq_job_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "object",
+      "concept": "bq_job_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "object_id",
+      "concept": "bq_job_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobName.projectId",
+      "concept": "project_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.destinationTable.projectId",
+      "concept": "project_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobStatistics.referencedTables{}.projectId",
+      "concept": "project_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.query",
+      "concept": "bq_query_text",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.statementType",
+      "concept": "bq_statement_type",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.queryPriority",
+      "concept": "bq_query_priority",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.createDisposition",
+      "concept": "bq_create_disposition",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.writeDisposition",
+      "concept": "bq_write_disposition",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobStatus.state",
+      "concept": "bq_job_state",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.destinationTable.datasetId",
+      "concept": "bq_dataset_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobStatistics.referencedTables{}.datasetId",
+      "concept": "bq_dataset_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobConfiguration.query.destinationTable.tableId",
+      "concept": "bq_table_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobStatistics.referencedTables{}.tableId",
+      "concept": "bq_table_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobStatistics.totalProcessedBytes",
+      "concept": "bq_bytes_processed",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:data_access",
+      "column": "data.protoPayload.serviceData.jobCompletedEvent.job.jobStatistics.totalBilledBytes",
+      "concept": "bq_bytes_billed",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "publish_time",
+      "concept": "publish_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.insertId",
+      "concept": "insert_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.logName",
+      "concept": "log_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.timestamp",
+      "concept": "event_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.receiveTimestamp",
+      "concept": "receive_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.severity",
+      "concept": "severity",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.protoPayload.methodName",
+      "concept": "method_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "command",
+      "concept": "method_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "result",
+      "concept": "method_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.protoPayload.serviceName",
+      "concept": "service_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "dvc",
+      "concept": "service_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.protoPayload.authenticationInfo.principalEmail",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "user",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "user_id",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "user_name",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.protoPayload.resourceName",
+      "concept": "resource_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "object",
+      "concept": "resource_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Carries resourceName's last path segment (the instance name) on this sample."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "object_id",
+      "concept": "resource_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Same value as object on this sample."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.resource.type",
+      "concept": "resource_type",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "instance_type",
+      "concept": "resource_type",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.resource.labels.project_id",
+      "concept": "project_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "dest",
+      "concept": "project_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "vendor_account",
+      "concept": "project_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.resource.labels.instance_id",
+      "concept": "instance_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.resource.labels.zone",
+      "concept": "zone",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "vendor_region",
+      "concept": "zone",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.operation.id",
+      "concept": "operation_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "data.protoPayload.status.message",
+      "concept": "status_message",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "action",
+      "concept": "cim_action",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "The TA classifies the record from methodName; 'unknown' does not copy any single source field verbatim, and reads unknown here despite the operation clearly succeeding."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:pubsub:audit:system_event",
+      "column": "status",
+      "concept": "cim_status",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Constant 'success' on this sample even though action reads 'unknown'; see the status_constant hazard."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "publish_time",
+      "concept": "publish_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "data.insertId",
+      "concept": "insert_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "data.logName",
+      "concept": "log_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "data.timestamp",
+      "concept": "event_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "data.receiveTimestamp",
+      "concept": "receive_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "data.severity",
+      "concept": "severity",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "data.protoPayload.methodName",
+      "concept": "method_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "signature",
+      "concept": "method_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "data.protoPayload.serviceName",
+      "concept": "service_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "app",
+      "concept": "service_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "authentication_service",
+      "concept": "service_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "data.protoPayload.authenticationInfo.principalEmail",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "user",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "user_id",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "src_user",
+      "concept": "principal_email",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "data.protoPayload.requestMetadata.callerIp",
+      "concept": "caller_ip",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "src",
+      "concept": "caller_ip",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "src_ip",
+      "concept": "caller_ip",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "data.protoPayload.resourceName",
+      "concept": "resource_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "dest",
+      "concept": "resource_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Carries the numeric organization id parsed from resourceName's organizations/<id> path, not a project id."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "vendor_account",
+      "concept": "resource_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Same organization id as dest on this sample, not a project id despite the field name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "data.protoPayload.metadata.event{}.eventName",
+      "concept": "login_event_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub envelope indexes as JSON; Splunk reaches this key by its dotted path over the indexed event, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "eventName",
+      "concept": "login_event_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Splunk_TA_google-cloudplatform's own CIM field carries the same value as the dotted path field, confirmed by comparing both on the sample event in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "login_type",
+      "concept": "login_type",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Flattened from metadata.event{}.parameter{} where name=login_type, observed in the dev Splunk index."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "action",
+      "concept": "cim_action",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "The TA classifies the record from eventName; 'success'/'failure' does not copy any single source field verbatim."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gsuite:pubsub:audit:auth",
+      "column": "authentication_method",
+      "concept": "cim_authentication_method",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Read 'unknown' on the loginFailure sample despite login_type being google_password on the same record; see the auth_method_mismatch hazard."
+      }
+    }
+  ],
+  "hazards": {
+    "index_time_ok_false": {
+      "text": "All four containers carry index_time_ok: false in this pack's own sample metadata; correlate on the record's own timestamp field, not on Splunk's _indextime."
+    },
+    "clock_family": {
+      "text": "publish_time, data.timestamp, data.receiveTimestamp and (on auth) activityId.timeUsec each mark a different moment; in every sample here publish_time was arithmetically derived from data.timestamp rather than an independent Pub/Sub delivery time, so they move together in this pack's samples, not necessarily in production."
+    },
+    "id_family": {
+      "text": "insertId, operation.id, activityId.uniqQualifier, jobName.jobId and resource.labels.instance_id each identify a different thing: a log entry, a long-running operation, a Workspace activity, a BigQuery job, a VM. The same event can carry more than one and they never interchange."
+    },
+    "project_id_family": {
+      "text": "project_id appears in resource.labels (the log's own project), jobName (the job's project) and destinationTable/referencedTables (the query's project); a cross-project BigQuery query carries three different values under the same concept."
+    },
+    "gsuite_routes_to_data_access": {
+      "text": "Google's own Workspace audit log documentation classifies login.googleapis.com events as Data Access audit logs, and both auth samples' logName ends %2Fdata_access; the TA nonetheless indexes them to google:gsuite:pubsub:audit:auth, a sourcetype distinct from google:gcp:pubsub:audit:data_access. A pivot for 'all Data Access audit logs' must name this sourcetype explicitly; logName's suffix will not select it."
+    },
+    "auth_method_mismatch": {
+      "text": "authentication_method read 'unknown' on the loginFailure sample even though login_type was google_password on the same record; treat login_type, not authentication_method, as the source of truth for how the user authenticated."
+    },
+    "status_constant": {
+      "text": "The CIM status field read 'success' on every sample in this pack, including the SetIamPolicy, BigQuery job and system_event records; it is not a failure signal here. Use cim_action, or for auth the login_success/login_failure event name, instead."
+    },
+    "vendor_product_constant": {
+      "text": "vendor_product ('GCP Identity Access Management') and change_type ('AAA') read the same literal value on every sample across admin_activity, data_access and system_event regardless of the actual service or record type; left unbound rather than asserting a per-event meaning neither field earns."
+    },
+    "member_prefix_stripped": {
+      "text": "On admin_activity, the CIM object and object_id fields carry the member's bare identity (user@example.com); the IAM binding's own member field keeps the type prefix (user:user@example.com). Same identity, different string."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

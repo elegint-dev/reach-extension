@@ -1,0 +1,7522 @@
+{
+ "description": "Eight tables the four bundled packs know nothing about, at the width the add-on or Sentinel actually lands them (33 to 63 columns), with discovery-shaped profiles (top values with counts, numeric and dynamic flags). tools/dev/check-bindings.mjs and tests/propose.test.js assert the proposer does not recognise any of them as a feed: a CIM-normalised firewall log, a CIM-normalised Zeek log, an Okta System Log, an Entra AuditLogs table, a Windows SecurityEvent table, an Azure Activity table, a flattened GuardDuty finding and a generic application log. Every Splunk table carries the default fields host, source, sourcetype and index.",
+ "tables": [
+  {
+   "platform": "splunk",
+   "container": "pan:traffic",
+   "note": "A CIM-normalised firewall sourcetype (Palo Alto traffic log as its add-on lands it): src/dest/action/user/app/bytes and the vendor fields underneath, plus the Splunk default fields.",
+   "columns": [
+    {
+     "column": "receive_time",
+     "profile": {
+      "top": [
+       {
+        "value": "2026/09/18 10:00:00",
+        "count": 100
+       },
+       {
+        "value": "2026/09/18 10:00:01",
+        "count": 93
+       },
+       {
+        "value": "2026/09/18 10:00:02",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "serial_number",
+     "profile": {
+      "top": [
+       {
+        "value": "001801012345",
+        "count": 100
+       },
+       {
+        "value": "001801012346",
+        "count": 93
+       },
+       {
+        "value": "001801012347",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "type",
+     "profile": {
+      "top": [
+       {
+        "value": "TRAFFIC",
+        "count": 100
+       },
+       {
+        "value": "TRAFFIC",
+        "count": 93
+       },
+       {
+        "value": "TRAFFIC",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "log_subtype",
+     "profile": {
+      "top": [
+       {
+        "value": "end",
+        "count": 100
+       },
+       {
+        "value": "start",
+        "count": 93
+       },
+       {
+        "value": "drop",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "src_ip",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "dest_ip",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "src",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "dest",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "src_port",
+     "profile": {
+      "top": [
+       {
+        "value": "51231",
+        "count": 100
+       },
+       {
+        "value": "51232",
+        "count": 93
+       },
+       {
+        "value": "51233",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "dest_port",
+     "profile": {
+      "top": [
+       {
+        "value": "443",
+        "count": 100
+       },
+       {
+        "value": "80",
+        "count": 93
+       },
+       {
+        "value": "53",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "src_zone",
+     "profile": {
+      "top": [
+       {
+        "value": "trust",
+        "count": 100
+       },
+       {
+        "value": "trust",
+        "count": 93
+       },
+       {
+        "value": "dmz",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "dest_zone",
+     "profile": {
+      "top": [
+       {
+        "value": "untrust",
+        "count": 100
+       },
+       {
+        "value": "untrust",
+        "count": 93
+       },
+       {
+        "value": "trust",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "src_translated_ip",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "dest_translated_ip",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "src_translated_port",
+     "profile": {
+      "top": [
+       {
+        "value": "1024",
+        "count": 100
+       },
+       {
+        "value": "1025",
+        "count": 93
+       },
+       {
+        "value": "1026",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "dest_translated_port",
+     "profile": {
+      "top": [
+       {
+        "value": "443",
+        "count": 100
+       },
+       {
+        "value": "80",
+        "count": 93
+       },
+       {
+        "value": "53",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "rule",
+     "profile": {
+      "top": [
+       {
+        "value": "allow-web",
+        "count": 100
+       },
+       {
+        "value": "allow-dns",
+        "count": 93
+       },
+       {
+        "value": "deny-all",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "user",
+     "profile": {
+      "top": [
+       {
+        "value": "corp\\jdoe",
+        "count": 100
+       },
+       {
+        "value": "corp\\asmith",
+        "count": 93
+       },
+       {
+        "value": "unknown",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "src_user",
+     "profile": {
+      "top": [
+       {
+        "value": "corp\\jdoe",
+        "count": 100
+       },
+       {
+        "value": "corp\\asmith",
+        "count": 93
+       },
+       {
+        "value": "unknown",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "app",
+     "profile": {
+      "top": [
+       {
+        "value": "web-browsing",
+        "count": 100
+       },
+       {
+        "value": "dns",
+        "count": 93
+       },
+       {
+        "value": "ssl",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "vsys",
+     "profile": {
+      "top": [
+       {
+        "value": "vsys1",
+        "count": 100
+       },
+       {
+        "value": "vsys1",
+        "count": 93
+       },
+       {
+        "value": "vsys1",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "action",
+     "profile": {
+      "top": [
+       {
+        "value": "allowed",
+        "count": 100
+       },
+       {
+        "value": "allowed",
+        "count": 93
+       },
+       {
+        "value": "blocked",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "vendor_action",
+     "profile": {
+      "top": [
+       {
+        "value": "allow",
+        "count": 100
+       },
+       {
+        "value": "allow",
+        "count": 93
+       },
+       {
+        "value": "deny",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "session_id",
+     "profile": {
+      "top": [
+       {
+        "value": "12345",
+        "count": 100
+       },
+       {
+        "value": "12346",
+        "count": 93
+       },
+       {
+        "value": "12347",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "repeat_count",
+     "profile": {
+      "top": [
+       {
+        "value": "1",
+        "count": 100
+       },
+       {
+        "value": "1",
+        "count": 93
+       },
+       {
+        "value": "3",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "transport",
+     "profile": {
+      "top": [
+       {
+        "value": "tcp",
+        "count": 100
+       },
+       {
+        "value": "udp",
+        "count": 93
+       },
+       {
+        "value": "tcp",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "protocol",
+     "profile": {
+      "top": [
+       {
+        "value": "tcp",
+        "count": 100
+       },
+       {
+        "value": "udp",
+        "count": 93
+       },
+       {
+        "value": "tcp",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "bytes",
+     "profile": {
+      "top": [
+       {
+        "value": "1536",
+        "count": 100
+       },
+       {
+        "value": "3072",
+        "count": 93
+       },
+       {
+        "value": "12288",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "bytes_in",
+     "profile": {
+      "top": [
+       {
+        "value": "1024",
+        "count": 100
+       },
+       {
+        "value": "2048",
+        "count": 93
+       },
+       {
+        "value": "4096",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "bytes_out",
+     "profile": {
+      "top": [
+       {
+        "value": "512",
+        "count": 100
+       },
+       {
+        "value": "1024",
+        "count": 93
+       },
+       {
+        "value": "8192",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "packets",
+     "profile": {
+      "top": [
+       {
+        "value": "10",
+        "count": 100
+       },
+       {
+        "value": "20",
+        "count": 93
+       },
+       {
+        "value": "30",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "packets_in",
+     "profile": {
+      "top": [
+       {
+        "value": "5",
+        "count": 100
+       },
+       {
+        "value": "10",
+        "count": 93
+       },
+       {
+        "value": "15",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "packets_out",
+     "profile": {
+      "top": [
+       {
+        "value": "5",
+        "count": 100
+       },
+       {
+        "value": "10",
+        "count": 93
+       },
+       {
+        "value": "15",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "duration",
+     "profile": {
+      "top": [
+       {
+        "value": "0",
+        "count": 100
+       },
+       {
+        "value": "12",
+        "count": 93
+       },
+       {
+        "value": "300",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "session_end_reason",
+     "profile": {
+      "top": [
+       {
+        "value": "tcp-fin",
+        "count": 100
+       },
+       {
+        "value": "aged-out",
+        "count": 93
+       },
+       {
+        "value": "policy-deny",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "dvc",
+     "profile": {
+      "top": [
+       {
+        "value": "fw-edge-1",
+        "count": 100
+       },
+       {
+        "value": "fw-edge-2",
+        "count": 93
+       },
+       {
+        "value": "fw-edge-1",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "dvc_name",
+     "profile": {
+      "top": [
+       {
+        "value": "fw-edge-1",
+        "count": 100
+       },
+       {
+        "value": "fw-edge-2",
+        "count": 93
+       },
+       {
+        "value": "fw-edge-1",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "category",
+     "profile": {
+      "top": [
+       {
+        "value": "any",
+        "count": 100
+       },
+       {
+        "value": "any",
+        "count": 93
+       },
+       {
+        "value": "computer-and-internet-info",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "src_location",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.0-10.255.255.255",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.0-10.255.255.255",
+        "count": 93
+       },
+       {
+        "value": "US",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "dest_location",
+     "profile": {
+      "top": [
+       {
+        "value": "US",
+        "count": 100
+       },
+       {
+        "value": "US",
+        "count": 93
+       },
+       {
+        "value": "DE",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "tunnel_type",
+     "profile": {
+      "top": [
+       {
+        "value": "N/A",
+        "count": 100
+       },
+       {
+        "value": "N/A",
+        "count": 93
+       },
+       {
+        "value": "N/A",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "host",
+     "profile": {
+      "top": [
+       {
+        "value": "fw-edge-1",
+        "count": 100
+       },
+       {
+        "value": "fw-edge-2",
+        "count": 93
+       },
+       {
+        "value": "fw-edge-1",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "source",
+     "profile": {
+      "top": [
+       {
+        "value": "udp:514",
+        "count": 100
+       },
+       {
+        "value": "udp:514",
+        "count": 93
+       },
+       {
+        "value": "udp:514",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "sourcetype",
+     "profile": {
+      "top": [
+       {
+        "value": "pan:traffic",
+        "count": 100
+       }
+      ],
+      "distinct": 1,
+      "fill": 1
+     }
+    },
+    {
+     "column": "index",
+     "profile": {
+      "top": [
+       {
+        "value": "firewall",
+        "count": 100
+       }
+      ],
+      "distinct": 1,
+      "fill": 1
+     }
+    }
+   ]
+  },
+  {
+   "platform": "splunk",
+   "container": "bro:conn",
+   "note": "Zeek conn.log as Splunk_TA_zeek lands it, CIM-normalised (src/dest/action/app/bytes) on top of the raw id.orig_h fields.",
+   "columns": [
+    {
+     "column": "ts",
+     "profile": {
+      "top": [
+       {
+        "value": "1758189600.123456",
+        "count": 100
+       },
+       {
+        "value": "1758189601.223456",
+        "count": 93
+       },
+       {
+        "value": "1758189602.323456",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "uid",
+     "profile": {
+      "top": [
+       {
+        "value": "CHhAvVGS1DHFjwGM9",
+        "count": 100
+       },
+       {
+        "value": "C4J4Th3PJpwUYZZ6gc",
+        "count": 93
+       },
+       {
+        "value": "CfbYqj4hYBp8mQ6vP1",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "id.orig_h",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "id.orig_p",
+     "profile": {
+      "top": [
+       {
+        "value": "51231",
+        "count": 100
+       },
+       {
+        "value": "51232",
+        "count": 93
+       },
+       {
+        "value": "51233",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "id.resp_h",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "id.resp_p",
+     "profile": {
+      "top": [
+       {
+        "value": "443",
+        "count": 100
+       },
+       {
+        "value": "80",
+        "count": 93
+       },
+       {
+        "value": "53",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "proto",
+     "profile": {
+      "top": [
+       {
+        "value": "tcp",
+        "count": 100
+       },
+       {
+        "value": "udp",
+        "count": 93
+       },
+       {
+        "value": "icmp",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service",
+     "profile": {
+      "top": [
+       {
+        "value": "ssl",
+        "count": 100
+       },
+       {
+        "value": "dns",
+        "count": 93
+       },
+       {
+        "value": "http",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "duration",
+     "profile": {
+      "top": [
+       {
+        "value": "0.12",
+        "count": 100
+       },
+       {
+        "value": "1.5",
+        "count": 93
+       },
+       {
+        "value": "3.2",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "orig_bytes",
+     "profile": {
+      "top": [
+       {
+        "value": "1024",
+        "count": 100
+       },
+       {
+        "value": "2048",
+        "count": 93
+       },
+       {
+        "value": "4096",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "resp_bytes",
+     "profile": {
+      "top": [
+       {
+        "value": "512",
+        "count": 100
+       },
+       {
+        "value": "1024",
+        "count": 93
+       },
+       {
+        "value": "8192",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "conn_state",
+     "profile": {
+      "top": [
+       {
+        "value": "SF",
+        "count": 100
+       },
+       {
+        "value": "S0",
+        "count": 93
+       },
+       {
+        "value": "REJ",
+        "count": 86
+       },
+       {
+        "value": "RSTO",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "local_orig",
+     "profile": {
+      "top": [
+       {
+        "value": "true",
+        "count": 100
+       },
+       {
+        "value": "false",
+        "count": 93
+       },
+       {
+        "value": "true",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "local_resp",
+     "profile": {
+      "top": [
+       {
+        "value": "false",
+        "count": 100
+       },
+       {
+        "value": "true",
+        "count": 93
+       },
+       {
+        "value": "false",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "missed_bytes",
+     "profile": {
+      "top": [
+       {
+        "value": "0",
+        "count": 100
+       },
+       {
+        "value": "0",
+        "count": 93
+       },
+       {
+        "value": "1400",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "history",
+     "profile": {
+      "top": [
+       {
+        "value": "ShADadFf",
+        "count": 100
+       },
+       {
+        "value": "S",
+        "count": 93
+       },
+       {
+        "value": "Dd",
+        "count": 86
+       },
+       {
+        "value": "ShAdDaFf",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "orig_pkts",
+     "profile": {
+      "top": [
+       {
+        "value": "10",
+        "count": 100
+       },
+       {
+        "value": "20",
+        "count": 93
+       },
+       {
+        "value": "30",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "orig_ip_bytes",
+     "profile": {
+      "top": [
+       {
+        "value": "1200",
+        "count": 100
+       },
+       {
+        "value": "2300",
+        "count": 93
+       },
+       {
+        "value": "4500",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "resp_pkts",
+     "profile": {
+      "top": [
+       {
+        "value": "8",
+        "count": 100
+       },
+       {
+        "value": "16",
+        "count": 93
+       },
+       {
+        "value": "24",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "resp_ip_bytes",
+     "profile": {
+      "top": [
+       {
+        "value": "900",
+        "count": 100
+       },
+       {
+        "value": "1800",
+        "count": 93
+       },
+       {
+        "value": "9000",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "tunnel_parents",
+     "profile": {
+      "top": [
+       {
+        "value": "",
+        "count": 100
+       },
+       {
+        "value": "CHhAvVGS1DHFjwGM9",
+        "count": 93
+       },
+       {
+        "value": "",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "src",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "dest",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "src_ip",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "dest_ip",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "src_port",
+     "profile": {
+      "top": [
+       {
+        "value": "51231",
+        "count": 100
+       },
+       {
+        "value": "51232",
+        "count": 93
+       },
+       {
+        "value": "51233",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "dest_port",
+     "profile": {
+      "top": [
+       {
+        "value": "443",
+        "count": 100
+       },
+       {
+        "value": "80",
+        "count": 93
+       },
+       {
+        "value": "53",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "transport",
+     "profile": {
+      "top": [
+       {
+        "value": "tcp",
+        "count": 100
+       },
+       {
+        "value": "udp",
+        "count": 93
+       },
+       {
+        "value": "icmp",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "app",
+     "profile": {
+      "top": [
+       {
+        "value": "ssl",
+        "count": 100
+       },
+       {
+        "value": "dns",
+        "count": 93
+       },
+       {
+        "value": "http",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "bytes",
+     "profile": {
+      "top": [
+       {
+        "value": "1536",
+        "count": 100
+       },
+       {
+        "value": "3072",
+        "count": 93
+       },
+       {
+        "value": "12288",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "bytes_in",
+     "profile": {
+      "top": [
+       {
+        "value": "1024",
+        "count": 100
+       },
+       {
+        "value": "2048",
+        "count": 93
+       },
+       {
+        "value": "4096",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "bytes_out",
+     "profile": {
+      "top": [
+       {
+        "value": "512",
+        "count": 100
+       },
+       {
+        "value": "1024",
+        "count": 93
+       },
+       {
+        "value": "8192",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "action",
+     "profile": {
+      "top": [
+       {
+        "value": "allowed",
+        "count": 100
+       },
+       {
+        "value": "blocked",
+        "count": 93
+       },
+       {
+        "value": "teardown",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "sensor_name",
+     "profile": {
+      "top": [
+       {
+        "value": "zeek-1",
+        "count": 100
+       },
+       {
+        "value": "zeek-2",
+        "count": 93
+       },
+       {
+        "value": "zeek-3",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "_path",
+     "profile": {
+      "top": [
+       {
+        "value": "conn",
+        "count": 100
+       },
+       {
+        "value": "conn",
+        "count": 93
+       },
+       {
+        "value": "conn",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "host",
+     "profile": {
+      "top": [
+       {
+        "value": "web-1.acme.internal",
+        "count": 60
+       },
+       {
+        "value": "web-2.acme.internal",
+        "count": 30
+       },
+       {
+        "value": "web-3.acme.internal",
+        "count": 10
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "source",
+     "profile": {
+      "top": [
+       {
+        "value": "/var/log/bro/conn.log",
+        "count": 100
+       },
+       {
+        "value": "/var/log/bro/conn.1.log",
+        "count": 10
+       },
+       {
+        "value": "/var/log/bro/conn.2.log",
+        "count": 5
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "sourcetype",
+     "profile": {
+      "top": [
+       {
+        "value": "bro:conn",
+        "count": 100
+       }
+      ],
+      "distinct": 1,
+      "fill": 1
+     }
+    },
+    {
+     "column": "index",
+     "profile": {
+      "top": [
+       {
+        "value": "main",
+        "count": 100
+       }
+      ],
+      "distinct": 1,
+      "fill": 1
+     }
+    }
+   ]
+  },
+  {
+   "platform": "splunk",
+   "container": "OktaIM2:log",
+   "note": "Okta System Log as its own add-on indexes it: dotted actor/client/outcome/target objects, nothing bound in any pack.",
+   "columns": [
+    {
+     "column": "uuid",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       },
+       {
+        "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "published",
+     "profile": {
+      "top": [
+       {
+        "value": "2026-09-18T10:00:00Z",
+        "count": 100
+       },
+       {
+        "value": "2026-09-18T10:00:01Z",
+        "count": 93
+       },
+       {
+        "value": "2026-09-18T10:00:02Z",
+        "count": 86
+       },
+       {
+        "value": "2026-09-18T10:00:03Z",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "eventType",
+     "profile": {
+      "top": [
+       {
+        "value": "user.session.start",
+        "count": 100
+       },
+       {
+        "value": "user.authentication.sso",
+        "count": 93
+       },
+       {
+        "value": "user.session.end",
+        "count": 86
+       },
+       {
+        "value": "policy.evaluate_sign_on",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "version",
+     "profile": {
+      "top": [
+       {
+        "value": "0",
+        "count": 100
+       },
+       {
+        "value": "0",
+        "count": 93
+       },
+       {
+        "value": "0",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "severity",
+     "profile": {
+      "top": [
+       {
+        "value": "INFO",
+        "count": 100
+       },
+       {
+        "value": "WARN",
+        "count": 93
+       },
+       {
+        "value": "INFO",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "displayMessage",
+     "profile": {
+      "top": [
+       {
+        "value": "User login to Okta",
+        "count": 100
+       },
+       {
+        "value": "User single sign on to app",
+        "count": 93
+       },
+       {
+        "value": "User logout from Okta",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "legacyEventType",
+     "profile": {
+      "top": [
+       {
+        "value": "core.user_auth.login_success",
+        "count": 100
+       },
+       {
+        "value": "app.auth.sso",
+        "count": 93
+       },
+       {
+        "value": "core.user_auth.logout_success",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "actor.id",
+     "profile": {
+      "top": [
+       {
+        "value": "00u1a2b3c4d5e6f7g8h9",
+        "count": 100
+       },
+       {
+        "value": "00u9h8g7f6e5d4c3b2a1",
+        "count": 93
+       },
+       {
+        "value": "00u1234567890abcdefg",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "actor.type",
+     "profile": {
+      "top": [
+       {
+        "value": "User",
+        "count": 100
+       },
+       {
+        "value": "User",
+        "count": 93
+       },
+       {
+        "value": "SystemPrincipal",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "actor.alternateId",
+     "profile": {
+      "top": [
+       {
+        "value": "jane.doe@acme.com",
+        "count": 100
+       },
+       {
+        "value": "alex.smith@acme.com",
+        "count": 93
+       },
+       {
+        "value": "bob.jones@acme.com",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "actor.displayName",
+     "profile": {
+      "top": [
+       {
+        "value": "Jane Doe",
+        "count": 100
+       },
+       {
+        "value": "Alex Smith",
+        "count": 93
+       },
+       {
+        "value": "Bob Jones",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "client.userAgent.rawUserAgent",
+     "profile": {
+      "top": [
+       {
+        "value": "Mozilla/5.0 (Windows NT 10.0)",
+        "count": 100
+       },
+       {
+        "value": "Mozilla/5.0 (Macintosh)",
+        "count": 93
+       },
+       {
+        "value": "okta-sdk-java/8.0",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "client.userAgent.os",
+     "profile": {
+      "top": [
+       {
+        "value": "Windows 10",
+        "count": 100
+       },
+       {
+        "value": "Mac OS X",
+        "count": 93
+       },
+       {
+        "value": "Unknown",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "client.userAgent.browser",
+     "profile": {
+      "top": [
+       {
+        "value": "CHROME",
+        "count": 100
+       },
+       {
+        "value": "SAFARI",
+        "count": 93
+       },
+       {
+        "value": "UNKNOWN",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "client.zone",
+     "profile": {
+      "top": [
+       {
+        "value": "null",
+        "count": 100
+       },
+       {
+        "value": "null",
+        "count": 93
+       },
+       {
+        "value": "null",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "client.device",
+     "profile": {
+      "top": [
+       {
+        "value": "Computer",
+        "count": 100
+       },
+       {
+        "value": "Computer",
+        "count": 93
+       },
+       {
+        "value": "Unknown",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "client.id",
+     "profile": {
+      "top": [
+       {
+        "value": "0oa1b2c3d4e5f6g7h8i9",
+        "count": 100
+       },
+       {
+        "value": "0oa9i8h7g6f5e4d3c2b1",
+        "count": 93
+       },
+       {
+        "value": "null",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "client.ipAddress",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "client.geographicalContext.city",
+     "profile": {
+      "top": [
+       {
+        "value": "Seattle",
+        "count": 100
+       },
+       {
+        "value": "Austin",
+        "count": 93
+       },
+       {
+        "value": "London",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "client.geographicalContext.country",
+     "profile": {
+      "top": [
+       {
+        "value": "United States",
+        "count": 100
+       },
+       {
+        "value": "United States",
+        "count": 93
+       },
+       {
+        "value": "United Kingdom",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "client.geographicalContext.state",
+     "profile": {
+      "top": [
+       {
+        "value": "Washington",
+        "count": 100
+       },
+       {
+        "value": "Texas",
+        "count": 93
+       },
+       {
+        "value": "England",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "client.geographicalContext.postalCode",
+     "profile": {
+      "top": [
+       {
+        "value": "98101",
+        "count": 100
+       },
+       {
+        "value": "73301",
+        "count": 93
+       },
+       {
+        "value": "SW1A",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "outcome.result",
+     "profile": {
+      "top": [
+       {
+        "value": "SUCCESS",
+        "count": 100
+       },
+       {
+        "value": "FAILURE",
+        "count": 93
+       },
+       {
+        "value": "SUCCESS",
+        "count": 86
+       },
+       {
+        "value": "SKIPPED",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "outcome.reason",
+     "profile": {
+      "top": [
+       {
+        "value": "",
+        "count": 100
+       },
+       {
+        "value": "INVALID_CREDENTIALS",
+        "count": 93
+       },
+       {
+        "value": "",
+        "count": 86
+       },
+       {
+        "value": "VERIFICATION_ERROR",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "target{}.id",
+     "profile": {
+      "top": [
+       {
+        "value": "0oa1b2c3d4e5f6g7h8i9",
+        "count": 100
+       },
+       {
+        "value": "00u1a2b3c4d5e6f7g8h9",
+        "count": 93
+       },
+       {
+        "value": "0oa9i8h7g6f5e4d3c2b1",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "target{}.type",
+     "profile": {
+      "top": [
+       {
+        "value": "AppInstance",
+        "count": 100
+       },
+       {
+        "value": "User",
+        "count": 93
+       },
+       {
+        "value": "AppUser",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "target{}.alternateId",
+     "profile": {
+      "top": [
+       {
+        "value": "Salesforce",
+        "count": 100
+       },
+       {
+        "value": "jane.doe@acme.com",
+        "count": 93
+       },
+       {
+        "value": "Slack",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "target{}.displayName",
+     "profile": {
+      "top": [
+       {
+        "value": "Salesforce",
+        "count": 100
+       },
+       {
+        "value": "Jane Doe",
+        "count": 93
+       },
+       {
+        "value": "Slack",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "transaction_type",
+     "profile": {
+      "top": [
+       {
+        "value": "WEB",
+        "count": 100
+       },
+       {
+        "value": "WEB",
+        "count": 93
+       },
+       {
+        "value": "JOB",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "transaction.id",
+     "profile": {
+      "top": [
+       {
+        "value": "Xa1b2c3d4e5f6g7h8i9j0",
+        "count": 100
+       },
+       {
+        "value": "Xb2c3d4e5f6g7h8i9j0k1",
+        "count": 93
+       },
+       {
+        "value": "Xc3d4e5f6g7h8i9j0k1l2",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "debugContext.debugData.requestUri",
+     "profile": {
+      "top": [
+       {
+        "value": "/api/v1/authn",
+        "count": 100
+       },
+       {
+        "value": "/app/salesforce/sso/saml",
+        "count": 93
+       },
+       {
+        "value": "/login/signout",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "debugContext.debugData.threatSuspected",
+     "profile": {
+      "top": [
+       {
+        "value": "false",
+        "count": 100
+       },
+       {
+        "value": "false",
+        "count": 93
+       },
+       {
+        "value": "true",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "debugContext.debugData.requestId",
+     "profile": {
+      "top": [
+       {
+        "value": "Xa1b2c3d4e5f6g7h8i9j0",
+        "count": 100
+       },
+       {
+        "value": "Xb2c3d4e5f6g7h8i9j0k1",
+        "count": 93
+       },
+       {
+        "value": "Xc3d4e5f6g7h8i9j0k1l2",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "authenticationContext.authenticationStep",
+     "profile": {
+      "top": [
+       {
+        "value": "0",
+        "count": 100
+       },
+       {
+        "value": "0",
+        "count": 93
+       },
+       {
+        "value": "0",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "authenticationContext.externalSessionId",
+     "profile": {
+      "top": [
+       {
+        "value": "102Xa1b2c3d4e5f6g7h8i",
+        "count": 100
+       },
+       {
+        "value": "102Xb2c3d4e5f6g7h8i9j",
+        "count": 93
+       },
+       {
+        "value": "102Xc3d4e5f6g7h8i9j0k",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "securityContext.asNumber",
+     "profile": {
+      "top": [
+       {
+        "value": "7922",
+        "count": 100
+       },
+       {
+        "value": "3356",
+        "count": 93
+       },
+       {
+        "value": "2856",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "securityContext.asOrg",
+     "profile": {
+      "top": [
+       {
+        "value": "comcast",
+        "count": 100
+       },
+       {
+        "value": "level 3",
+        "count": 93
+       },
+       {
+        "value": "bt",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "securityContext.isp",
+     "profile": {
+      "top": [
+       {
+        "value": "comcast",
+        "count": 100
+       },
+       {
+        "value": "level 3",
+        "count": 93
+       },
+       {
+        "value": "bt",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "securityContext.domain",
+     "profile": {
+      "top": [
+       {
+        "value": "comcast.net",
+        "count": 100
+       },
+       {
+        "value": "level3.net",
+        "count": 93
+       },
+       {
+        "value": "bt.com",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "securityContext.isProxy",
+     "profile": {
+      "top": [
+       {
+        "value": "false",
+        "count": 100
+       },
+       {
+        "value": "false",
+        "count": 93
+       },
+       {
+        "value": "true",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "user",
+     "profile": {
+      "top": [
+       {
+        "value": "jane.doe@acme.com",
+        "count": 100
+       },
+       {
+        "value": "alex.smith@acme.com",
+        "count": 93
+       },
+       {
+        "value": "bob.jones@acme.com",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "src_ip",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "src_user",
+     "profile": {
+      "top": [
+       {
+        "value": "jane.doe@acme.com",
+        "count": 100
+       },
+       {
+        "value": "alex.smith@acme.com",
+        "count": 93
+       },
+       {
+        "value": "bob.jones@acme.com",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "action",
+     "profile": {
+      "top": [
+       {
+        "value": "success",
+        "count": 100
+       },
+       {
+        "value": "failure",
+        "count": 93
+       },
+       {
+        "value": "success",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "app",
+     "profile": {
+      "top": [
+       {
+        "value": "Okta",
+        "count": 100
+       },
+       {
+        "value": "Salesforce",
+        "count": 93
+       },
+       {
+        "value": "Slack",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "dest",
+     "profile": {
+      "top": [
+       {
+        "value": "acme.okta.com",
+        "count": 100
+       },
+       {
+        "value": "acme.okta.com",
+        "count": 93
+       },
+       {
+        "value": "acme.okta.com",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "signature",
+     "profile": {
+      "top": [
+       {
+        "value": "User login to Okta",
+        "count": 100
+       },
+       {
+        "value": "User single sign on to app",
+        "count": 93
+       },
+       {
+        "value": "User logout from Okta",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "result",
+     "profile": {
+      "top": [
+       {
+        "value": "SUCCESS",
+        "count": 100
+       },
+       {
+        "value": "FAILURE",
+        "count": 93
+       },
+       {
+        "value": "SUCCESS",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "reason",
+     "profile": {
+      "top": [
+       {
+        "value": "",
+        "count": 100
+       },
+       {
+        "value": "INVALID_CREDENTIALS",
+        "count": 93
+       },
+       {
+        "value": "",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "host",
+     "profile": {
+      "top": [
+       {
+        "value": "web-1.acme.internal",
+        "count": 60
+       },
+       {
+        "value": "web-2.acme.internal",
+        "count": 30
+       },
+       {
+        "value": "web-3.acme.internal",
+        "count": 10
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "source",
+     "profile": {
+      "top": [
+       {
+        "value": "/var/log/OktaIM2/log.log",
+        "count": 100
+       },
+       {
+        "value": "/var/log/OktaIM2/log.1.log",
+        "count": 10
+       },
+       {
+        "value": "/var/log/OktaIM2/log.2.log",
+        "count": 5
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "sourcetype",
+     "profile": {
+      "top": [
+       {
+        "value": "OktaIM2:log",
+        "count": 100
+       }
+      ],
+      "distinct": 1,
+      "fill": 1
+     }
+    },
+    {
+     "column": "index",
+     "profile": {
+      "top": [
+       {
+        "value": "main",
+        "count": 100
+       }
+      ],
+      "distinct": 1,
+      "fill": 1
+     }
+    }
+   ]
+  },
+  {
+   "platform": "sentinel",
+   "container": "SecurityEvent",
+   "note": "Windows Security 4624/4625 in Sentinel's SecurityEvent table: EventID, Computer, Account, SIDs, logon ids, the Sentinel system columns.",
+   "columns": [
+    {
+     "column": "TimeGenerated",
+     "profile": {
+      "top": [
+       {
+        "value": "2026-09-18T10:00:00Z",
+        "count": 100
+       },
+       {
+        "value": "2026-09-18T10:00:01Z",
+        "count": 93
+       },
+       {
+        "value": "2026-09-18T10:00:02Z",
+        "count": 86
+       },
+       {
+        "value": "2026-09-18T10:00:03Z",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Account",
+     "profile": {
+      "top": [
+       {
+        "value": "CORP\\jdoe",
+        "count": 100
+       },
+       {
+        "value": "CORP\\asmith",
+        "count": 93
+       },
+       {
+        "value": "NT AUTHORITY\\SYSTEM",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "AccountType",
+     "profile": {
+      "top": [
+       {
+        "value": "User",
+        "count": 100
+       },
+       {
+        "value": "User",
+        "count": 93
+       },
+       {
+        "value": "Machine",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Computer",
+     "profile": {
+      "top": [
+       {
+        "value": "WIN-DC01.corp.acme.com",
+        "count": 100
+       },
+       {
+        "value": "WIN-WS01.corp.acme.com",
+        "count": 93
+       },
+       {
+        "value": "WIN-SRV02.corp.acme.com",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "EventSourceName",
+     "profile": {
+      "top": [
+       {
+        "value": "Microsoft-Windows-Security-Auditing",
+        "count": 100
+       },
+       {
+        "value": "Microsoft-Windows-Security-Auditing",
+        "count": 93
+       },
+       {
+        "value": "Microsoft-Windows-Security-Auditing",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Channel",
+     "profile": {
+      "top": [
+       {
+        "value": "Security",
+        "count": 100
+       },
+       {
+        "value": "Security",
+        "count": 93
+       },
+       {
+        "value": "Security",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Task",
+     "profile": {
+      "top": [
+       {
+        "value": "12544",
+        "count": 100
+       },
+       {
+        "value": "12544",
+        "count": 93
+       },
+       {
+        "value": "12544",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "Level",
+     "profile": {
+      "top": [
+       {
+        "value": "8",
+        "count": 100
+       },
+       {
+        "value": "8",
+        "count": 93
+       },
+       {
+        "value": "8",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "EventData",
+     "profile": {
+      "top": [
+       {
+        "value": "<EventData xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><Data Name=\"SubjectUserSid\">S-1-5-18</Data><Data Name=\"SubjectUserName\">WIN-DC01$</Data>",
+        "count": 100
+       },
+       {
+        "value": "<EventData xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><Data Name=\"SubjectUserSid\">S-1-5-21-1</Data>",
+        "count": 93
+       },
+       {
+        "value": "<EventData><Data>x</Data></EventData>",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "EventID",
+     "profile": {
+      "top": [
+       {
+        "value": "4624",
+        "count": 100
+       },
+       {
+        "value": "4625",
+        "count": 93
+       },
+       {
+        "value": "4634",
+        "count": 86
+       },
+       {
+        "value": "4672",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "Activity",
+     "profile": {
+      "top": [
+       {
+        "value": "4624 - An account was successfully logged on.",
+        "count": 100
+       },
+       {
+        "value": "4625 - An account failed to log on.",
+        "count": 93
+       },
+       {
+        "value": "4634 - An account was logged off.",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "SubjectUserSid",
+     "profile": {
+      "top": [
+       {
+        "value": "S-1-5-18",
+        "count": 100
+       },
+       {
+        "value": "S-1-5-21-3623811015-3361044348-30300820-1013",
+        "count": 93
+       },
+       {
+        "value": "S-1-5-21-3623811015-3361044348-30300820-1014",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "SubjectUserName",
+     "profile": {
+      "top": [
+       {
+        "value": "WIN-DC01$",
+        "count": 100
+       },
+       {
+        "value": "jdoe",
+        "count": 93
+       },
+       {
+        "value": "asmith",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "SubjectDomainName",
+     "profile": {
+      "top": [
+       {
+        "value": "CORP",
+        "count": 100
+       },
+       {
+        "value": "CORP",
+        "count": 93
+       },
+       {
+        "value": "CORP",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "SubjectLogonId",
+     "profile": {
+      "top": [
+       {
+        "value": "0x3e7",
+        "count": 100
+       },
+       {
+        "value": "0x1a2b3c",
+        "count": 93
+       },
+       {
+        "value": "0x2b3c4d",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "TargetUserSid",
+     "profile": {
+      "top": [
+       {
+        "value": "S-1-5-21-3623811015-3361044348-30300820-1013",
+        "count": 100
+       },
+       {
+        "value": "S-1-5-21-3623811015-3361044348-30300820-1014",
+        "count": 93
+       },
+       {
+        "value": "S-1-5-18",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "TargetUserName",
+     "profile": {
+      "top": [
+       {
+        "value": "jdoe",
+        "count": 100
+       },
+       {
+        "value": "asmith",
+        "count": 93
+       },
+       {
+        "value": "SYSTEM",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "TargetDomainName",
+     "profile": {
+      "top": [
+       {
+        "value": "CORP",
+        "count": 100
+       },
+       {
+        "value": "CORP",
+        "count": 93
+       },
+       {
+        "value": "NT AUTHORITY",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "TargetLogonId",
+     "profile": {
+      "top": [
+       {
+        "value": "0x1a2b3c",
+        "count": 100
+       },
+       {
+        "value": "0x2b3c4d",
+        "count": 93
+       },
+       {
+        "value": "0x3e7",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "LogonType",
+     "profile": {
+      "top": [
+       {
+        "value": "3",
+        "count": 100
+       },
+       {
+        "value": "10",
+        "count": 93
+       },
+       {
+        "value": "2",
+        "count": 86
+       },
+       {
+        "value": "5",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "LogonProcessName",
+     "profile": {
+      "top": [
+       {
+        "value": "Kerberos",
+        "count": 100
+       },
+       {
+        "value": "User32",
+        "count": 93
+       },
+       {
+        "value": "Advapi",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "AuthenticationPackageName",
+     "profile": {
+      "top": [
+       {
+        "value": "Kerberos",
+        "count": 100
+       },
+       {
+        "value": "Negotiate",
+        "count": 93
+       },
+       {
+        "value": "NTLM",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "WorkstationName",
+     "profile": {
+      "top": [
+       {
+        "value": "WIN-WS01",
+        "count": 100
+       },
+       {
+        "value": "WIN-WS02",
+        "count": 93
+       },
+       {
+        "value": "-",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "LogonGuid",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       },
+       {
+        "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "TransmittedServices",
+     "profile": {
+      "top": [
+       {
+        "value": "-",
+        "count": 100
+       },
+       {
+        "value": "-",
+        "count": 93
+       },
+       {
+        "value": "-",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "LmPackageName",
+     "profile": {
+      "top": [
+       {
+        "value": "-",
+        "count": 100
+       },
+       {
+        "value": "NTLM V2",
+        "count": 93
+       },
+       {
+        "value": "-",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "KeyLength",
+     "profile": {
+      "top": [
+       {
+        "value": "0",
+        "count": 100
+       },
+       {
+        "value": "128",
+        "count": 93
+       },
+       {
+        "value": "0",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "ProcessId",
+     "profile": {
+      "top": [
+       {
+        "value": "0x0",
+        "count": 100
+       },
+       {
+        "value": "0x3a4",
+        "count": 93
+       },
+       {
+        "value": "0x1f0",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ProcessName",
+     "profile": {
+      "top": [
+       {
+        "value": "-",
+        "count": 100
+       },
+       {
+        "value": "C:\\Windows\\System32\\svchost.exe",
+        "count": 93
+       },
+       {
+        "value": "C:\\Windows\\System32\\lsass.exe",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "IpAddress",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.9",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.10",
+        "count": 93
+       },
+       {
+        "value": "-",
+        "count": 86
+       },
+       {
+        "value": "::1",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "IpPort",
+     "profile": {
+      "top": [
+       {
+        "value": "51231",
+        "count": 100
+       },
+       {
+        "value": "0",
+        "count": 93
+       },
+       {
+        "value": "-",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ImpersonationLevel",
+     "profile": {
+      "top": [
+       {
+        "value": "%%1833",
+        "count": 100
+       },
+       {
+        "value": "%%1832",
+        "count": 93
+       },
+       {
+        "value": "%%1833",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "RestrictedAdminMode",
+     "profile": {
+      "top": [
+       {
+        "value": "-",
+        "count": 100
+       },
+       {
+        "value": "-",
+        "count": 93
+       },
+       {
+        "value": "-",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "TargetOutboundUserName",
+     "profile": {
+      "top": [
+       {
+        "value": "-",
+        "count": 100
+       },
+       {
+        "value": "-",
+        "count": 93
+       },
+       {
+        "value": "-",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "TargetOutboundDomainName",
+     "profile": {
+      "top": [
+       {
+        "value": "-",
+        "count": 100
+       },
+       {
+        "value": "-",
+        "count": 93
+       },
+       {
+        "value": "-",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "VirtualAccount",
+     "profile": {
+      "top": [
+       {
+        "value": "%%1843",
+        "count": 100
+       },
+       {
+        "value": "%%1843",
+        "count": 93
+       },
+       {
+        "value": "%%1843",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "TargetLinkedLogonId",
+     "profile": {
+      "top": [
+       {
+        "value": "0x0",
+        "count": 100
+       },
+       {
+        "value": "0x1a2b3d",
+        "count": 93
+       },
+       {
+        "value": "0x0",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ElevatedToken",
+     "profile": {
+      "top": [
+       {
+        "value": "%%1842",
+        "count": 100
+       },
+       {
+        "value": "%%1843",
+        "count": 93
+       },
+       {
+        "value": "%%1842",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "SourceComputerId",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       },
+       {
+        "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "EventOriginId",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       },
+       {
+        "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "MG",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       },
+       {
+        "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ManagementGroupName",
+     "profile": {
+      "top": [
+       {
+        "value": "AOI-1",
+        "count": 100
+       },
+       {
+        "value": "AOI-1",
+        "count": 93
+       },
+       {
+        "value": "AOI-1",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "SourceSystem",
+     "profile": {
+      "top": [
+       {
+        "value": "OpsManager",
+        "count": 100
+       },
+       {
+        "value": "OpsManager",
+        "count": 93
+       },
+       {
+        "value": "OpsManager",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "TenantId",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       },
+       {
+        "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Type",
+     "profile": {
+      "top": [
+       {
+        "value": "SecurityEvent",
+        "count": 100
+       },
+       {
+        "value": "SecurityEvent",
+        "count": 93
+       },
+       {
+        "value": "SecurityEvent",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "_ResourceId",
+     "profile": {
+      "top": [
+       {
+        "value": "/subscriptions/1/resourcegroups/rg/providers/microsoft.compute/virtualmachines/win-dc01",
+        "count": 100
+       },
+       {
+        "value": "/subscriptions/1/resourcegroups/rg/providers/microsoft.compute/virtualmachines/win-ws01",
+        "count": 93
+       },
+       {
+        "value": "/subscriptions/1/x",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    }
+   ]
+  },
+  {
+   "platform": "sentinel",
+   "container": "AuditLogs",
+   "note": "Entra's own audit table, not the sign-in log the entra-signin pack knows: same tenant, same Azure common schema, a different feed. InitiatedBy and TargetResources are dynamic.",
+   "columns": [
+    {
+     "column": "TimeGenerated",
+     "profile": {
+      "top": [
+       {
+        "value": "2026-09-18T10:00:00Z",
+        "count": 100
+       },
+       {
+        "value": "2026-09-18T10:00:01Z",
+        "count": 93
+       },
+       {
+        "value": "2026-09-18T10:00:02Z",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "TenantId",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "SourceSystem",
+     "profile": {
+      "top": [
+       {
+        "value": "Azure AD",
+        "count": 100
+       },
+       {
+        "value": "Azure AD",
+        "count": 93
+       },
+       {
+        "value": "Azure AD",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Type",
+     "profile": {
+      "top": [
+       {
+        "value": "AuditLogs",
+        "count": 100
+       },
+       {
+        "value": "AuditLogs",
+        "count": 93
+       },
+       {
+        "value": "AuditLogs",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "_ResourceId",
+     "profile": {
+      "top": [
+       {
+        "value": "/tenants/1/providers/microsoft.aadiam",
+        "count": 100
+       },
+       {
+        "value": "/tenants/1/providers/microsoft.aadiam",
+        "count": 93
+       },
+       {
+        "value": "/tenants/1/providers/microsoft.aadiam",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ResourceId",
+     "profile": {
+      "top": [
+       {
+        "value": "/tenants/1/providers/Microsoft.aadiam",
+        "count": 100
+       },
+       {
+        "value": "/tenants/1/providers/Microsoft.aadiam",
+        "count": 93
+       },
+       {
+        "value": "/tenants/1/providers/Microsoft.aadiam",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "OperationName",
+     "profile": {
+      "top": [
+       {
+        "value": "Add user",
+        "count": 100
+       },
+       {
+        "value": "Update user",
+        "count": 93
+       },
+       {
+        "value": "Add member to group",
+        "count": 86
+       },
+       {
+        "value": "Reset user password",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "OperationVersion",
+     "profile": {
+      "top": [
+       {
+        "value": "1.0",
+        "count": 100
+       },
+       {
+        "value": "1.0",
+        "count": 93
+       },
+       {
+        "value": "1.0",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Category",
+     "profile": {
+      "top": [
+       {
+        "value": "UserManagement",
+        "count": 100
+       },
+       {
+        "value": "GroupManagement",
+        "count": 93
+       },
+       {
+        "value": "UserManagement",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ResultType",
+     "profile": {
+      "top": [
+       {
+        "value": "",
+        "count": 100
+       },
+       {
+        "value": "",
+        "count": 93
+       },
+       {
+        "value": "",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ResultSignature",
+     "profile": {
+      "top": [
+       {
+        "value": "None",
+        "count": 100
+       },
+       {
+        "value": "None",
+        "count": 93
+       },
+       {
+        "value": "None",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ResultDescription",
+     "profile": {
+      "top": [
+       {
+        "value": "",
+        "count": 100
+       },
+       {
+        "value": "",
+        "count": 93
+       },
+       {
+        "value": "Microsoft.Online.Workflows.ValidationException",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Result",
+     "profile": {
+      "top": [
+       {
+        "value": "success",
+        "count": 100
+       },
+       {
+        "value": "success",
+        "count": 93
+       },
+       {
+        "value": "failure",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ResultReason",
+     "profile": {
+      "top": [
+       {
+        "value": "",
+        "count": 100
+       },
+       {
+        "value": "",
+        "count": 93
+       },
+       {
+        "value": "Invalid value",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "DurationMs",
+     "profile": {
+      "top": [
+       {
+        "value": "0",
+        "count": 100
+       },
+       {
+        "value": "0",
+        "count": 93
+       },
+       {
+        "value": "0",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "CorrelationId",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Resource",
+     "profile": {
+      "top": [
+       {
+        "value": "Microsoft.aadiam",
+        "count": 100
+       },
+       {
+        "value": "Microsoft.aadiam",
+        "count": 93
+       },
+       {
+        "value": "Microsoft.aadiam",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ResourceGroup",
+     "profile": {
+      "top": [
+       {
+        "value": "Microsoft.aadiam",
+        "count": 100
+       },
+       {
+        "value": "Microsoft.aadiam",
+        "count": 93
+       },
+       {
+        "value": "Microsoft.aadiam",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ResourceProvider",
+     "profile": {
+      "top": [
+       {
+        "value": "",
+        "count": 100
+       },
+       {
+        "value": "",
+        "count": 93
+       },
+       {
+        "value": "",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Identity",
+     "profile": {
+      "top": [
+       {
+        "value": "Jane Doe",
+        "count": 100
+       },
+       {
+        "value": "Microsoft Approval Management",
+        "count": 93
+       },
+       {
+        "value": "Alex Smith",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Level",
+     "profile": {
+      "top": [
+       {
+        "value": "4",
+        "count": 100
+       },
+       {
+        "value": "4",
+        "count": 93
+       },
+       {
+        "value": "4",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Location",
+     "profile": {
+      "top": [
+       {
+        "value": "",
+        "count": 100
+       },
+       {
+        "value": "",
+        "count": 93
+       },
+       {
+        "value": "",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "AADTenantId",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "AADOperationType",
+     "profile": {
+      "top": [
+       {
+        "value": "Add",
+        "count": 100
+       },
+       {
+        "value": "Update",
+        "count": 93
+       },
+       {
+        "value": "Assign",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "LoggedByService",
+     "profile": {
+      "top": [
+       {
+        "value": "Core Directory",
+        "count": 100
+       },
+       {
+        "value": "Core Directory",
+        "count": 93
+       },
+       {
+        "value": "Self-service Password Management",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Id",
+     "profile": {
+      "top": [
+       {
+        "value": "Directory_a1b2c3",
+        "count": 100
+       },
+       {
+        "value": "Directory_d4e5f6",
+        "count": 93
+       },
+       {
+        "value": "SSPR_g7h8i9",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ActivityDateTime",
+     "profile": {
+      "top": [
+       {
+        "value": "2026-09-18T10:00:00Z",
+        "count": 100
+       },
+       {
+        "value": "2026-09-18T10:00:01Z",
+        "count": 93
+       },
+       {
+        "value": "2026-09-18T10:00:02Z",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ActivityDisplayName",
+     "profile": {
+      "top": [
+       {
+        "value": "Add user",
+        "count": 100
+       },
+       {
+        "value": "Update user",
+        "count": 93
+       },
+       {
+        "value": "Add member to group",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "InitiatedBy",
+     "profile": {
+      "top": [
+       {
+        "value": "{\"user\":{\"id\":\"550e8400-e29b-41d4-a716-446655440000\",\"userPrincipalName\":\"jane.doe@contoso.com\"}}",
+        "count": 100
+       },
+       {
+        "value": "{\"app\":{\"displayName\":\"Microsoft Approval Management\"}}",
+        "count": 93
+       },
+       {
+        "value": "{\"user\":{\"id\":\"6ba7b810-9dad-11d1-80b4-00c04fd430c8\"}}",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "type": "dynamic"
+     }
+    },
+    {
+     "column": "TargetResources",
+     "profile": {
+      "top": [
+       {
+        "value": "[{\"id\":\"6ba7b811-9dad-11d1-80b4-00c04fd430c8\",\"type\":\"User\",\"userPrincipalName\":\"bob@contoso.com\"}]",
+        "count": 100
+       },
+       {
+        "value": "[{\"id\":\"6ba7b812-9dad-11d1-80b4-00c04fd430c8\",\"type\":\"Group\"}]",
+        "count": 93
+       },
+       {
+        "value": "[{\"type\":\"User\"}]",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "type": "dynamic"
+     }
+    },
+    {
+     "column": "AdditionalDetails",
+     "profile": {
+      "top": [
+       {
+        "value": "[{\"key\":\"User-Agent\",\"value\":\"Mozilla/5.0\"}]",
+        "count": 100
+       },
+       {
+        "value": "[]",
+        "count": 93
+       },
+       {
+        "value": "[{\"key\":\"Category\",\"value\":\"UserManagement\"}]",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "type": "dynamic"
+     }
+    }
+   ]
+  },
+  {
+   "platform": "sentinel",
+   "container": "AzureActivity",
+   "note": "Azure Activity log: the Azure Monitor common schema (OperationName, CorrelationId, CallerIpAddress, Level, Category, Properties) that every diagnostics table shares with SigninLogs.",
+   "columns": [
+    {
+     "column": "TimeGenerated",
+     "profile": {
+      "top": [
+       {
+        "value": "2026-09-18T10:00:00Z",
+        "count": 100
+       },
+       {
+        "value": "2026-09-18T10:00:01Z",
+        "count": 93
+       },
+       {
+        "value": "2026-09-18T10:00:02Z",
+        "count": 86
+       },
+       {
+        "value": "2026-09-18T10:00:03Z",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ResourceId",
+     "profile": {
+      "top": [
+       {
+        "value": "/SUBSCRIPTIONS/1/RESOURCEGROUPS/RG/PROVIDERS/MICROSOFT.COMPUTE/VIRTUALMACHINES/VM1",
+        "count": 100
+       },
+       {
+        "value": "/SUBSCRIPTIONS/1/RESOURCEGROUPS/RG/PROVIDERS/MICROSOFT.STORAGE/STORAGEACCOUNTS/SA1",
+        "count": 93
+       },
+       {
+        "value": "/SUBSCRIPTIONS/1/RESOURCEGROUPS/RG2/PROVIDERS/MICROSOFT.NETWORK/NSG/NSG1",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "OperationName",
+     "profile": {
+      "top": [
+       {
+        "value": "Microsoft.Compute/virtualMachines/start/action",
+        "count": 100
+       },
+       {
+        "value": "Microsoft.Storage/storageAccounts/listKeys/action",
+        "count": 93
+       },
+       {
+        "value": "Microsoft.Network/networkSecurityGroups/write",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "OperationNameValue",
+     "profile": {
+      "top": [
+       {
+        "value": "MICROSOFT.COMPUTE/VIRTUALMACHINES/START/ACTION",
+        "count": 100
+       },
+       {
+        "value": "MICROSOFT.STORAGE/STORAGEACCOUNTS/LISTKEYS/ACTION",
+        "count": 93
+       },
+       {
+        "value": "MICROSOFT.NETWORK/NETWORKSECURITYGROUPS/WRITE",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Level",
+     "profile": {
+      "top": [
+       {
+        "value": "Informational",
+        "count": 100
+       },
+       {
+        "value": "Informational",
+        "count": 93
+       },
+       {
+        "value": "Warning",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ActivityStatus",
+     "profile": {
+      "top": [
+       {
+        "value": "Started",
+        "count": 100
+       },
+       {
+        "value": "Succeeded",
+        "count": 93
+       },
+       {
+        "value": "Failed",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ActivityStatusValue",
+     "profile": {
+      "top": [
+       {
+        "value": "Start",
+        "count": 100
+       },
+       {
+        "value": "Success",
+        "count": 93
+       },
+       {
+        "value": "Failure",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ActivitySubstatus",
+     "profile": {
+      "top": [
+       {
+        "value": "",
+        "count": 100
+       },
+       {
+        "value": "OK",
+        "count": 93
+       },
+       {
+        "value": "BadRequest",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ActivitySubstatusValue",
+     "profile": {
+      "top": [
+       {
+        "value": "",
+        "count": 100
+       },
+       {
+        "value": "OK",
+        "count": 93
+       },
+       {
+        "value": "BadRequest",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ResourceGroup",
+     "profile": {
+      "top": [
+       {
+        "value": "RG",
+        "count": 100
+       },
+       {
+        "value": "RG",
+        "count": 93
+       },
+       {
+        "value": "RG2",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "SubscriptionId",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       },
+       {
+        "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "CorrelationId",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       },
+       {
+        "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Caller",
+     "profile": {
+      "top": [
+       {
+        "value": "jane.doe@acme.com",
+        "count": 100
+       },
+       {
+        "value": "alex.smith@acme.com",
+        "count": 93
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "CallerIpAddress",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Category",
+     "profile": {
+      "top": [
+       {
+        "value": "Administrative",
+        "count": 100
+       },
+       {
+        "value": "Administrative",
+        "count": 93
+       },
+       {
+        "value": "Security",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "HTTPRequest",
+     "profile": {
+      "top": [
+       {
+        "value": "{\"clientRequestId\":\"a\",\"clientIpAddress\":\"10.0.0.5\",\"method\":\"POST\"}",
+        "count": 100
+       },
+       {
+        "value": "{\"clientRequestId\":\"b\",\"clientIpAddress\":\"10.0.0.6\",\"method\":\"POST\"}",
+        "count": 93
+       },
+       {
+        "value": "{\"method\":\"PUT\"}",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Properties",
+     "profile": {
+      "top": [
+       {
+        "value": "{\"eventCategory\":\"Administrative\",\"entity\":\"/subscriptions/1\",\"message\":\"Microsoft.Compute/virtualMachines/start/action\"}",
+        "count": 100
+       },
+       {
+        "value": "{\"eventCategory\":\"Administrative\",\"entity\":\"/subscriptions/1/x\"}",
+        "count": 93
+       },
+       {
+        "value": "{\"statusCode\":\"BadRequest\"}",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Properties_d",
+     "profile": {
+      "top": [
+       {
+        "value": "{\"eventCategory\":\"Administrative\"}",
+        "count": 100
+       },
+       {
+        "value": "{\"eventCategory\":\"Security\"}",
+        "count": 93
+       },
+       {
+        "value": "{\"x\":1}",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "type": "dynamic"
+     }
+    },
+    {
+     "column": "Authorization",
+     "profile": {
+      "top": [
+       {
+        "value": "{\"action\":\"Microsoft.Compute/virtualMachines/start/action\",\"scope\":\"/subscriptions/1\"}",
+        "count": 100
+       },
+       {
+        "value": "{\"action\":\"Microsoft.Storage/storageAccounts/listKeys/action\"}",
+        "count": 93
+       },
+       {
+        "value": "{\"action\":\"x\"}",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Authorization_d",
+     "profile": {
+      "top": [
+       {
+        "value": "{\"action\":\"a\"}",
+        "count": 100
+       },
+       {
+        "value": "{\"action\":\"b\"}",
+        "count": 93
+       },
+       {
+        "value": "{\"action\":\"c\"}",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "type": "dynamic"
+     }
+    },
+    {
+     "column": "Claims",
+     "profile": {
+      "top": [
+       {
+        "value": "{\"aud\":\"https://management.core.windows.net/\",\"iss\":\"https://sts.windows.net/1/\",\"name\":\"Jane Doe\"}",
+        "count": 100
+       },
+       {
+        "value": "{\"aud\":\"x\"}",
+        "count": 93
+       },
+       {
+        "value": "{\"aud\":\"y\"}",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Claims_d",
+     "profile": {
+      "top": [
+       {
+        "value": "{\"aud\":\"a\"}",
+        "count": 100
+       },
+       {
+        "value": "{\"aud\":\"b\"}",
+        "count": 93
+       },
+       {
+        "value": "{\"aud\":\"c\"}",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "type": "dynamic"
+     }
+    },
+    {
+     "column": "EventSubmissionTimestamp",
+     "profile": {
+      "top": [
+       {
+        "value": "2026-09-18T10:00:00Z",
+        "count": 100
+       },
+       {
+        "value": "2026-09-18T10:00:01Z",
+        "count": 93
+       },
+       {
+        "value": "2026-09-18T10:00:02Z",
+        "count": 86
+       },
+       {
+        "value": "2026-09-18T10:00:03Z",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "EventDataId",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       },
+       {
+        "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "OperationId",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       },
+       {
+        "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ResourceProvider",
+     "profile": {
+      "top": [
+       {
+        "value": "Microsoft.Compute",
+        "count": 100
+       },
+       {
+        "value": "Microsoft.Storage",
+        "count": 93
+       },
+       {
+        "value": "Microsoft.Network",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ResourceProviderValue",
+     "profile": {
+      "top": [
+       {
+        "value": "MICROSOFT.COMPUTE",
+        "count": 100
+       },
+       {
+        "value": "MICROSOFT.STORAGE",
+        "count": 93
+       },
+       {
+        "value": "MICROSOFT.NETWORK",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "_ResourceId",
+     "profile": {
+      "top": [
+       {
+        "value": "/subscriptions/1/resourcegroups/rg/providers/microsoft.compute/virtualmachines/vm1",
+        "count": 100
+       },
+       {
+        "value": "/subscriptions/1/x",
+        "count": 93
+       },
+       {
+        "value": "/subscriptions/1/y",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Resource",
+     "profile": {
+      "top": [
+       {
+        "value": "VM1",
+        "count": 100
+       },
+       {
+        "value": "SA1",
+        "count": 93
+       },
+       {
+        "value": "NSG1",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ResourceProviderName",
+     "profile": {
+      "top": [
+       {
+        "value": "Microsoft.Compute",
+        "count": 100
+       },
+       {
+        "value": "Microsoft.Storage",
+        "count": 93
+       },
+       {
+        "value": "Microsoft.Network",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "SourceSystem",
+     "profile": {
+      "top": [
+       {
+        "value": "Azure",
+        "count": 100
+       },
+       {
+        "value": "Azure",
+        "count": 93
+       },
+       {
+        "value": "Azure",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Type",
+     "profile": {
+      "top": [
+       {
+        "value": "AzureActivity",
+        "count": 100
+       },
+       {
+        "value": "AzureActivity",
+        "count": 93
+       },
+       {
+        "value": "AzureActivity",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "TenantId",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       },
+       {
+        "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "Hostname",
+     "profile": {
+      "top": [
+       {
+        "value": "",
+        "count": 100
+       },
+       {
+        "value": "",
+        "count": 93
+       },
+       {
+        "value": "",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "CategoryValue",
+     "profile": {
+      "top": [
+       {
+        "value": "Administrative",
+        "count": 100
+       },
+       {
+        "value": "Administrative",
+        "count": 93
+       },
+       {
+        "value": "Security",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "_SubscriptionId",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       },
+       {
+        "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    }
+   ]
+  },
+  {
+   "platform": "splunk",
+   "container": "aws:cloudwatch:guardduty",
+   "note": "A GuardDuty finding as Splunk_TA_aws flattens it: accountId, arn, region, resource.* and service.* paths, plus the CIM fields (src_ip, user, signature, category, vendor_account) the add-on stamps on every AWS sourcetype.",
+   "columns": [
+    {
+     "column": "id",
+     "profile": {
+      "top": [
+       {
+        "value": "1ab2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+        "count": 100
+       },
+       {
+        "value": "2ab2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+        "count": 93
+       },
+       {
+        "value": "3ab2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "accountId",
+     "profile": {
+      "top": [
+       {
+        "value": "123456789012",
+        "count": 100
+       },
+       {
+        "value": "123456789012",
+        "count": 93
+       },
+       {
+        "value": "210987654321",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "region",
+     "profile": {
+      "top": [
+       {
+        "value": "us-east-1",
+        "count": 100
+       },
+       {
+        "value": "us-west-2",
+        "count": 93
+       },
+       {
+        "value": "eu-west-1",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "partition",
+     "profile": {
+      "top": [
+       {
+        "value": "aws",
+        "count": 100
+       },
+       {
+        "value": "aws",
+        "count": 93
+       },
+       {
+        "value": "aws",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "arn",
+     "profile": {
+      "top": [
+       {
+        "value": "arn:aws:guardduty:us-east-1:123456789012:detector/abc/finding/1ab2c3d4",
+        "count": 100
+       },
+       {
+        "value": "arn:aws:guardduty:us-west-2:123456789012:detector/abc/finding/2ab2c3d4",
+        "count": 93
+       },
+       {
+        "value": "arn:aws:guardduty:eu-west-1:210987654321:detector/def/finding/3ab2c3d4",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "type",
+     "profile": {
+      "top": [
+       {
+        "value": "UnauthorizedAccess:IAMUser/ConsoleLoginSuccess.B",
+        "count": 100
+       },
+       {
+        "value": "Recon:EC2/PortProbeUnprotectedPort",
+        "count": 93
+       },
+       {
+        "value": "CredentialAccess:IAMUser/AnomalousBehavior",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "schemaVersion",
+     "profile": {
+      "top": [
+       {
+        "value": "2.0",
+        "count": 100
+       },
+       {
+        "value": "2.0",
+        "count": 93
+       },
+       {
+        "value": "2.0",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "severity",
+     "profile": {
+      "top": [
+       {
+        "value": "2",
+        "count": 100
+       },
+       {
+        "value": "5",
+        "count": 93
+       },
+       {
+        "value": "8",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "title",
+     "profile": {
+      "top": [
+       {
+        "value": "Console login success from new geolocation",
+        "count": 100
+       },
+       {
+        "value": "Unprotected port on EC2 instance i-1 is being probed.",
+        "count": 93
+       },
+       {
+        "value": "Anomalous API credential access",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "description",
+     "profile": {
+      "top": [
+       {
+        "value": "A user login was seen from a new location",
+        "count": 100
+       },
+       {
+        "value": "EC2 instance has an unprotected port",
+        "count": 93
+       },
+       {
+        "value": "Credentials were used anomalously",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "createdAt",
+     "profile": {
+      "top": [
+       {
+        "value": "2026-09-18T10:00:00Z",
+        "count": 100
+       },
+       {
+        "value": "2026-09-18T10:00:01Z",
+        "count": 93
+       },
+       {
+        "value": "2026-09-18T10:00:02Z",
+        "count": 86
+       },
+       {
+        "value": "2026-09-18T10:00:03Z",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "updatedAt",
+     "profile": {
+      "top": [
+       {
+        "value": "2026-09-18T10:00:00Z",
+        "count": 100
+       },
+       {
+        "value": "2026-09-18T10:00:01Z",
+        "count": 93
+       },
+       {
+        "value": "2026-09-18T10:00:02Z",
+        "count": 86
+       },
+       {
+        "value": "2026-09-18T10:00:03Z",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "confidence",
+     "profile": {
+      "top": [
+       {
+        "value": "0",
+        "count": 100
+       },
+       {
+        "value": "5",
+        "count": 93
+       },
+       {
+        "value": "8",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "service.action.actionType",
+     "profile": {
+      "top": [
+       {
+        "value": "AWS_API_CALL",
+        "count": 100
+       },
+       {
+        "value": "PORT_PROBE",
+        "count": 93
+       },
+       {
+        "value": "AWS_API_CALL",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service.action.awsApiCallAction.api",
+     "profile": {
+      "top": [
+       {
+        "value": "ConsoleLogin",
+        "count": 100
+       },
+       {
+        "value": "GetCallerIdentity",
+        "count": 93
+       },
+       {
+        "value": "ListBuckets",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service.action.awsApiCallAction.serviceName",
+     "profile": {
+      "top": [
+       {
+        "value": "signin.amazonaws.com",
+        "count": 100
+       },
+       {
+        "value": "sts.amazonaws.com",
+        "count": 93
+       },
+       {
+        "value": "s3.amazonaws.com",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service.action.awsApiCallAction.callerType",
+     "profile": {
+      "top": [
+       {
+        "value": "Remote IP",
+        "count": 100
+       },
+       {
+        "value": "Remote IP",
+        "count": 93
+       },
+       {
+        "value": "Remote IP",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service.action.awsApiCallAction.remoteIpDetails.ipAddressV4",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service.action.awsApiCallAction.remoteIpDetails.country.countryName",
+     "profile": {
+      "top": [
+       {
+        "value": "United States",
+        "count": 100
+       },
+       {
+        "value": "Germany",
+        "count": 93
+       },
+       {
+        "value": "China",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service.action.awsApiCallAction.remoteIpDetails.city.cityName",
+     "profile": {
+      "top": [
+       {
+        "value": "Ashburn",
+        "count": 100
+       },
+       {
+        "value": "Frankfurt",
+        "count": 93
+       },
+       {
+        "value": "Beijing",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service.action.awsApiCallAction.remoteIpDetails.organization.asn",
+     "profile": {
+      "top": [
+       {
+        "value": "16509",
+        "count": 100
+       },
+       {
+        "value": "3320",
+        "count": 93
+       },
+       {
+        "value": "4134",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "service.action.awsApiCallAction.remoteIpDetails.organization.isp",
+     "profile": {
+      "top": [
+       {
+        "value": "Amazon",
+        "count": 100
+       },
+       {
+        "value": "Deutsche Telekom",
+        "count": 93
+       },
+       {
+        "value": "Chinanet",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service.action.awsApiCallAction.affectedResources.AWS::S3::Bucket",
+     "profile": {
+      "top": [
+       {
+        "value": "my-bucket",
+        "count": 100
+       },
+       {
+        "value": "other-bucket",
+        "count": 93
+       },
+       {
+        "value": "third-bucket",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service.count",
+     "profile": {
+      "top": [
+       {
+        "value": "1",
+        "count": 100
+       },
+       {
+        "value": "3",
+        "count": 93
+       },
+       {
+        "value": "12",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "service.detectorId",
+     "profile": {
+      "top": [
+       {
+        "value": "abc1234567890abcdef1234567890abc",
+        "count": 100
+       },
+       {
+        "value": "abc1234567890abcdef1234567890abc",
+        "count": 93
+       },
+       {
+        "value": "def1234567890abcdef1234567890def",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service.eventFirstSeen",
+     "profile": {
+      "top": [
+       {
+        "value": "2026-09-18T10:00:00Z",
+        "count": 100
+       },
+       {
+        "value": "2026-09-18T10:00:01Z",
+        "count": 93
+       },
+       {
+        "value": "2026-09-18T10:00:02Z",
+        "count": 86
+       },
+       {
+        "value": "2026-09-18T10:00:03Z",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service.eventLastSeen",
+     "profile": {
+      "top": [
+       {
+        "value": "2026-09-18T10:00:00Z",
+        "count": 100
+       },
+       {
+        "value": "2026-09-18T10:00:01Z",
+        "count": 93
+       },
+       {
+        "value": "2026-09-18T10:00:02Z",
+        "count": 86
+       },
+       {
+        "value": "2026-09-18T10:00:03Z",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service.archived",
+     "profile": {
+      "top": [
+       {
+        "value": "false",
+        "count": 100
+       },
+       {
+        "value": "false",
+        "count": 93
+       },
+       {
+        "value": "true",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service.resourceRole",
+     "profile": {
+      "top": [
+       {
+        "value": "TARGET",
+        "count": 100
+       },
+       {
+        "value": "TARGET",
+        "count": 93
+       },
+       {
+        "value": "ACTOR",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "service.serviceName",
+     "profile": {
+      "top": [
+       {
+        "value": "guardduty",
+        "count": 100
+       },
+       {
+        "value": "guardduty",
+        "count": 93
+       },
+       {
+        "value": "guardduty",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.resourceType",
+     "profile": {
+      "top": [
+       {
+        "value": "AccessKey",
+        "count": 100
+       },
+       {
+        "value": "Instance",
+        "count": 93
+       },
+       {
+        "value": "AccessKey",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.accessKeyDetails.accessKeyId",
+     "profile": {
+      "top": [
+       {
+        "value": "AKIAIOSFODNN7EXAMPLE",
+        "count": 100
+       },
+       {
+        "value": "ASIAIOSFODNN7EXAMPLE",
+        "count": 93
+       },
+       {
+        "value": "AKIAIOSFODNN7EXAMPL2",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.accessKeyDetails.principalId",
+     "profile": {
+      "top": [
+       {
+        "value": "AIDAJQABLZS4A3QDU576Q",
+        "count": 100
+       },
+       {
+        "value": "AROAJQABLZS4A3QDU576Q",
+        "count": 93
+       },
+       {
+        "value": "AIDAJQABLZS4A3QDU5772",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.accessKeyDetails.userName",
+     "profile": {
+      "top": [
+       {
+        "value": "jdoe",
+        "count": 100
+       },
+       {
+        "value": "AdminRole",
+        "count": 93
+       },
+       {
+        "value": "bsmith",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.accessKeyDetails.userType",
+     "profile": {
+      "top": [
+       {
+        "value": "IAMUser",
+        "count": 100
+       },
+       {
+        "value": "AssumedRole",
+        "count": 93
+       },
+       {
+        "value": "Root",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.instanceDetails.instanceId",
+     "profile": {
+      "top": [
+       {
+        "value": "i-0abc123def456",
+        "count": 100
+       },
+       {
+        "value": "i-0def456abc123",
+        "count": 93
+       },
+       {
+        "value": "i-0123456789ab",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.instanceDetails.instanceType",
+     "profile": {
+      "top": [
+       {
+        "value": "t3.micro",
+        "count": 100
+       },
+       {
+        "value": "m5.large",
+        "count": 93
+       },
+       {
+        "value": "c5.xlarge",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.instanceDetails.availabilityZone",
+     "profile": {
+      "top": [
+       {
+        "value": "us-east-1a",
+        "count": 100
+       },
+       {
+        "value": "us-west-2b",
+        "count": 93
+       },
+       {
+        "value": "eu-west-1c",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.instanceDetails.imageId",
+     "profile": {
+      "top": [
+       {
+        "value": "ami-0abc123",
+        "count": 100
+       },
+       {
+        "value": "ami-0def456",
+        "count": 93
+       },
+       {
+        "value": "ami-0123456",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.instanceDetails.networkInterfaces{}.privateIpAddress",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.1.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.2.6",
+        "count": 93
+       },
+       {
+        "value": "10.0.3.7",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.instanceDetails.networkInterfaces{}.publicIp",
+     "profile": {
+      "top": [
+       {
+        "value": "203.0.113.9",
+        "count": 100
+       },
+       {
+        "value": "203.0.113.10",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.11",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.instanceDetails.networkInterfaces{}.vpcId",
+     "profile": {
+      "top": [
+       {
+        "value": "vpc-0abc123",
+        "count": 100
+       },
+       {
+        "value": "vpc-0def456",
+        "count": 93
+       },
+       {
+        "value": "vpc-0123456",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.instanceDetails.networkInterfaces{}.subnetId",
+     "profile": {
+      "top": [
+       {
+        "value": "subnet-0abc",
+        "count": 100
+       },
+       {
+        "value": "subnet-0def",
+        "count": 93
+       },
+       {
+        "value": "subnet-0123",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.instanceDetails.iamInstanceProfile.arn",
+     "profile": {
+      "top": [
+       {
+        "value": "arn:aws:iam::123456789012:instance-profile/web",
+        "count": 100
+       },
+       {
+        "value": "arn:aws:iam::123456789012:instance-profile/app",
+        "count": 93
+       },
+       {
+        "value": "arn:aws:iam::210987654321:instance-profile/db",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.instanceDetails.iamInstanceProfile.id",
+     "profile": {
+      "top": [
+       {
+        "value": "AIPAJQABLZS4A3QDU576Q",
+        "count": 100
+       },
+       {
+        "value": "AIPAJQABLZS4A3QDU5772",
+        "count": 93
+       },
+       {
+        "value": "AIPAJQABLZS4A3QDU5773",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.instanceDetails.tags{}.key",
+     "profile": {
+      "top": [
+       {
+        "value": "Name",
+        "count": 100
+       },
+       {
+        "value": "env",
+        "count": 93
+       },
+       {
+        "value": "owner",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "resource.instanceDetails.tags{}.value",
+     "profile": {
+      "top": [
+       {
+        "value": "web-1",
+        "count": 100
+       },
+       {
+        "value": "prod",
+        "count": 93
+       },
+       {
+        "value": "platform",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "detail",
+     "profile": {
+      "top": [
+       {
+        "value": "{\"schemaVersion\":\"2.0\",\"accountId\":\"123456789012\"}",
+        "count": 100
+       },
+       {
+        "value": "{\"schemaVersion\":\"2.0\"}",
+        "count": 93
+       },
+       {
+        "value": "{\"x\":1}",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "source",
+     "profile": {
+      "top": [
+       {
+        "value": "aws.guardduty",
+        "count": 100
+       },
+       {
+        "value": "aws.guardduty",
+        "count": 93
+       },
+       {
+        "value": "aws.guardduty",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "detail-type",
+     "profile": {
+      "top": [
+       {
+        "value": "GuardDuty Finding",
+        "count": 100
+       },
+       {
+        "value": "GuardDuty Finding",
+        "count": 93
+       },
+       {
+        "value": "GuardDuty Finding",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "vendor_account",
+     "profile": {
+      "top": [
+       {
+        "value": "123456789012",
+        "count": 100
+       },
+       {
+        "value": "123456789012",
+        "count": 93
+       },
+       {
+        "value": "210987654321",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "vendor_region",
+     "profile": {
+      "top": [
+       {
+        "value": "us-east-1",
+        "count": 100
+       },
+       {
+        "value": "us-west-2",
+        "count": 93
+       },
+       {
+        "value": "eu-west-1",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "aws_account_id",
+     "profile": {
+      "top": [
+       {
+        "value": "123456789012",
+        "count": 100
+       },
+       {
+        "value": "123456789012",
+        "count": 93
+       },
+       {
+        "value": "210987654321",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "src_ip",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "dest",
+     "profile": {
+      "top": [
+       {
+        "value": "i-0abc123def456",
+        "count": 100
+       },
+       {
+        "value": "my-bucket",
+        "count": 93
+       },
+       {
+        "value": "i-0def456abc123",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "user",
+     "profile": {
+      "top": [
+       {
+        "value": "jdoe",
+        "count": 100
+       },
+       {
+        "value": "AdminRole",
+        "count": 93
+       },
+       {
+        "value": "bsmith",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "signature",
+     "profile": {
+      "top": [
+       {
+        "value": "Console login success from new geolocation",
+        "count": 100
+       },
+       {
+        "value": "Unprotected port",
+        "count": 93
+       },
+       {
+        "value": "Anomalous API",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "category",
+     "profile": {
+      "top": [
+       {
+        "value": "UnauthorizedAccess",
+        "count": 100
+       },
+       {
+        "value": "Recon",
+        "count": 93
+       },
+       {
+        "value": "CredentialAccess",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "severity_id",
+     "profile": {
+      "top": [
+       {
+        "value": "2",
+        "count": 100
+       },
+       {
+        "value": "5",
+        "count": 93
+       },
+       {
+        "value": "8",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "host",
+     "profile": {
+      "top": [
+       {
+        "value": "web-1.acme.internal",
+        "count": 60
+       },
+       {
+        "value": "web-2.acme.internal",
+        "count": 30
+       },
+       {
+        "value": "web-3.acme.internal",
+        "count": 10
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "sourcetype",
+     "profile": {
+      "top": [
+       {
+        "value": "aws:cloudwatch:guardduty",
+        "count": 100
+       }
+      ],
+      "distinct": 1,
+      "fill": 1
+     }
+    },
+    {
+     "column": "index",
+     "profile": {
+      "top": [
+       {
+        "value": "main",
+        "count": 100
+       }
+      ],
+      "distinct": 1,
+      "fill": 1
+     }
+    }
+   ]
+  },
+  {
+   "platform": "splunk",
+   "container": "acme:portal:app",
+   "note": "A custom application log with the generic names an app team picks (user, user_id, ip, method, request_id, session_id, account_id, version, host, source) and the Splunk default fields.",
+   "columns": [
+    {
+     "column": "timestamp",
+     "profile": {
+      "top": [
+       {
+        "value": "2026-09-18T10:00:00Z",
+        "count": 100
+       },
+       {
+        "value": "2026-09-18T10:00:01Z",
+        "count": 93
+       },
+       {
+        "value": "2026-09-18T10:00:02Z",
+        "count": 86
+       },
+       {
+        "value": "2026-09-18T10:00:03Z",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "level",
+     "profile": {
+      "top": [
+       {
+        "value": "INFO",
+        "count": 100
+       },
+       {
+        "value": "WARN",
+        "count": 93
+       },
+       {
+        "value": "ERROR",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "logger",
+     "profile": {
+      "top": [
+       {
+        "value": "auth.login",
+        "count": 100
+       },
+       {
+        "value": "orders.create",
+        "count": 93
+       },
+       {
+        "value": "billing.charge",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "user",
+     "profile": {
+      "top": [
+       {
+        "value": "jdoe",
+        "count": 100
+       },
+       {
+        "value": "asmith",
+        "count": 93
+       },
+       {
+        "value": "bjones",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "user_id",
+     "profile": {
+      "top": [
+       {
+        "value": "1001",
+        "count": 100
+       },
+       {
+        "value": "1002",
+        "count": 93
+       },
+       {
+        "value": "1003",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "user_email",
+     "profile": {
+      "top": [
+       {
+        "value": "jane.doe@acme.com",
+        "count": 100
+       },
+       {
+        "value": "alex.smith@acme.com",
+        "count": 93
+       },
+       {
+        "value": "bob.jones@acme.com",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "ip",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "client_ip",
+     "profile": {
+      "top": [
+       {
+        "value": "10.0.0.5",
+        "count": 100
+       },
+       {
+        "value": "10.0.0.6",
+        "count": 93
+       },
+       {
+        "value": "203.0.113.9",
+        "count": 86
+       },
+       {
+        "value": "198.51.100.7",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "status",
+     "profile": {
+      "top": [
+       {
+        "value": "200",
+        "count": 100
+       },
+       {
+        "value": "401",
+        "count": 93
+       },
+       {
+        "value": "500",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "action",
+     "profile": {
+      "top": [
+       {
+        "value": "login",
+        "count": 100
+       },
+       {
+        "value": "create_order",
+        "count": 93
+       },
+       {
+        "value": "charge_card",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "method",
+     "profile": {
+      "top": [
+       {
+        "value": "POST",
+        "count": 100
+       },
+       {
+        "value": "POST",
+        "count": 93
+       },
+       {
+        "value": "GET",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "path",
+     "profile": {
+      "top": [
+       {
+        "value": "/api/login",
+        "count": 100
+       },
+       {
+        "value": "/api/orders",
+        "count": 93
+       },
+       {
+        "value": "/api/billing/charge",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "duration_ms",
+     "profile": {
+      "top": [
+       {
+        "value": "12",
+        "count": 100
+       },
+       {
+        "value": "230",
+        "count": 93
+       },
+       {
+        "value": "1500",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "request_id",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       },
+       {
+        "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "session_id",
+     "profile": {
+      "top": [
+       {
+        "value": "550e8400-e29b-41d4-a716-446655440000",
+        "count": 100
+       },
+       {
+        "value": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "count": 93
+       },
+       {
+        "value": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+        "count": 86
+       },
+       {
+        "value": "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
+        "count": 79
+       }
+      ],
+      "distinct": 4,
+      "fill": 1
+     }
+    },
+    {
+     "column": "user_agent",
+     "profile": {
+      "top": [
+       {
+        "value": "Mozilla/5.0 (Windows NT 10.0)",
+        "count": 100
+       },
+       {
+        "value": "Mozilla/5.0 (iPhone)",
+        "count": 93
+       },
+       {
+        "value": "curl/8.0",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "tenant",
+     "profile": {
+      "top": [
+       {
+        "value": "acme",
+        "count": 100
+       },
+       {
+        "value": "globex",
+        "count": 93
+       },
+       {
+        "value": "initech",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "tenant_id",
+     "profile": {
+      "top": [
+       {
+        "value": "1",
+        "count": 100
+       },
+       {
+        "value": "2",
+        "count": 93
+       },
+       {
+        "value": "3",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "account_id",
+     "profile": {
+      "top": [
+       {
+        "value": "5001",
+        "count": 100
+       },
+       {
+        "value": "5002",
+        "count": 93
+       },
+       {
+        "value": "5003",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "env",
+     "profile": {
+      "top": [
+       {
+        "value": "prod",
+        "count": 100
+       },
+       {
+        "value": "prod",
+        "count": 93
+       },
+       {
+        "value": "staging",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "host",
+     "profile": {
+      "top": [
+       {
+        "value": "web-1.acme.internal",
+        "count": 100
+       },
+       {
+        "value": "web-2.acme.internal",
+        "count": 93
+       },
+       {
+        "value": "web-3.acme.internal",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "version",
+     "profile": {
+      "top": [
+       {
+        "value": "3.4.1",
+        "count": 100
+       },
+       {
+        "value": "3.4.1",
+        "count": 93
+       },
+       {
+        "value": "3.5.0",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "region",
+     "profile": {
+      "top": [
+       {
+        "value": "us-east-1",
+        "count": 100
+       },
+       {
+        "value": "us-east-1",
+        "count": 93
+       },
+       {
+        "value": "eu-west-1",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "error",
+     "profile": {
+      "top": [
+       {
+        "value": "",
+        "count": 100
+       },
+       {
+        "value": "invalid_credentials",
+        "count": 93
+       },
+       {
+        "value": "card_declined",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "error_code",
+     "profile": {
+      "top": [
+       {
+        "value": "0",
+        "count": 100
+       },
+       {
+        "value": "1001",
+        "count": 93
+       },
+       {
+        "value": "2003",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "message",
+     "profile": {
+      "top": [
+       {
+        "value": "login ok",
+        "count": 100
+       },
+       {
+        "value": "bad password",
+        "count": 93
+       },
+       {
+        "value": "charge failed",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "order_id",
+     "profile": {
+      "top": [
+       {
+        "value": "ord_1",
+        "count": 100
+       },
+       {
+        "value": "ord_2",
+        "count": 93
+       },
+       {
+        "value": "ord_3",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "amount",
+     "profile": {
+      "top": [
+       {
+        "value": "10.00",
+        "count": 100
+       },
+       {
+        "value": "25.50",
+        "count": 93
+       },
+       {
+        "value": "100.00",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1,
+      "numeric": true
+     }
+    },
+    {
+     "column": "currency",
+     "profile": {
+      "top": [
+       {
+        "value": "USD",
+        "count": 100
+       },
+       {
+        "value": "USD",
+        "count": 93
+       },
+       {
+        "value": "EUR",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "role",
+     "profile": {
+      "top": [
+       {
+        "value": "admin",
+        "count": 100
+       },
+       {
+        "value": "user",
+        "count": 93
+       },
+       {
+        "value": "user",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "mfa",
+     "profile": {
+      "top": [
+       {
+        "value": "true",
+        "count": 100
+       },
+       {
+        "value": "false",
+        "count": 93
+       },
+       {
+        "value": "true",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "source",
+     "profile": {
+      "top": [
+       {
+        "value": "/var/log/portal/app.log",
+        "count": 100
+       },
+       {
+        "value": "/var/log/portal/app.log",
+        "count": 93
+       },
+       {
+        "value": "/var/log/portal/app.log",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "sourcetype",
+     "profile": {
+      "top": [
+       {
+        "value": "acme:portal:app",
+        "count": 100
+       },
+       {
+        "value": "acme:portal:app",
+        "count": 93
+       },
+       {
+        "value": "acme:portal:app",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    },
+    {
+     "column": "index",
+     "profile": {
+      "top": [
+       {
+        "value": "app",
+        "count": 100
+       },
+       {
+        "value": "app",
+        "count": 93
+       },
+       {
+        "value": "app",
+        "count": 86
+       }
+      ],
+      "distinct": 3,
+      "fill": 1
+     }
+    }
+   ]
+  }
+ ]
+}

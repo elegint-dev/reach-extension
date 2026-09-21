@@ -1,0 +1,97 @@
+[
+  {
+    "id": "2",
+    "org_id": "1",
+    "date": "2026-09-20",
+    "info": "Reach write-back check",
+    "uuid": "a5fc5ced-c0bd-4907-b954-8c34ef0c0d5e",
+    "published": false,
+    "analysis": "0",
+    "attribute_count": "1",
+    "orgc_id": "1",
+    "timestamp": "1789923999",
+    "distribution": "0",
+    "sharing_group_id": "0",
+    "proposal_email_lock": false,
+    "locked": false,
+    "threat_level_id": "4",
+    "publish_timestamp": "0",
+    "sighting_timestamp": "0",
+    "disable_correlation": false,
+    "extends_uuid": "",
+    "protected": null,
+    "first_publication": "0",
+    "Org": {
+      "id": "1",
+      "name": "ADMIN",
+      "uuid": "927575fd-4bd5-4037-855f-174212f1489d"
+    },
+    "Orgc": {
+      "id": "1",
+      "name": "ADMIN",
+      "uuid": "927575fd-4bd5-4037-855f-174212f1489d"
+    },
+    "EventTag": []
+  },
+  {
+    "id": "1",
+    "org_id": "1",
+    "date": "2026-09-19",
+    "info": "Reach demo: T1003.001 capture",
+    "uuid": "25b41909-4d8c-4165-b8dc-b7124ed59557",
+    "published": true,
+    "analysis": "2",
+    "attribute_count": "7",
+    "orgc_id": "1",
+    "timestamp": "1789831324",
+    "distribution": "0",
+    "sharing_group_id": "0",
+    "proposal_email_lock": false,
+    "locked": false,
+    "threat_level_id": "2",
+    "publish_timestamp": "1789831333",
+    "sighting_timestamp": "0",
+    "disable_correlation": false,
+    "extends_uuid": "",
+    "protected": null,
+    "first_publication": "1789831333",
+    "Org": {
+      "id": "1",
+      "name": "ADMIN",
+      "uuid": "927575fd-4bd5-4037-855f-174212f1489d"
+    },
+    "Orgc": {
+      "id": "1",
+      "name": "ADMIN",
+      "uuid": "927575fd-4bd5-4037-855f-174212f1489d"
+    },
+    "EventTag": [
+      {
+        "id": "1",
+        "event_id": "1",
+        "tag_id": "75",
+        "local": false,
+        "relationship_type": "",
+        "Tag": {
+          "id": "75",
+          "name": "tlp:amber",
+          "colour": "#b1eacd",
+          "is_galaxy": false
+        }
+      },
+      {
+        "id": "2",
+        "event_id": "1",
+        "tag_id": "76",
+        "local": false,
+        "relationship_type": "",
+        "Tag": {
+          "id": "76",
+          "name": "misp-galaxy:mitre-attack-pattern=\"OS Credential Dumping: LSASS Memory - T1003.001\"",
+          "colour": "#6dbb4f",
+          "is_galaxy": true
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,2361 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "mscs-security",
+  "name": "Microsoft Defender for Cloud alerts and recommendations",
+  "pack_version": "0.1.0",
+  "description": "Microsoft Defender for Cloud security alerts and security recommendations, delivered through Azure Event Hubs and indexed by the Splunk Add-on for Microsoft Cloud Services: what was detected or assessed, on which resource, how severe, and what to do about it.",
+  "source": "Splunk Add-on for Microsoft Cloud Services (mscs_azure_event_hub modular input), sourcetypes mscs:azure:security:alert and mscs:azure:security:recommendation, CIM-mapped to the Alerts data model; Microsoft Defender for Cloud Alerts and Assessments REST API schemas; field presence and CIM alias values confirmed against the dev Splunk instance's own indexed samples",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "mscs_azure_security",
+    "label": "Microsoft Defender for Cloud alerts and recommendations",
+    "description": "Microsoft Defender for Cloud's own findings, exported through Azure Event Hubs: security alerts (one per detection) and security recommendations (one per resource per policy assessment).",
+    "tags": [
+      "azure",
+      "cloud",
+      "security"
+    ]
+  },
+  "concepts": {
+    "vendor_name": {
+      "label": "Vendor name",
+      "type": "text",
+      "description": "The name of the vendor that raised the alert."
+    },
+    "product_name": {
+      "label": "Product name",
+      "type": "text",
+      "description": "The Microsoft product or service that published the record: the alert's own product name field, or a fixed label this TA writes for a recommendation.",
+      "hazards": [
+        "product_name_renamed"
+      ]
+    },
+    "arm_subscription_id": {
+      "label": "Subscription id",
+      "type": "account_id",
+      "description": "The Azure subscription GUID, read out of the /subscriptions/ segment of an Azure Resource Manager id path.",
+      "notes": "Not itself a named vendor field: every ARM resource id (AzureResourceId, the recommendation's id and resourceDetails.id) carries this segment in the same position."
+    },
+    "arm_resource_group": {
+      "label": "Resource group",
+      "type": "identifier",
+      "description": "The Azure resource group name, read out of the /resourceGroups/ segment of an Azure Resource Manager id path.",
+      "notes": "Not itself a named vendor field; see arm_subscription_id."
+    },
+    "alert_type": {
+      "label": "Alert type",
+      "type": "record_type",
+      "description": "A unique identifier for the detection logic: every alert instance from the same detection shares this value."
+    },
+    "alert_display_name": {
+      "label": "Alert display name",
+      "type": "text",
+      "description": "The alert's display name."
+    },
+    "alert_description": {
+      "label": "Description",
+      "type": "text",
+      "description": "A description of the suspicious activity that was detected."
+    },
+    "alert_severity": {
+      "label": "Severity",
+      "type": "enum",
+      "description": "The risk level Defender for Cloud assigned the detected threat.",
+      "notes": "The CIM alias lowercases this (Medium becomes medium); the CIM Alerts field of the same name also allows critical and unknown, which this vendor enum does not use."
+    },
+    "alert_status": {
+      "label": "Status",
+      "type": "enum",
+      "description": "The alert's life cycle status.",
+      "hazards": [
+        "status_undocumented_value"
+      ]
+    },
+    "confidence_level": {
+      "label": "Confidence level",
+      "type": "enum",
+      "description": "An optional coarse confidence rating Microsoft attaches to some alerts.",
+      "notes": "Null on both of this pack's samples."
+    },
+    "confidence_score": {
+      "label": "Confidence score",
+      "type": "count",
+      "description": "An optional numeric confidence indicator for the alert.",
+      "notes": "Null on both of this pack's samples."
+    },
+    "confidence_reasons": {
+      "label": "Confidence reasons",
+      "type": "text",
+      "description": "An extra field this schema carries alongside confidence_level and confidence_score."
+    },
+    "provider_alert_status": {
+      "label": "Provider alert status",
+      "type": "text",
+      "description": "An extra status field this schema carries alongside status."
+    },
+    "intent": {
+      "label": "Intent",
+      "type": "enum",
+      "description": "The kill chain stage the alert's detection logic maps to."
+    },
+    "is_incident": {
+      "label": "Is incident",
+      "type": "flag",
+      "description": "True when the alert is itself a grouping of several related alerts rather than a single alert."
+    },
+    "correlation_key": {
+      "label": "Correlation key",
+      "type": "identifier",
+      "description": "A key shared by every alert Microsoft considers related to this one."
+    },
+    "compromised_entity": {
+      "label": "Compromised entity",
+      "type": "identifier",
+      "description": "The display name of the resource most related to the alert.",
+      "hazards": [
+        "friendly_name_not_id"
+      ]
+    },
+    "azure_resource_id": {
+      "label": "Azure resource id",
+      "type": "resource_id",
+      "description": "The full Azure Resource Manager id of the resource the alert is about.",
+      "notes": "The continuous export payload carries this at the top level as AzureResourceId; the REST alert object instead nests it inside resourceIdentifiers[].azureResourceId (type AzureResource).",
+      "hazards": [
+        "resource_id_case"
+      ]
+    },
+    "workspace_id": {
+      "label": "Log Analytics workspace id",
+      "type": "identifier",
+      "description": "The id of the Log Analytics workspace storing this alert, when the alert is tied to one."
+    },
+    "workspace_subscription_id": {
+      "label": "Workspace subscription id",
+      "type": "account_id",
+      "description": "The Azure subscription id of the Log Analytics workspace storing this alert."
+    },
+    "workspace_resource_group": {
+      "label": "Workspace resource group",
+      "type": "identifier",
+      "description": "The resource group of the Log Analytics workspace storing this alert."
+    },
+    "agent_id": {
+      "label": "Log Analytics agent id",
+      "type": "host_id",
+      "description": "The Log Analytics agent id reporting the event the alert is based on."
+    },
+    "resource_identifier_type": {
+      "label": "Resource identifier type",
+      "type": "enum",
+      "description": "Which kind of identifier one entry of the alert's resourceIdentifiers list is.",
+      "hazards": [
+        "resource_identifier_type_extra"
+      ]
+    },
+    "resource_tenant_id": {
+      "label": "Resource tenant id",
+      "type": "account_id",
+      "description": "A Microsoft Entra tenant id attached to a resourceIdentifiers entry.",
+      "notes": "Present on this pack's sample as AzureResourceTenantId (on an AzureResource entry) and AadTenantId (on an entry of type AAD, itself not in the documented enum); neither field is named in the AzureResourceIdentifier or LogAnalyticsIdentifier schema tables."
+    },
+    "entities": {
+      "label": "Entities list housekeeping",
+      "type": "raw_object",
+      "description": "The JSON-schema style $id/$ref back references inside the alert's entities list, used to point one entity at another (for example a process at its host) instead of repeating it."
+    },
+    "entity_type": {
+      "label": "Entity type",
+      "type": "enum",
+      "description": "Which kind of entity one element of the alert's entities list is.",
+      "notes": "Values below are the ones this pack's own sample carries; the entities list can hold other types the REST doc does not enumerate (Changing set of properties depending on the entity type)."
+    },
+    "entity_properties": {
+      "label": "Entity properties",
+      "type": "raw_object",
+      "description": "The remaining fields of one entity: a discriminated bag whose keys follow the sibling Type value (an ip entity carries Address and Location, a process entity carries ProcessId and CommandLine). No single vendor page enumerates every type's field set; each type's own object in the REST schema does."
+    },
+    "extended_links": {
+      "label": "Extended links",
+      "type": "raw_object",
+      "description": "Links related to the alert, for example a threat report or a source-code reference the detection logic cited."
+    },
+    "extended_properties": {
+      "label": "Extended properties",
+      "type": "raw_object",
+      "description": "A free-form bag of extra fields relevant to one alert; which keys appear depends on the alert type (this pack's samples show, among others, a Windows process path and PID on one alert and a client IP and application on another)."
+    },
+    "remediation_steps": {
+      "label": "Remediation steps",
+      "type": "text",
+      "description": "Manual action items to take to remediate the alert."
+    },
+    "alert_uri": {
+      "label": "Alert URI",
+      "type": "text",
+      "description": "A direct link to the alert's page in the Azure Portal."
+    },
+    "start_time_utc": {
+      "label": "Start time",
+      "type": "event_time",
+      "description": "The UTC time of the first event or activity the alert covers.",
+      "hazards": [
+        "four_alert_times",
+        "time_basis"
+      ]
+    },
+    "end_time_utc": {
+      "label": "End time",
+      "type": "event_time",
+      "description": "The UTC time of the last event or activity the alert covers.",
+      "hazards": [
+        "four_alert_times",
+        "time_basis"
+      ]
+    },
+    "time_generated_utc": {
+      "label": "Time generated",
+      "type": "event_time",
+      "description": "The UTC time Microsoft generated the alert.",
+      "hazards": [
+        "four_alert_times",
+        "time_basis"
+      ]
+    },
+    "processing_end_time": {
+      "label": "Processing end time",
+      "type": "event_time",
+      "description": "The UTC time Microsoft's processing pipeline finished with this alert.",
+      "hazards": [
+        "four_alert_times",
+        "time_basis"
+      ]
+    },
+    "system_alert_id": {
+      "label": "System alert id",
+      "type": "event_id",
+      "description": "The alert's own unique identifier."
+    },
+    "cim_type": {
+      "label": "CIM record kind",
+      "type": "record_type",
+      "description": "A fixed word this TA writes to say the record is an alert, for the Alerts data model's own bookkeeping.",
+      "notes": "Not present in the source JSON; constant alert on every indexed event this pack observed."
+    },
+    "alert_region": {
+      "label": "Region",
+      "type": "region",
+      "description": "The Azure region named in the alert, read out of the location segment at the end of AlertUri.",
+      "notes": "Correlates exactly with the trailing /location/{region} segment of AlertUri on this pack's sample; absent whenever AlertUri is absent (the second sample)."
+    },
+    "alert_user": {
+      "label": "Actor user id",
+      "type": "user_id",
+      "description": "The user involved in the alert event, per the CIM Alerts field of the same name.",
+      "notes": "Empty on both of this pack's samples: neither names an actor through an account entity."
+    },
+    "alert_user_name": {
+      "label": "Actor user name",
+      "type": "user_name",
+      "description": "The name of the user involved in the alert event, per the CIM Alerts field of the same name.",
+      "notes": "Empty on both of this pack's samples."
+    },
+    "alert_dest_type": {
+      "label": "Destination type",
+      "type": "enum",
+      "description": "The CIM Alerts category of the alert's target object.",
+      "notes": "instance on this pack's one sample that carries it; absent (not null, missing) on the sample with no ExtendedProperties.resourceType."
+    },
+    "alert_src_ip": {
+      "label": "Source address",
+      "type": "source_ip",
+      "description": "An address this TA collects out of the alert's ip-type entities.",
+      "notes": "An array on this pack's sample, with one entry per ip entity (including repeats of the same address); not deduplicated."
+    },
+    "assessment_key": {
+      "label": "Assessment key",
+      "type": "identifier",
+      "description": "The assessment type's key (the record's own name property): the same value for every resource that assessment type ran against. The unique id for one finding is the full ARM path in the record's top level id property, seen only in _raw on this sourcetype, not extracted to a field of its own.",
+      "hazards": [
+        "assessment_key_shared"
+      ]
+    },
+    "assessment_resource_type": {
+      "label": "Resource type constant",
+      "type": "record_type",
+      "description": "A fixed value, Microsoft.Security/assessments, naming the ARM resource type of every record on this sourcetype."
+    },
+    "resource_details_source": {
+      "label": "Resource details source",
+      "type": "enum",
+      "description": "The platform the assessed resource lives on."
+    },
+    "resource_details_id": {
+      "label": "Assessed resource id",
+      "type": "resource_id",
+      "description": "The ARM resource id of the resource this assessment scored."
+    },
+    "assessment_display_name": {
+      "label": "Assessment display name",
+      "type": "text",
+      "description": "A user friendly display name of the assessment (the recommendation's title).",
+      "hazards": [
+        "friendly_name_not_id"
+      ]
+    },
+    "assessment_status_code": {
+      "label": "Assessment status code",
+      "type": "enum",
+      "description": "A programmatic code for the result of the assessment."
+    },
+    "assessment_status_cause": {
+      "label": "Assessment status cause",
+      "type": "enum",
+      "description": "A programmatic code for why the assessment has that status.",
+      "notes": "The schema table gives no fixed list of cause values; OffByPolicy is this pack's one observed value."
+    },
+    "assessment_status_description": {
+      "label": "Assessment status description",
+      "type": "text",
+      "description": "A human readable description of the assessment status."
+    },
+    "linked_workspace_id": {
+      "label": "Linked workspace id",
+      "type": "identifier",
+      "description": "A Log Analytics workspace id associated with the assessment.",
+      "notes": "Seen in the vendor's own worked example under additionalData, a field the schema table documents only as an untyped object, not by key name."
+    },
+    "assessment_metadata": {
+      "label": "Assessment metadata fields",
+      "type": "text",
+      "description": "Severity, a free-text description, a remediation description and a policy definition id that SecurityAssessmentMetadataProperties documents, aliased onto this sourcetype's CIM shape (severity, description, recommendation, signature_id).",
+      "hazards": [
+        "metadata_absent"
+      ]
+    }
+  },
+  "containers": {
+    "mscs:azure:security:alert": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Microsoft Defender for Cloud security alerts, delivered through Azure Event Hubs and indexed by the Splunk Add-on for Microsoft Cloud Services (mscs_azure_event_hub), one flat JSON object per alert, CIM-mapped to the Alerts data model.",
+      "note": "Entities, ExtendedLinks and ResourceIdentifiers are JSON arrays, flattened to dotted and bracketed field names (Entities{}.Type, ResourceIdentifiers{}.Type). ExtendedProperties keys contain spaces (ExtendedProperties.Client IP address). _time is set from StartTimeUtc; index_time_ok is false in this pack's own sample metadata."
+    },
+    "mscs:azure:security:recommendation": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Microsoft Defender for Cloud security recommendations (Microsoft.Security/assessments), delivered through Azure Event Hubs and indexed by the same modular input, one flat ARM assessment resource object per record, CIM-mapped to the Alerts data model.",
+      "note": "No field on the record carries an event time; _time is index time (index_time_ok is true in this pack's own sample metadata). properties.metadata is absent from every example this pack found, so severity, description, recommendation and signature_id are consistently null."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "VendorName",
+      "concept": "vendor_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ProductName",
+      "concept": "product_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "AlertType",
+      "concept": "alert_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "AlertDisplayName",
+      "concept": "alert_display_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "AlertUri",
+      "concept": "alert_uri",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Description",
+      "concept": "alert_description",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Severity",
+      "concept": "alert_severity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Status",
+      "concept": "alert_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ConfidenceLevel",
+      "concept": "confidence_level",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ConfidenceScore",
+      "concept": "confidence_score",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ConfidenceReasons",
+      "concept": "confidence_reasons",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Present as a top level key on the sample; null on both of this pack's samples, and not named on the REST or Sentinel schema pages this pack read."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ProviderAlertStatus",
+      "concept": "provider_alert_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Present as a top level key on the sample; null on both of this pack's samples, and not named on the REST or Sentinel schema pages this pack read."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "CorrelationKey",
+      "concept": "correlation_key",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "CompromisedEntity",
+      "concept": "compromised_entity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "AzureResourceId",
+      "concept": "azure_resource_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "AzureResourceSubscriptionId",
+      "concept": "arm_subscription_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed on this pack's second sample to equal the subscription segment of that same event's AzureResourceId."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "WorkspaceId",
+      "concept": "workspace_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "WorkspaceSubscriptionId",
+      "concept": "workspace_subscription_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "WorkspaceResourceGroup",
+      "concept": "workspace_resource_group",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "AgentId",
+      "concept": "agent_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Intent",
+      "concept": "intent",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "IsIncident",
+      "concept": "is_incident",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "SystemAlertId",
+      "concept": "system_alert_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "StartTimeUtc",
+      "concept": "start_time_utc",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "EndTimeUtc",
+      "concept": "end_time_utc",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "TimeGenerated",
+      "concept": "time_generated_utc",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ProcessingEndTime",
+      "concept": "processing_end_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "RemediationSteps{}",
+      "concept": "remediation_steps",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.$id",
+      "concept": "entities",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.$ref",
+      "concept": "entities",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Type",
+      "concept": "entity_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.AadTenantId",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.AadUserId",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Account.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Address",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Asset",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.AzureID",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.BlobContainer.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Category",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.CloudResource.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Cluster.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.CommandLine",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.ContainerId",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.CreationTimeUtc",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Directory",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.DnsDomain",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.DomainName",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Etag",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.FileHashes{}.$id",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.FileHashes{}.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.FileHashes{}.Algorithm",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.FileHashes{}.Asset",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.FileHashes{}.Type",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.FileHashes{}.Value",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Files{}.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Host.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.HostIpAddress.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.HostName",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Image.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.ImageFile.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.ImageId",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.IpAddresses{}.$id",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.IpAddresses{}.Address",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.IpAddresses{}.Asset",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.IpAddresses{}.Location.Asn",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.IpAddresses{}.Location.City",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.IpAddresses{}.Location.CountryCode",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.IpAddresses{}.Location.CountryName",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.IpAddresses{}.Location.Latitude",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.IpAddresses{}.Location.Longitude",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.IpAddresses{}.Location.State",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.IpAddresses{}.Type",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.IsDomainJoined",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Location",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Location.Asn",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Location.Carrier",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Location.City",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Location.CloudProvider",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Location.CountryCode",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Location.CountryName",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Location.Latitude",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Location.Longitude",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Location.Organization",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Location.OrganizationType",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Location.State",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Location.SystemService",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.LocationType",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.LogonId",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.NTDomain",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Name",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Namespace.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.NetBiosName",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.OMSAgentID",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.OSFamily",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.OSVersion",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.ParentProcess.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Pod.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.ProcessId",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.ProjectId",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Protocol",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.RelatedAzureResourceIds{}",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.ResourceName",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.ResourceType",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Sid",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.SourceAddress.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.StorageResource.$ref",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.ThreatIntelligence{}.Confidence",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.ThreatIntelligence{}.ProviderName",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.ThreatIntelligence{}.ThreatDescription",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.ThreatIntelligence{}.ThreatName",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.ThreatIntelligence{}.ThreatType",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.UPNSuffix",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "Entities{}.Url",
+      "concept": "entity_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedLinks{}.Category",
+      "concept": "extended_links",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedLinks{}.Href",
+      "concept": "extended_links",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedLinks{}.Label",
+      "concept": "extended_links",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedLinks{}.Type",
+      "concept": "extended_links",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedProperties.Account",
+      "concept": "extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedProperties.ActionTaken",
+      "concept": "extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedProperties.Alert Id",
+      "concept": "extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedProperties.Client IP address",
+      "concept": "extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedProperties.Client IP location",
+      "concept": "extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedProperties.Client application",
+      "concept": "extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedProperties.Client principal name",
+      "concept": "extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedProperties.Investigation steps",
+      "concept": "extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedProperties.OMS agent ID",
+      "concept": "extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedProperties.OMS workspace ID",
+      "concept": "extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedProperties.PID",
+      "concept": "extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedProperties.Potential causes",
+      "concept": "extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedProperties.Process Path",
+      "concept": "extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ExtendedProperties.resourceType",
+      "concept": "extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ResourceIdentifiers{}.$id",
+      "concept": "resource_identifier_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ResourceIdentifiers{}.Type",
+      "concept": "resource_identifier_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ResourceIdentifiers{}.AzureResourceId",
+      "concept": "azure_resource_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ResourceIdentifiers{}.AzureResourceTenantId",
+      "concept": "resource_tenant_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ResourceIdentifiers{}.AadTenantId",
+      "concept": "resource_tenant_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ResourceIdentifiers{}.WorkspaceId",
+      "concept": "workspace_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ResourceIdentifiers{}.WorkspaceSubscriptionId",
+      "concept": "workspace_subscription_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ResourceIdentifiers{}.WorkspaceResourceGroup",
+      "concept": "workspace_resource_group",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "ResourceIdentifiers{}.AgentId",
+      "concept": "agent_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:alert."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "app",
+      "concept": "product_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed on the dev Splunk instance to equal ProductName on every sample event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "description",
+      "concept": "alert_description",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed on the dev Splunk instance to equal Description on every sample event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "severity",
+      "concept": "alert_severity",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed on the dev Splunk instance to equal Severity, lower cased (Medium became medium, High became high)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "signature",
+      "concept": "alert_display_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed on the dev Splunk instance to equal AlertDisplayName on every sample event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "signature_id",
+      "concept": "alert_type",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed on the dev Splunk instance to equal AlertType on every sample event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "recommendation",
+      "concept": "remediation_steps",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed on the dev Splunk instance to equal RemediationSteps{} joined, on every sample event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "id",
+      "concept": "system_alert_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed on the dev Splunk instance to equal SystemAlertId on every sample event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "dest",
+      "concept": "azure_resource_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed on the dev Splunk instance to equal AzureResourceId, case preserved, on every sample event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "dest_name",
+      "concept": "compromised_entity",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed on the dev Splunk instance to equal CompromisedEntity on every sample event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "dest_type",
+      "concept": "alert_dest_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed as the constant instance on the one sample that carries ExtendedProperties.resourceType (Virtual Machine); absent, not merely null, on the sample without that key."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "resource_group",
+      "concept": "arm_resource_group",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed on the dev Splunk instance to equal the resourceGroups segment of that same event's AzureResourceId, independent of its case."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "subscription_id",
+      "concept": "arm_subscription_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed on the dev Splunk instance to equal the subscriptions segment of that same event's AzureResourceId."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "vendor_account",
+      "concept": "arm_subscription_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed on the dev Splunk instance to equal subscription_id, the subscriptions segment of that same event's AzureResourceId."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "vendor_region",
+      "concept": "alert_region",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed on the dev Splunk instance to equal the trailing location segment of that same event's AlertUri (.../referencedFrom/alertDeepLink/location/centralus); absent when AlertUri is absent."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "type",
+      "concept": "cim_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed as the constant alert on both of this pack's sample events; not present under that name in the source JSON."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "user",
+      "concept": "alert_user",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Present as a CIM Alerts field on this sourcetype; empty on both of this pack's sample events."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "user_name",
+      "concept": "alert_user_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Present as a CIM Alerts field on this sourcetype; empty on both of this pack's sample events."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:alert",
+      "column": "src",
+      "concept": "alert_src_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed on the dev Splunk instance as an array of every Address value found directly on an Entities{} object of type ip on that event (3 entries, with repeats, on the sample that has ip entities)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "type",
+      "concept": "assessment_resource_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:recommendation."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "name",
+      "concept": "assessment_key",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:recommendation."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "properties.resourceDetails.source",
+      "concept": "resource_details_source",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:recommendation."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "properties.resourceDetails.id",
+      "concept": "resource_details_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:recommendation."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "properties.displayName",
+      "concept": "assessment_display_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:recommendation."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "properties.status.code",
+      "concept": "assessment_status_code",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:recommendation."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "properties.status.cause",
+      "concept": "assessment_status_cause",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:recommendation."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "properties.status.description",
+      "concept": "assessment_status_description",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:recommendation."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "properties.additionalData.linkedWorkspaceId",
+      "concept": "linked_workspace_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the Event Hub JSON payload; nested objects and arrays flatten to dotted or bracketed field names on mscs:azure:security:recommendation."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "id",
+      "concept": "assessment_key",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed on the dev Splunk instance to equal the record's own name property (the assessment type's key), not its top level id property (the unique per finding ARM path, present only in _raw)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "app",
+      "concept": "product_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed as the constant Azure Security Center on every indexed event of this sourcetype; not sourced from any key in the JSON record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "dest",
+      "concept": "resource_details_id",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed on the dev Splunk instance to equal properties.resourceDetails.id on every sample event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "signature",
+      "concept": "assessment_display_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Observed on the dev Splunk instance to equal properties.displayName on every sample event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "resource_group",
+      "concept": "arm_resource_group",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed on the dev Splunk instance to equal the resourceGroups segment of that same event's properties.resourceDetails.id."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "subscription_id",
+      "concept": "arm_subscription_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed on the dev Splunk instance to equal the subscriptions segment of that same event's properties.resourceDetails.id."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "vendor_account",
+      "concept": "arm_subscription_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Observed on the dev Splunk instance to equal subscription_id, the subscriptions segment of that same event's properties.resourceDetails.id."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "severity",
+      "concept": "assessment_metadata",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "A CIM alias of the assessment's metadata severity; absent on every sample event this pack indexed, per the metadata_absent hazard."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "description",
+      "concept": "assessment_metadata",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "A CIM alias of the assessment's metadata description; absent on every sample event this pack indexed, per the metadata_absent hazard."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "recommendation",
+      "concept": "assessment_metadata",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "A CIM alias of the assessment's metadata remediationDescription; absent on every sample event this pack indexed, per the metadata_absent hazard."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:security:recommendation",
+      "column": "signature_id",
+      "concept": "assessment_metadata",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "A CIM alias of the assessment's metadata policyDefinitionId; absent on every sample event this pack indexed, per the metadata_absent hazard."
+      }
+    }
+  ],
+  "hazards": {
+    "four_alert_times": {
+      "level": "caution",
+      "text": "An alert carries four UTC times: StartTimeUtc/EndTimeUtc bound the activity, TimeGenerated is when Microsoft raised the alert, ProcessingEndTime is when the export pipeline finished. This pack's own sample entry sets _time from StartTimeUtc and marks index_time_ok false, so _time is not ingestion time and not TimeGenerated."
+    },
+    "assessment_key_shared": {
+      "level": "caution",
+      "text": "The recommendation record's name (and the CIM id alias of it) is the assessment type's key: the same GUID names every resource that check ran against, seen here identically on the vmss1 and vmss2 samples. The unique key for one finding is the record's own top level id, the full ARM path."
+    },
+    "resource_id_case": {
+      "level": "note",
+      "text": "AzureResourceId arrives cased however the source cased it: SUBSCRIPTIONS and RESOURCEGROUPS upper case in one sample, lower case in another. A literal string match against ResourceIdentifiers or resourceDetails ids needs a case fold first."
+    },
+    "metadata_absent": {
+      "level": "note",
+      "text": "severity, description, recommendation and signature_id on the recommendation sourcetype are TA aliases of the assessment's metadata (severity, description, remediationDescription), which only the $expand=metadata call returns. No example on the vendor's Get or List pages carries it, and neither does any sample this pack indexed; expect these four fields null."
+    },
+    "resource_identifier_type_extra": {
+      "level": "note",
+      "text": "The alert sample carries a resourceIdentifier of type AAD (AadTenantId only), which the documented ResourceIdentifierType enum does not list (it names only AzureResource and LogAnalytics)."
+    },
+    "product_name_renamed": {
+      "level": "note",
+      "text": "ProductName appears as both Microsoft Defender for Cloud and the legacy Azure Security Center across this pack's own two alert samples: the product was renamed, the field was not backfilled."
+    },
+    "status_undocumented_value": {
+      "level": "note",
+      "text": "Both of this pack's alert samples carry Status New, a value the documented AlertStatus enum does not list (it names only Active, InProgress, Resolved, Dismissed)."
+    },
+    "friendly_name_not_id": {
+      "level": "note",
+      "text": "A display name for a resource, not a stable id: it can repeat and can change on rename. Pivot on the record's own id or the ARM resource id, not this field."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

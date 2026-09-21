@@ -1,0 +1,8 @@
+{
+  "search": "index=notable sourcetype=stash search_name=\"ESCU - Disabled Kerberos Pre-Authentication Discovery With Get-ADUser - Rule\"",
+  "path": "/en-US/app/search/search",
+  "query": {
+    "q": "search index=notable sourcetype=stash search_name=\"ESCU - Disabled Kerberos Pre-Authentication Discovery With Get-ADUser - Rule\"",
+    "sid": "1700000000.2"
+  }
+}

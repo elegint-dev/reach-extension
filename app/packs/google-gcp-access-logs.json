@@ -1,0 +1,1641 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "google-gcp-access-logs",
+  "name": "Google Cloud VPC Flow Logs and Cloud Storage usage logs",
+  "pack_version": "0.1.0",
+  "description": "Two Google Cloud access-and-traffic feeds as the Splunk Add-on for Google Cloud Platform indexes them: Compute Engine VPC Flow Logs (who talked to whom, on which port, how much) and Cloud Storage bucket usage logs (who called the storage API, on which bucket and object, with what result).",
+  "source": "Google Cloud VPC Flow Logs record and Cloud Storage usage log CSV reference (docs.cloud.google.com); Cloud Logging LogEntry reference; Splunk Add-on for Google Cloud Platform source type and Network Traffic CIM mapping docs; observed field lists and dev Splunk index from this pack's own sample data.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "google_gcp_access_logs",
+    "label": "Google Cloud VPC Flow Logs and Cloud Storage usage logs",
+    "description": "Network flow records between Compute Engine VMs, GKE pods and gateways, and HTTP-level access records for Cloud Storage buckets, both indexed as Cloud Logging or usage-log exports.",
+    "tags": [
+      "gcp",
+      "cloud",
+      "network",
+      "storage"
+    ]
+  },
+  "concepts": {
+    "flow_log_entry_id": {
+      "label": "Log entry id",
+      "type": "event_id",
+      "description": "A unique id Cloud Logging assigns to one flow log entry; entries with the same project, timestamp and id are deduplicated.",
+      "hazards": [
+        "ids_look_alike"
+      ]
+    },
+    "flow_log_name": {
+      "label": "Log name",
+      "type": "identifier",
+      "description": "The Cloud Logging log resource path the entry belongs to, for example projects/<id>/logs/compute.googleapis.com%2Fvpc_flows."
+    },
+    "flow_log_time": {
+      "label": "Log entry time",
+      "type": "event_time",
+      "description": "The time Cloud Logging attributes to the entry; for a flow log this sits close to the flow's end_time.",
+      "hazards": [
+        "flow_time_basis"
+      ]
+    },
+    "flow_receive_time": {
+      "label": "Log receive time",
+      "type": "event_time",
+      "description": "The time Cloud Logging received the entry, not when the flow happened.",
+      "hazards": [
+        "flow_time_basis"
+      ]
+    },
+    "flow_start_time": {
+      "label": "Flow start time",
+      "type": "event_time",
+      "description": "Timestamp of the first observed packet during the flow's aggregation interval.",
+      "hazards": [
+        "flow_time_basis"
+      ]
+    },
+    "flow_end_time": {
+      "label": "Flow end time",
+      "type": "event_time",
+      "description": "Timestamp of the last observed packet during the flow's aggregation interval.",
+      "hazards": [
+        "flow_time_basis"
+      ]
+    },
+    "flow_reporter": {
+      "label": "Reporter",
+      "type": "enum",
+      "description": "Which side reported the flow: the source VM, the destination VM, or a Cloud Interconnect/VPN gateway on either side.",
+      "hazards": [
+        "reporter_perspective"
+      ]
+    },
+    "flow_src_ip": {
+      "label": "Source address",
+      "type": "source_ip",
+      "description": "The connection's source IP address; populated for every flow."
+    },
+    "flow_dest_ip": {
+      "label": "Destination address",
+      "type": "dest_ip",
+      "description": "The connection's destination IP address; populated for every flow."
+    },
+    "flow_reporting_device": {
+      "label": "Reporting side address",
+      "type": "source_ip",
+      "description": "The address of whichever side produced this record: the source address when reporter is SRC, the destination address when reporter is DEST.",
+      "hazards": [
+        "reporter_perspective"
+      ]
+    },
+    "flow_src_port": {
+      "label": "Source port",
+      "type": "identifier",
+      "description": "The connection's source port; populated only for TCP and UDP flows."
+    },
+    "flow_dest_port": {
+      "label": "Destination port",
+      "type": "identifier",
+      "description": "The connection's destination port; populated only for TCP and UDP flows."
+    },
+    "flow_protocol": {
+      "label": "IP protocol",
+      "type": "enum",
+      "description": "The IANA protocol number of the connection (for example 6 for TCP); unpopulated for RDMA."
+    },
+    "flow_bytes_sent": {
+      "label": "Bytes sent",
+      "type": "count",
+      "description": "Estimated user-payload bytes sent from the source to the destination during the aggregation interval; absent for dropped traffic."
+    },
+    "flow_packets_sent": {
+      "label": "Packets sent",
+      "type": "count",
+      "description": "Estimated packets sent from the source to the destination during the aggregation interval; absent for dropped traffic."
+    },
+    "flow_rtt_msec": {
+      "label": "Round-trip time",
+      "type": "count",
+      "description": "Round-trip time in milliseconds measured during the aggregation interval.",
+      "hazards": [
+        "rtt_tcp_only"
+      ]
+    },
+    "flow_duration": {
+      "label": "Flow duration",
+      "type": "count",
+      "description": "The flow's duration, worked out from start_time and end_time."
+    },
+    "gcp_project_id": {
+      "label": "Google Cloud project id",
+      "type": "account_id",
+      "description": "The id of the Google Cloud project that owns the VM, VPC or subnetwork side of the flow named in the same record."
+    },
+    "gcp_vm_name": {
+      "label": "VM instance name",
+      "type": "hostname",
+      "description": "The Compute Engine instance name on one side of the flow."
+    },
+    "gcp_vm_zone": {
+      "label": "VM zone",
+      "type": "region",
+      "description": "The Compute Engine zone the VM on one side of the flow runs in."
+    },
+    "gcp_vm_region": {
+      "label": "VM region",
+      "type": "region",
+      "description": "The Compute Engine region the VM on one side of the flow runs in."
+    },
+    "gcp_vpc_name": {
+      "label": "VPC network name",
+      "type": "identifier",
+      "description": "The name of the VPC network one side of the flow belongs to."
+    },
+    "gcp_subnetwork_name": {
+      "label": "Subnetwork name",
+      "type": "identifier",
+      "description": "The name of the subnet one side of the flow belongs to, when the flow is scoped to one."
+    },
+    "gcp_subnetwork_id": {
+      "label": "Subnetwork id",
+      "type": "identifier",
+      "description": "The Monitored Resource's own numeric id for the reporting subnetwork.",
+      "hazards": [
+        "ids_look_alike"
+      ]
+    },
+    "gke_cluster_name": {
+      "label": "GKE cluster name",
+      "type": "identifier",
+      "description": "The name of the GKE cluster a flow endpoint's pod runs in."
+    },
+    "gke_cluster_location": {
+      "label": "GKE cluster location",
+      "type": "region",
+      "description": "The location of the GKE cluster a flow endpoint's pod runs in."
+    },
+    "gke_pod_name": {
+      "label": "GKE pod name",
+      "type": "identifier",
+      "description": "The name of the pod at one end of the flow."
+    },
+    "gke_pod_namespace": {
+      "label": "GKE pod namespace",
+      "type": "identifier",
+      "description": "The Kubernetes namespace of the pod at one end of the flow."
+    },
+    "gke_service_name": {
+      "label": "GKE service name",
+      "type": "identifier",
+      "description": "The name of a Kubernetes Service fronting the source pod, when the flow's source side is a service-backed pod.",
+      "hazards": [
+        "gke_service_cap"
+      ]
+    },
+    "gke_service_namespace": {
+      "label": "GKE service namespace",
+      "type": "identifier",
+      "description": "The namespace of the Kubernetes Service named in the same record.",
+      "hazards": [
+        "gke_service_cap"
+      ]
+    },
+    "flow_resource_kind": {
+      "label": "Monitored resource kind",
+      "type": "enum",
+      "description": "The kind of Google Cloud resource the flow log entry is attributed to; every sampled flow log entry carries gce_subnetwork, a Compute Engine subnetwork."
+    },
+    "gcs_time_micros": {
+      "label": "Request time",
+      "type": "event_time",
+      "description": "The time the request completed, in microseconds since the Unix epoch.",
+      "hazards": [
+        "gcs_time_broken"
+      ]
+    },
+    "gcs_client_ip": {
+      "label": "Client address",
+      "type": "source_ip",
+      "description": "The IP address the request was made from."
+    },
+    "gcs_client_ip_type": {
+      "label": "Client address type",
+      "type": "enum",
+      "description": "Which IP version the client address is: 1 for IPv4, 2 for IPv6."
+    },
+    "gcs_client_ip_region": {
+      "label": "Client address region",
+      "type": "text",
+      "description": "A column Google's usage log format reserves for a future client-region value; not populated today."
+    },
+    "gcs_http_method": {
+      "label": "HTTP method",
+      "type": "enum",
+      "description": "The HTTP method of the request, for example GET or PATCH."
+    },
+    "gcs_request_uri": {
+      "label": "Request URI",
+      "type": "text",
+      "description": "The URI of the request, including its path and any query string; the add-on also splits it into a path, a query string, a reconstructed url and that url's length."
+    },
+    "gcs_status": {
+      "label": "HTTP status",
+      "type": "outcome",
+      "description": "The HTTP status code the server returned for the request; the add-on also carries its text reason phrase."
+    },
+    "gcs_request_bytes": {
+      "label": "Request bytes",
+      "type": "count",
+      "description": "The number of bytes sent in the request."
+    },
+    "gcs_response_bytes": {
+      "label": "Response bytes",
+      "type": "count",
+      "description": "The number of bytes sent in the response."
+    },
+    "gcs_total_bytes": {
+      "label": "Total bytes",
+      "type": "count",
+      "description": "Request and response bytes added together."
+    },
+    "gcs_response_time": {
+      "label": "Time to serve",
+      "type": "count",
+      "description": "How long the request took to serve, in microseconds; the add-on also carries a millisecond conversion."
+    },
+    "gcs_server_host": {
+      "label": "Request host",
+      "type": "domain",
+      "description": "The host named in the original request, for example storage.googleapis.com or a custom domain fronting the bucket."
+    },
+    "gcs_referer": {
+      "label": "HTTP referer",
+      "type": "text",
+      "description": "The HTTP Referer header value sent with the request, when the client sent one."
+    },
+    "gcs_referer_domain": {
+      "label": "Referer domain",
+      "type": "domain",
+      "description": "The host portion the add-on extracts from the HTTP referer.",
+      "hazards": [
+        "referer_domain_bug"
+      ]
+    },
+    "gcs_user_agent": {
+      "label": "User agent",
+      "type": "user_agent",
+      "description": "The User-Agent header value of the request."
+    },
+    "gcs_user_agent_length": {
+      "label": "User agent length",
+      "type": "count",
+      "description": "The length, in characters, of the request's User-Agent string."
+    },
+    "gcs_request_id": {
+      "label": "Request id",
+      "type": "request_id",
+      "description": "Google's own identifier for the request.",
+      "hazards": [
+        "ids_look_alike"
+      ]
+    },
+    "gcs_operation": {
+      "label": "Storage operation",
+      "type": "enum",
+      "description": "The Cloud Storage operation name the request performed, for example GET_Object; empty for requests the usage log does not classify as an object operation."
+    },
+    "gcs_bucket": {
+      "label": "Bucket name",
+      "type": "resource_id",
+      "description": "The bucket named in the request."
+    },
+    "gcs_object": {
+      "label": "Object name",
+      "type": "file_path",
+      "description": "The object named in the request; empty for a request that is not scoped to one object."
+    },
+    "gcs_vendor_product": {
+      "label": "Vendor product",
+      "type": "enum",
+      "description": "A constant the add-on sets on every Cloud Storage usage log event, naming the vendor and product."
+    }
+  },
+  "containers": {
+    "google:gcp:compute:vpc_flows": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Compute Engine VPC Flow Logs, indexed from a Cloud Logging export: one record per side per flow, with connection, byte/packet counts, and the VM, VPC, subnetwork or GKE pod context of each side.",
+      "note": "jsonPayload holds the record nested under src_/dest_ instance, vpc and gke_details objects; the add-on also aliases the same values to flat, CIM-style top-level fields."
+    },
+    "google:gcp:buckets:accesslogs": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Cloud Storage bucket server access logs (the 'usage log'): one CSV row per storage API request, with the client, method, URI, status and byte counts. Maps to the CIM Change data model.",
+      "note": "Indexed from the bucket-delivered usage-log CSV object; the add-on both keeps the raw cs_/sc_ column names and adds derived and CIM alias fields."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "insertId",
+      "concept": "flow_log_entry_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "logName",
+      "concept": "flow_log_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "timestamp",
+      "concept": "flow_log_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "receiveTimestamp",
+      "concept": "flow_receive_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "start_time",
+      "concept": "flow_start_time",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.start_time",
+      "concept": "flow_start_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "end_time",
+      "concept": "flow_end_time",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.end_time",
+      "concept": "flow_end_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.reporter",
+      "concept": "flow_reporter",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "vpcflow_reporter",
+      "concept": "flow_reporter",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "direction",
+      "concept": "flow_reporter",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "CIM direction, calculated from jsonPayload.reporter.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "src_ip",
+      "concept": "flow_src_ip",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model field alias for Network Traffic, per Splunk's Network Traffic field mapping.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "src",
+      "concept": "flow_src_ip",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model field alias for Network Traffic, per Splunk's Network Traffic field mapping.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.connection.src_ip",
+      "concept": "flow_src_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "dest_ip",
+      "concept": "flow_dest_ip",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model field alias for Network Traffic, per Splunk's Network Traffic field mapping.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "dest",
+      "concept": "flow_dest_ip",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model field alias for Network Traffic, per Splunk's Network Traffic field mapping.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.connection.dest_ip",
+      "concept": "flow_dest_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "dvc",
+      "concept": "flow_reporting_device",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "CIM dvc: the source address when reporter is SRC, the destination address when reporter is DEST.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "dvc_ip",
+      "concept": "flow_reporting_device",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "CIM dvc: the source address when reporter is SRC, the destination address when reporter is DEST.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "src_port",
+      "concept": "flow_src_port",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.connection.src_port",
+      "concept": "flow_src_port",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "dest_port",
+      "concept": "flow_dest_port",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.connection.dest_port",
+      "concept": "flow_dest_port",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "protocol_code",
+      "concept": "flow_protocol",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "transport",
+      "concept": "flow_protocol",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "CIM transport, calculated from jsonPayload.connection.protocol.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.connection.protocol",
+      "concept": "flow_protocol",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.bytes_sent",
+      "concept": "flow_bytes_sent",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "bytes",
+      "concept": "flow_bytes_sent",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "CIM bytes, calculated from jsonPayload.bytes_sent.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "bytes_in",
+      "concept": "flow_bytes_sent",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "CIM bytes_in, calculated from jsonPayload.bytes_sent.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "bytes_out",
+      "concept": "flow_bytes_sent",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "CIM bytes_out, calculated from jsonPayload.bytes_sent when reporter is SRC.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.packets_sent",
+      "concept": "flow_packets_sent",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "packets",
+      "concept": "flow_packets_sent",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "packets_in",
+      "concept": "flow_packets_sent",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "packets_out",
+      "concept": "flow_packets_sent",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.rtt_msec",
+      "concept": "flow_rtt_msec",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "duration",
+      "concept": "flow_duration",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "CIM duration, calculated from start_time and end_time.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "response_time",
+      "concept": "flow_duration",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "CIM duration, calculated from start_time and end_time.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.src_instance.project_id",
+      "concept": "gcp_project_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.dest_instance.project_id",
+      "concept": "gcp_project_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.src_vpc.project_id",
+      "concept": "gcp_project_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.dest_vpc.project_id",
+      "concept": "gcp_project_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "resource.labels.project_id",
+      "concept": "gcp_project_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "src_vendor_account",
+      "concept": "gcp_project_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "dest_vendor_account",
+      "concept": "gcp_project_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "vendor_account",
+      "concept": "gcp_project_id",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "CIM vendor_account, calculated from the reporting side's instance project_id.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.src_instance.vm_name",
+      "concept": "gcp_vm_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.dest_instance.vm_name",
+      "concept": "gcp_vm_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "src_vm_name",
+      "concept": "gcp_vm_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "dest_vm_name",
+      "concept": "gcp_vm_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.src_instance.zone",
+      "concept": "gcp_vm_zone",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.dest_instance.zone",
+      "concept": "gcp_vm_zone",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "src_zone",
+      "concept": "gcp_vm_zone",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "dest_zone",
+      "concept": "gcp_vm_zone",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "dvc_zone",
+      "concept": "gcp_vm_zone",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "The reporting side's own zone.",
+        "cite": {
+          "url": "https://help.splunk.com/en/splunk-cloud-platform/common-information-model/5.1/field-mappings/network-traffic-field-mapping",
+          "title": "Network Traffic field mapping (Common Information Model)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "resource.labels.location",
+      "concept": "gcp_vm_zone",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.src_instance.region",
+      "concept": "gcp_vm_region",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.dest_instance.region",
+      "concept": "gcp_vm_region",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.src_vpc.vpc_name",
+      "concept": "gcp_vpc_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.dest_vpc.vpc_name",
+      "concept": "gcp_vpc_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "src_vpc_name",
+      "concept": "gcp_vpc_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "dest_vpc_name",
+      "concept": "gcp_vpc_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.src_vpc.subnetwork_name",
+      "concept": "gcp_subnetwork_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.dest_vpc.subnetwork_name",
+      "concept": "gcp_subnetwork_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "src_subnetwork_name",
+      "concept": "gcp_subnetwork_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "dest_subnetwork_name",
+      "concept": "gcp_subnetwork_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The Splunk Add-on for Google Cloud Platform's own flattened top-level field, derived from the nested LogEntry field of the same meaning."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "resource.labels.subnetwork_name",
+      "concept": "gcp_subnetwork_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "resource.labels.subnetwork_id",
+      "concept": "gcp_subnetwork_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.src_gke_details.cluster.cluster_name",
+      "concept": "gke_cluster_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.dest_gke_details.cluster.cluster_name",
+      "concept": "gke_cluster_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.src_gke_details.cluster.cluster_location",
+      "concept": "gke_cluster_location",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.dest_gke_details.cluster.cluster_location",
+      "concept": "gke_cluster_location",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.src_gke_details.pod.pod_name",
+      "concept": "gke_pod_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.dest_gke_details.pod.pod_name",
+      "concept": "gke_pod_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.src_gke_details.pod.pod_namespace",
+      "concept": "gke_pod_namespace",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.dest_gke_details.pod.pod_namespace",
+      "concept": "gke_pod_namespace",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.src_gke_details.service{}.service_name",
+      "concept": "gke_service_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "jsonPayload.src_gke_details.service{}.service_namespace",
+      "concept": "gke_service_namespace",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:vpc_flows",
+      "column": "resource.type",
+      "concept": "flow_resource_kind",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Google Cloud Logging LogEntry JSON, indexed and flattened to dotted field names by the Splunk Add-on for Google Cloud Platform."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "time",
+      "concept": "gcs_time_micros",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "c_ip",
+      "concept": "gcs_client_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "src",
+      "concept": "gcs_client_ip",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's own derived or Common Information Model alias field, confirmed against the dev Splunk index alongside its source CSV column."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "c_ip_type",
+      "concept": "gcs_client_ip_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "c_ip_region",
+      "concept": "gcs_client_ip_region",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "cs_method",
+      "concept": "gcs_http_method",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "http_method",
+      "concept": "gcs_http_method",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's own derived or Common Information Model alias field, confirmed against the dev Splunk index alongside its source CSV column."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "cs_uri",
+      "concept": "gcs_request_uri",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "uri_path",
+      "concept": "gcs_request_uri",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "The add-on's own split of cs_uri into a path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "uri_query",
+      "concept": "gcs_request_uri",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "The add-on's own split of cs_uri into a query string."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "url",
+      "concept": "gcs_request_uri",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "The add-on's own reconstruction of cs_host and cs_uri into a full url."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "url_length",
+      "concept": "gcs_request_uri",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "The character length of the reconstructed url."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "sc_status",
+      "concept": "gcs_status",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "status",
+      "concept": "gcs_status",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's own derived or Common Information Model alias field, confirmed against the dev Splunk index alongside its source CSV column."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "action",
+      "concept": "gcs_status",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "The HTTP status reason phrase the add-on decodes from sc_status, for example OK for 200 or Not Found for 404."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "cs_bytes",
+      "concept": "gcs_request_bytes",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "bytes_in",
+      "concept": "gcs_request_bytes",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's own derived or Common Information Model alias field, confirmed against the dev Splunk index alongside its source CSV column."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "sc_bytes",
+      "concept": "gcs_response_bytes",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "bytes_out",
+      "concept": "gcs_response_bytes",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's own derived or Common Information Model alias field, confirmed against the dev Splunk index alongside its source CSV column."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "bytes",
+      "concept": "gcs_total_bytes",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "cs_bytes plus sc_bytes, confirmed against the dev Splunk index (82 + 27 = 109)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "time_taken_micros",
+      "concept": "gcs_response_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "response_time",
+      "concept": "gcs_response_time",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "time_taken_micros converted to milliseconds, confirmed against the dev Splunk index (204000 -> 204)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "cs_host",
+      "concept": "gcs_server_host",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "dest",
+      "concept": "gcs_server_host",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's own derived or Common Information Model alias field, confirmed against the dev Splunk index alongside its source CSV column."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "url_domain",
+      "concept": "gcs_server_host",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's own derived or Common Information Model alias field, confirmed against the dev Splunk index alongside its source CSV column."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "cs_referer",
+      "concept": "gcs_referer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "http_referrer",
+      "concept": "gcs_referer",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's own derived or Common Information Model alias field, confirmed against the dev Splunk index alongside its source CSV column."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "http_referrer_domain",
+      "concept": "gcs_referer_domain",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "The add-on's own host extraction from cs_referer."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "cs_user_agent",
+      "concept": "gcs_user_agent",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "http_user_agent",
+      "concept": "gcs_user_agent",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's own derived or Common Information Model alias field, confirmed against the dev Splunk index alongside its source CSV column."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "http_user_agent_length",
+      "concept": "gcs_user_agent_length",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "The character length of cs_user_agent."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "s_request_id",
+      "concept": "gcs_request_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "cs_operation",
+      "concept": "gcs_operation",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "operation",
+      "concept": "gcs_operation",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's own derived or Common Information Model alias field, confirmed against the dev Splunk index alongside its source CSV column."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "cs_bucket",
+      "concept": "gcs_bucket",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "storage_name",
+      "concept": "gcs_bucket",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's own derived or Common Information Model alias field, confirmed against the dev Splunk index alongside its source CSV column."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "cs_object",
+      "concept": "gcs_object",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cloud Storage usage log CSV column, indexed and named by the Splunk Add-on for Google Cloud Platform's field extraction (transforms.conf FIELDS)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "vendor_product",
+      "concept": "gcs_vendor_product",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Constant on every event of this sourcetype, confirmed against the dev Splunk index (GCP Google Cloud Storage)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "app",
+      "concept": "gcs_vendor_product",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Constant on every event of this sourcetype, confirmed against the dev Splunk index (GCP Google Cloud Storage)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:buckets:accesslogs",
+      "column": "category",
+      "concept": "gcs_vendor_product",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Constant on every event of this sourcetype, confirmed against the dev Splunk index (GCP Google Cloud Storage)."
+      }
+    }
+  ],
+  "hazards": {
+    "flow_time_basis": {
+      "text": "A flow record carries four times: timestamp (the LogEntry's own time, close to end_time), start_time and end_time (the flow's aggregation window), and receiveTimestamp (when Cloud Logging received the entry). Bound a search on start_time and end_time, not on receiveTimestamp or _time alone.",
+      "level": "note"
+    },
+    "reporter_perspective": {
+      "text": "reporter (SRC, DEST, SRC_GATEWAY or DEST_GATEWAY) says which side produced the record; dvc and the add-on's dest/direction fields are computed relative to it. The same flow can be reported from both ends, so counting records without grouping on reporter double-counts flows.",
+      "level": "caution"
+    },
+    "rtt_tcp_only": {
+      "text": "rtt_msec is populated only for TCP flows reported from VMs; it is absent for UDP, ICMP or gateway-reported flows.",
+      "level": "note"
+    },
+    "gke_service_cap": {
+      "text": "A flow's GKE service list is capped at two entries; a pod fronted by more services reports MANY_SERVICES instead of naming them.",
+      "level": "note"
+    },
+    "ids_look_alike": {
+      "text": "insertId (vpc_flows), s_request_id (accesslogs) and resource.labels.subnetwork_id are all opaque tokens that look alike; none is a join key to either of the others.",
+      "level": "note"
+    },
+    "gcs_time_broken": {
+      "text": "This sourcetype's props.conf TIME_PREFIX cannot match the real CSV content (no bracketed timestamp is ever present), so Splunk indexes _time at ingest time, not the request's own time_micros value. Always read and sort on time_micros, not _time.",
+      "level": "caution"
+    },
+    "referer_domain_bug": {
+      "text": "The add-on's http_referrer_domain extraction can drop leading digits from a numeric host: a referrer host of 99.88.77.66 was observed to yield http_referrer_domain 88.77.66, not the full address.",
+      "level": "caution"
+    }
+  },
+  "edges": [],
+  "templates": []
+}

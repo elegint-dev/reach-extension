@@ -1,0 +1,13 @@
+{
+ "format": "reach-pack-values",
+ "version": 1,
+ "pack": "fixture-cites",
+ "licence": {"name": "CC0"},
+ "cites": {
+  "dict_page": {"url": "https://example.com/dict", "title": "Dict page", "read_on": "2026-09-19"}
+ },
+ "concepts": {
+  "event_name": {"provenance": "documented", "cite": "dict_page", "values": {"Login": {"meaning": "A sign-in.", "cite": "spec_page"}}},
+  "outcome": {"provenance": "documented", "cite": {"url": "https://example.com/inline", "title": "Inline page", "read_on": "2026-09-19"}}
+ }
+}

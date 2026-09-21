@@ -1,0 +1,20 @@
+# Vendor TA packages: build inputs only, not redistributed (Splunk license)
+packs/_ta/
+# (TA configs now live outside the repo: ~/git/reach-ta-inputs, never inside the loaded extension directory)
+tools/dev/falcon.env
+tools/dev/.falcon-offset
+tools/falcon.env
+.claude/worktrees/
+# Downloaded public fixtures and rendered Azure payloads.
+tools/dev/.cache/
+__pycache__/
+*.pyc
+tools/dev/__pycache__/
+tools/dev/okta.env
+tools/dev/samples-tenant/
+*.zip
+.DS_Store
+node_modules/
+tests/chrome/screenshots/
+tests/fixtures/pages/raw/
+node_modules

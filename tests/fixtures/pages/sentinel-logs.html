@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Logs (fixture)</title>
+<style>
+body{margin:0;background:#fff;color:#323130;font:13px/1.4 "Segoe UI",-apple-system,Roboto,sans-serif}
+.query-editor{padding:12px 16px;border-bottom:1px solid #e1dfdd}
+.monaco-editor{width:900px;height:48px;border:1px solid #c8c6c4;padding:4px 8px;font:13px/20px Consolas,Menlo,monospace;overflow:hidden}
+.view-line{white-space:pre;height:20px}
+.results{padding:12px 16px}
+.ag-root-wrapper{position:relative;height:720px;border:1px solid #e1dfdd}
+.ag-root{position:relative;height:100%;overflow:hidden}
+.ag-header{height:32px;border-bottom:1px solid #e1dfdd;background:#faf9f8}
+.ag-header-row,.ag-row{position:absolute;left:0;right:0;height:32px;display:flex}
+.ag-header-cell,.ag-cell{flex:0 0 auto;padding:6px 8px;box-sizing:border-box;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border-right:1px solid #f3f2f1}
+.ag-body{position:relative;height:calc(100% - 32px)}
+.ag-row{border-bottom:1px solid #f3f2f1}
+.c1{width:170px}.c2{width:150px}.c3{width:130px}.c4{width:250px}.c5{width:260px}.c6{width:330px}.c7{width:130px}.c8{width:110px}.c9{width:200px}.c10{width:120px}.c11{width:120px}.c12{width:140px}.c13{width:150px}
+.ag-popup{position:absolute;inset:0;pointer-events:none}
+.ag-popup-child{position:absolute;pointer-events:auto}
+.ag-menu{background:#fff;border:1px solid #c8c6c4;box-shadow:0 1.6px 3.6px rgba(0,0,0,.13),0 .3px .9px rgba(0,0,0,.11);border-radius:2px}
+.ag-menu-list{display:table;min-width:180px;padding:4px 0}
+.ag-menu-option{display:table-row;cursor:pointer}
+.ag-menu-option-part{display:table-cell;padding:6px 12px}
+</style>
+</head>
+<body>
+<div class="query-editor">
+  <div class="monaco-editor" role="code">
+    <div class="view-lines">
+      <div class="view-line"><span>ReachCrowdStrike_CL</span></div>
+      <div class="view-line"><span>| where EventSimpleName == "ProcessRollup2"</span></div>
+    </div>
+  </div>
+</div>
+<div class="results">
+<div class="ag-root-wrapper">
+<div class="ag-root" role="grid" aria-rowcount="8" aria-colcount="13">
+  <div class="ag-header" role="presentation">
+    <div class="ag-header-row" role="row" aria-rowindex="1">
+      <div class="ag-header-cell c1" role="columnheader" aria-colindex="1" col-id="TimeGenerated"><span class="ag-header-cell-text">TimeGenerated [UTC]</span></div>
+      <div class="ag-header-cell c2" role="columnheader" aria-colindex="2" col-id="Type"><span class="ag-header-cell-text">Type</span></div>
+      <div class="ag-header-cell c3" role="columnheader" aria-colindex="3" col-id="EventSimpleName"><span class="ag-header-cell-text">EventSimpleName</span></div>
+      <div class="ag-header-cell c4" role="columnheader" aria-colindex="4" col-id="Aid"><span class="ag-header-cell-text">Aid</span></div>
+      <div class="ag-header-cell c5" role="columnheader" aria-colindex="5" col-id="ImageFileName"><span class="ag-header-cell-text">ImageFileName</span></div>
+      <div class="ag-header-cell c6" role="columnheader" aria-colindex="6" col-id="SHA256HashData"><span class="ag-header-cell-text">SHA256HashData</span></div>
+      <div class="ag-header-cell c7" role="columnheader" aria-colindex="7" col-id="TargetProcessId"><span class="ag-header-cell-text">TargetProcessId</span></div>
+      <div class="ag-header-cell c8" role="columnheader" aria-colindex="8" col-id="EventPlatform"><span class="ag-header-cell-text">EventPlatform</span></div>
+      <div class="ag-header-cell c9" role="columnheader" aria-colindex="9" col-id="SigningId"><span class="ag-header-cell-text">SigningId</span></div>
+      <div class="ag-header-cell c10" role="columnheader" aria-colindex="10" col-id="DesiredAccess"><span class="ag-header-cell-text">DesiredAccess</span></div>
+      <div class="ag-header-cell c11" role="columnheader" aria-colindex="11" col-id="RawProcessId"><span class="ag-header-cell-text">RawProcessId</span></div>
+      <div class="ag-header-cell c12" role="columnheader" aria-colindex="12" col-id="AidOsVersion"><span class="ag-header-cell-text">AidOsVersion</span></div>
+      <div class="ag-header-cell c13" role="columnheader" aria-colindex="13" col-id="ContextProcessId"><span class="ag-header-cell-text">ContextProcessId</span></div>
+    </div>
+  </div>
+  <div class="ag-body" role="presentation">
+    <div class="ag-row ag-row-level-0" role="row" aria-rowindex="3" style="top:32px">
+      <div class="ag-cell c1" role="gridcell" aria-colindex="1">7/27/2022, 10:42:40.382 AM</div>
+      <div class="ag-cell c2" role="gridcell" aria-colindex="2">ReachCrowdStrike_CL</div>
+      <div class="ag-cell c3" role="gridcell" aria-colindex="3">ProcessRollup2</div>
+      <div class="ag-cell c4" role="gridcell" aria-colindex="4">f0778584e83c4efc9cf026bc1e7f0489</div>
+      <div class="ag-cell c5" role="gridcell" aria-colindex="5">\Device\HarddiskVolume1\Windows\System32\cmd.exe</div>
+      <div class="ag-cell c6" role="gridcell" aria-colindex="6">935c1861df1f4018d698e8b65abfa02d7e9037d8f68ca3c2065b6ca165d44ad2</div>
+      <div class="ag-cell c7" role="gridcell" aria-colindex="7">326552622</div>
+      <div class="ag-cell c8" role="gridcell" aria-colindex="8">Win</div>
+      <div class="ag-cell c9" role="gridcell" aria-colindex="9"></div>
+      <div class="ag-cell c10" role="gridcell" aria-colindex="10"></div>
+      <div class="ag-cell c11" role="gridcell" aria-colindex="11"></div>
+      <div class="ag-cell c12" role="gridcell" aria-colindex="12"></div>
+      <div class="ag-cell c13" role="gridcell" aria-colindex="13"></div>
+    </div>
+    <div class="ag-row ag-row-level-0" role="row" aria-rowindex="2" style="top:0">
+      <div class="ag-cell c1" role="gridcell" aria-colindex="1">7/27/2022, 10:42:41.056 AM</div>
+      <div class="ag-cell c2" role="gridcell" aria-colindex="2">ReachCrowdStrike_CL</div>
+      <div class="ag-cell c3" role="gridcell" aria-colindex="3">ProcessRollup2</div>
+      <div class="ag-cell c4" role="gridcell" aria-colindex="4">f0778584e83c4efc9cf026bc1e7f0489</div>
+      <div class="ag-cell c5" role="gridcell" aria-colindex="5">\Device\HarddiskVolume1\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</div>
+      <div class="ag-cell c6" role="gridcell" aria-colindex="6">ba4038fd20e474c047be8aad5bfacdb1bfc1ddbe12f803f473b7918d8d819436</div>
+      <div class="ag-cell c7" role="gridcell" aria-colindex="7">332855234</div>
+      <div class="ag-cell c8" role="gridcell" aria-colindex="8">Win</div>
+      <div class="ag-cell c9" role="gridcell" aria-colindex="9"></div>
+      <div class="ag-cell c10" role="gridcell" aria-colindex="10"></div>
+      <div class="ag-cell c11" role="gridcell" aria-colindex="11"></div>
+      <div class="ag-cell c12" role="gridcell" aria-colindex="12"></div>
+      <div class="ag-cell c13" role="gridcell" aria-colindex="13"></div>
+    </div>
+    <div class="ag-row ag-row-level-0" role="row" aria-rowindex="4" style="top:64px">
+      <div class="ag-cell c1" role="gridcell" aria-colindex="1">7/27/2022, 10:42:40.382 AM</div>
+      <div class="ag-cell c2" role="gridcell" aria-colindex="2">ReachCrowdStrike_CL</div>
+      <div class="ag-cell c3" role="gridcell" aria-colindex="3">ProcessRollup2</div>
+      <div class="ag-cell c4" role="gridcell" aria-colindex="4">f0778584e83c4efc9cf026bc1e7f0489</div>
+      <div class="ag-cell c5" role="gridcell" aria-colindex="5">\Device\HarddiskVolume1\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</div>
+      <div class="ag-cell c6" role="gridcell" aria-colindex="6">ba4038fd20e474c047be8aad5bfacdb1bfc1ddbe12f803f473b7918d8d819436</div>
+      <div class="ag-cell c7" role="gridcell" aria-colindex="7">330919164</div>
+      <div class="ag-cell c8" role="gridcell" aria-colindex="8">Win</div>
+      <div class="ag-cell c9" role="gridcell" aria-colindex="9"></div>
+      <div class="ag-cell c10" role="gridcell" aria-colindex="10"></div>
+      <div class="ag-cell c11" role="gridcell" aria-colindex="11"></div>
+      <div class="ag-cell c12" role="gridcell" aria-colindex="12"></div>
+      <div class="ag-cell c13" role="gridcell" aria-colindex="13"></div>
+    </div>
+    <div class="ag-row ag-row-level-0" role="row" aria-rowindex="5" style="top:96px">
+      <div class="ag-cell c1" role="gridcell" aria-colindex="1">9/16/2026, 3:12:08.114 PM</div>
+      <div class="ag-cell c2" role="gridcell" aria-colindex="2">ReachCrowdStrike_CL</div>
+      <div class="ag-cell c3" role="gridcell" aria-colindex="3">ProcessRollup2</div>
+      <div class="ag-cell c4" role="gridcell" aria-colindex="4">0123456789abcdef0123456789abcdef</div>
+      <div class="ag-cell c5" role="gridcell" aria-colindex="5">/System/Library/Frameworks/Contacts.framework/Support/contactsd</div>
+      <div class="ag-cell c6" role="gridcell" aria-colindex="6">077fc5180ed67177cfdcad85cadc028f2466fa21db42ba8265ee2187b02114e9</div>
+      <div class="ag-cell c7" role="gridcell" aria-colindex="7">708952894073940015</div>
+      <div class="ag-cell c8" role="gridcell" aria-colindex="8">Mac</div>
+      <div class="ag-cell c9" role="gridcell" aria-colindex="9">com.apple.contactsd</div>
+      <div class="ag-cell c10" role="gridcell" aria-colindex="10"></div>
+      <div class="ag-cell c11" role="gridcell" aria-colindex="11"></div>
+      <div class="ag-cell c12" role="gridcell" aria-colindex="12"></div>
+      <div class="ag-cell c13" role="gridcell" aria-colindex="13"></div>
+    </div>
+    <div class="ag-row ag-row-level-0" role="row" aria-rowindex="6" style="top:128px">
+      <div class="ag-cell c1" role="gridcell" aria-colindex="1">7/27/2022, 10:42:40.312 AM</div>
+      <div class="ag-cell c2" role="gridcell" aria-colindex="2">ReachCrowdStrike_CL</div>
+      <div class="ag-cell c3" role="gridcell" aria-colindex="3">ProcessHandleOpDetectInfo</div>
+      <div class="ag-cell c4" role="gridcell" aria-colindex="4">f0778584e83c4efc9cf026bc1e7f0489</div>
+      <div class="ag-cell c5" role="gridcell" aria-colindex="5">\Device\HarddiskVolume1\Tools\procdump.exe</div>
+      <div class="ag-cell c6" role="gridcell" aria-colindex="6"></div>
+      <div class="ag-cell c7" role="gridcell" aria-colindex="7">5497396</div>
+      <div class="ag-cell c8" role="gridcell" aria-colindex="8">Win</div>
+      <div class="ag-cell c9" role="gridcell" aria-colindex="9"></div>
+      <div class="ag-cell c10" role="gridcell" aria-colindex="10">2097151</div>
+      <div class="ag-cell c11" role="gridcell" aria-colindex="11">936</div>
+      <div class="ag-cell c12" role="gridcell" aria-colindex="12"></div>
+      <div class="ag-cell c13" role="gridcell" aria-colindex="13">255667414</div>
+    </div>
+    <div class="ag-row ag-row-level-0" role="row" aria-rowindex="8" style="top:192px">
+      <div class="ag-cell c1" role="gridcell" aria-colindex="1">9/17/2026, 4:12:00.204 PM</div>
+      <div class="ag-cell c2" role="gridcell" aria-colindex="2">ReachCrowdStrike_CL</div>
+      <div class="ag-cell c3" role="gridcell" aria-colindex="3">ProcessRollup2</div>
+      <div class="ag-cell c4" role="gridcell" aria-colindex="4">fedcba9876543210fedcba9876543210</div>
+      <div class="ag-cell c5" role="gridcell" aria-colindex="5">/usr/bin/curl</div>
+      <div class="ag-cell c6" role="gridcell" aria-colindex="6">b1b4a0805c83790a5854ff58ed222cecebb40ce7f5daeca33878b47089e9c206</div>
+      <div class="ag-cell c7" role="gridcell" aria-colindex="7">708952894073942210</div>
+      <div class="ag-cell c8" role="gridcell" aria-colindex="8">Lin</div>
+      <div class="ag-cell c9" role="gridcell" aria-colindex="9"></div>
+      <div class="ag-cell c10" role="gridcell" aria-colindex="10"></div>
+      <div class="ag-cell c11" role="gridcell" aria-colindex="11"></div>
+      <div class="ag-cell c12" role="gridcell" aria-colindex="12">Ubuntu 22.04</div>
+      <div class="ag-cell c13" role="gridcell" aria-colindex="13"></div>
+    </div>
+    <div class="ag-row ag-row-level-0" role="row" aria-rowindex="7" style="top:160px">
+      <div class="ag-cell c1" role="gridcell" aria-colindex="1">9/17/2026, 4:11:40.118 PM</div>
+      <div class="ag-cell c2" role="gridcell" aria-colindex="2">ReachCrowdStrike_CL</div>
+      <div class="ag-cell c3" role="gridcell" aria-colindex="3">ProcessRollup2</div>
+      <div class="ag-cell c4" role="gridcell" aria-colindex="4">0123456789abcdef0123456789abcdef</div>
+      <div class="ag-cell c5" role="gridcell" aria-colindex="5">/System/Library/Frameworks/Contacts.framework/Support/contactsd</div>
+      <div class="ag-cell c6" role="gridcell" aria-colindex="6">9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08</div>
+      <div class="ag-cell c7" role="gridcell" aria-colindex="7">708952894073941120</div>
+      <div class="ag-cell c8" role="gridcell" aria-colindex="8">Mac</div>
+      <div class="ag-cell c9" role="gridcell" aria-colindex="9">com.evil.contactsd</div>
+      <div class="ag-cell c10" role="gridcell" aria-colindex="10"></div>
+      <div class="ag-cell c11" role="gridcell" aria-colindex="11"></div>
+      <div class="ag-cell c12" role="gridcell" aria-colindex="12"></div>
+      <div class="ag-cell c13" role="gridcell" aria-colindex="13"></div>
+    </div>
+  </div>
+  <div class="ag-popup"></div>
+</div>
+</div>
+</div>
+<script>
+// The blade's own value menu (ag-Grid's): opened by a right-click on a
+// body cell, inside the grid's overlay layer, laid out as a table with
+// Copy value / Filter for / Filter to exclude. The browser's menu is
+// suppressed on cells, not on headers, as in the blade.
+(function () {
+  var layer = document.querySelector(".ag-popup");
+  var root = document.querySelector(".ag-root");
+  document.addEventListener("contextmenu", function (e) {
+    var cell = e.target.closest && e.target.closest('[role="gridcell"]');
+    if (!cell) return;
+    e.preventDefault();
+    layer.replaceChildren();
+    var wrap = document.createElement("div");
+    wrap.className = "ag-popup-child";
+    var r = root.getBoundingClientRect();
+    wrap.style.left = Math.round(e.clientX - r.left) + "px";
+    wrap.style.top = Math.round(e.clientY - r.top) + "px";
+    var menu = document.createElement("div");
+    menu.className = "ag-menu";
+    var list = document.createElement("div");
+    list.className = "ag-menu-list";
+    list.setAttribute("role", "menu");
+    ["Copy value", "Filter for", "Filter to exclude"].forEach(function (label) {
+      var opt = document.createElement("div");
+      opt.className = "ag-menu-option";
+      opt.setAttribute("role", "menuitem");
+      opt.innerHTML = '<span class="ag-menu-option-part ag-menu-option-icon"></span><span class="ag-menu-option-part ag-menu-option-text">' + label + "</span>";
+      list.appendChild(opt);
+    });
+    menu.appendChild(list);
+    wrap.appendChild(menu);
+    layer.appendChild(wrap);
+  });
+  document.addEventListener("mousedown", function (e) {
+    if (!e.target.closest || !e.target.closest(".ag-popup-child")) layer.replaceChildren();
+  });
+})();
+</script>
+</body>
+</html>

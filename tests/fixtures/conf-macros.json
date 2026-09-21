@@ -1,0 +1,5 @@
+[
+  { "name": "cs_index", "acl": { "app": "TA_crowdstrike_fdr" }, "content": { "definition": "index=crowdstrike_fdr", "disabled": "0" } },
+  { "name": "cs_trace_process(3)", "acl": { "app": "TA_crowdstrike_fdr" }, "content": { "definition": "search index=`cs_index` ...", "disabled": "0" } },
+  { "name": "some_other_macro", "acl": { "app": "TA_crowdstrike_fdr" }, "content": { "definition": "unrelated", "disabled": "0" } }
+]

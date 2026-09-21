@@ -1,0 +1,2604 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "crowdstrike-events",
+  "name": "CrowdStrike Falcon event streams beside the sensor feed",
+  "pack_version": "0.2.0",
+  "description": "Two CrowdStrike FDR sourcetypes that sit beside the main sensor feed: crowdstrike:events:sensor:ithr, the index-time-host-resolution variant of sensor telemetry (rewritten away at index time by the TA's own transform), and crowdstrike:events:external, the External API Event stream carrying detections and other activity from outside the sensors. Two more sourcetypes join here, from a different pipeline than the FDR ones above: crowdstrike:events (the Falcon Streaming API's audit/API-activity envelope, pulled from a Falcon trial tenant) and crowdstrike:hosts (a device snapshot from the Hosts API's GetDeviceDetailsV2/PostDeviceDetailsV2 response, pulled the same way). Neither has a Splunkbase TA; both sourcetypes are this project's own dev-app definitions.",
+  "source": "Splunk Add-on for CrowdStrike FDR (Splunk_TA_CrowdStrike_FDR) props and transforms; Splunk Security Content data-source pages; checked against seeded samples. CrowdStrike Falcon Streaming API and Hosts API, pulled into a Splunk index from a Falcon trial tenant; field names cross checked against the public schema at developer.crowdstrike.com on 2026-09-19 where noted.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "crowdstrike_events_fdr",
+    "label": "CrowdStrike FDR: sensor:ithr and External API events",
+    "description": "The two FDR sourcetypes beside the main sensor feed: index-time-host-resolved sensor telemetry (rewritten to crowdstrike:events:sensor before it reaches disk) and the External API event stream carrying detections and other non-sensor activity.",
+    "tags": [
+      "edr",
+      "crowdstrike",
+      "endpoint"
+    ],
+    "discriminator": "record_kind"
+  },
+  "concepts": {
+    "record_kind": {
+      "label": "Record kind",
+      "type": "record_type",
+      "description": "Which kind of record this row is: the sensor's own event name on crowdstrike:events:sensor:ithr (event_simpleName), the External API event name on crowdstrike:events:external (ExternalApiType). Decides which other columns are filled.",
+      "role": "enum"
+    },
+    "cid": {
+      "label": "Customer id (cid)",
+      "type": "account_id",
+      "description": "CrowdStrike's id for the tenant (customer) the record belongs to.",
+      "role": "account_id"
+    },
+    "aid": {
+      "label": "Agent id (aid)",
+      "type": "host_id",
+      "description": "The Falcon sensor's own id for the host, unique to one sensor install: the stable host key across a rename. Named aid on crowdstrike:events:sensor:ithr; on crowdstrike:events:external this pack binds the same value from SensorId, the field Splunk's own field-reference page for this sourcetype names.",
+      "role": "agent_id"
+    },
+    "sha256": {
+      "label": "SHA-256",
+      "type": "file_hash",
+      "description": "SHA-256 of the file involved: the executing image on crowdstrike:events:sensor:ithr, the file named in the detection's IOC on crowdstrike:events:external.",
+      "role": "hash"
+    },
+    "sha1": {
+      "label": "SHA-1",
+      "type": "file_hash",
+      "description": "SHA-1 of the file involved. All zeros in the sensor:ithr ProcessRollup2 sample (unset); malformed (39 characters) in the external sample, see the synthetic_external_sample hazard.",
+      "role": "hash",
+      "hazards": [
+        "synthetic_external_sample"
+      ]
+    },
+    "md5": {
+      "label": "MD5",
+      "type": "file_hash",
+      "description": "MD5 of the file involved.",
+      "role": "hash"
+    },
+    "raw_process_id": {
+      "label": "Raw process id",
+      "type": "process_id",
+      "description": "The operating system's own process id (a literal PID), recycled by the OS across process lifetimes. Named RawProcessId on crowdstrike:events:sensor:ithr and ProcessId on crowdstrike:events:external.",
+      "role": "process_id",
+      "hazards": [
+        "pid_recycling"
+      ]
+    },
+    "target_process_id": {
+      "label": "Target process id",
+      "type": "process_id",
+      "description": "A larger, sensor-assigned process number that is the focus of the event, present on almost every sensor:ithr record and named ParentProcessId's counterpart on external. Splunk's ProcessRollup2 field reference lists it as its own field, separate from RawProcessId; see the pid_recycling hazard for the observed magnitude gap between the two.",
+      "role": "process_id",
+      "hazards": [
+        "pid_recycling"
+      ]
+    },
+    "parent_process_id": {
+      "label": "Parent process id",
+      "type": "process_id",
+      "description": "The same sensor-assigned numbering as target_process_id, for the parent process.",
+      "role": "process_id",
+      "hazards": [
+        "pid_recycling"
+      ]
+    },
+    "context_process_id": {
+      "label": "Context process id",
+      "type": "process_id",
+      "description": "The same sensor-assigned numbering as target_process_id, for the process that generated a file, handle or dump event (FileDeleteInfo, DmpFileWritten, ProcessHandleOpDetectInfo).",
+      "role": "process_id",
+      "hazards": [
+        "pid_recycling"
+      ]
+    },
+    "source_process_id": {
+      "label": "Source process id",
+      "type": "process_id",
+      "description": "The same sensor-assigned numbering as target_process_id, for the process on the other side of a handle operation (ProcessHandleOpDetectInfo's opener).",
+      "role": "process_id",
+      "hazards": [
+        "pid_recycling"
+      ]
+    },
+    "command_line": {
+      "label": "Command line",
+      "type": "command_line",
+      "description": "The full command line used to start the process."
+    },
+    "parent_command_line": {
+      "label": "Parent command line",
+      "type": "command_line",
+      "description": "The full command line of the parent process."
+    },
+    "image_file_name": {
+      "label": "Image file name",
+      "type": "file_path",
+      "description": "Full device path to the executable (PE) image."
+    },
+    "parent_image_file_name": {
+      "label": "Parent image file name",
+      "type": "file_path",
+      "description": "Full device path to the parent process's executable image."
+    },
+    "parent_base_file_name": {
+      "label": "Parent base file name",
+      "type": "file_name",
+      "description": "Base file name (no path) of the parent process's image."
+    },
+    "grand_parent_base_file_name": {
+      "label": "Grandparent base file name",
+      "type": "file_name",
+      "description": "Base file name (no path) of the grandparent process's image, present on ProcessRollup2 records."
+    },
+    "target_file_name": {
+      "label": "Target file name",
+      "type": "file_path",
+      "description": "The file the event is about: the file deleted (FileDeleteInfo), the dump written to disk (DmpFileWritten), or, on crowdstrike:events:external, the file the detection produced (AssociatedFile)."
+    },
+    "event_id": {
+      "label": "Event id",
+      "type": "event_id",
+      "description": "A unique id for one record: id on crowdstrike:events:sensor:ithr, EventUUID on crowdstrike:events:external.",
+      "hazards": [
+        "id_namespaces"
+      ]
+    },
+    "session_id": {
+      "label": "Session id",
+      "type": "session_id",
+      "description": "The Windows logon session id (Windows only), present on ProcessRollup2 records.",
+      "role": "session_id"
+    },
+    "event_time": {
+      "label": "Sensor event time",
+      "type": "event_time",
+      "description": "The sensor's own timestamp for the event, epoch milliseconds.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_fields"
+      ]
+    },
+    "aip": {
+      "label": "Sensor egress IP (aip)",
+      "type": "source_ip",
+      "description": "The sensor's public IP address as seen by the CrowdStrike cloud at event time; the egress address, not the host's own interface.",
+      "role": "ip"
+    },
+    "event_platform": {
+      "label": "Event platform",
+      "type": "enum",
+      "description": "Operating system family the sensor runs on. Only Win is in the seeded sample.",
+      "role": "enum",
+      "decode": {
+        "lookup": "falcon-event-platform",
+        "meaning_field": "platform",
+        "values": {
+          "Win": "Windows sensor",
+          "Mac": "macOS sensor (not seen in the sample)",
+          "Lin": "Linux sensor (not seen in the sample)"
+        }
+      }
+    },
+    "process_start_time": {
+      "label": "Process start time",
+      "type": "event_time",
+      "description": "When the process began, epoch seconds with a fractional part.",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_fields"
+      ]
+    },
+    "process_end_time": {
+      "label": "Process end time",
+      "type": "event_time",
+      "description": "When the process finished, epoch seconds. Empty in the sample's ProcessRollup2 record: the process had not exited when the sensor rolled the event up.",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_fields"
+      ]
+    },
+    "context_timestamp": {
+      "label": "Context time",
+      "type": "event_time",
+      "description": "A second sensor-side timestamp on file, handle and synthetic-rollup records, close to but not identical to the record's own timestamp.",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_fields"
+      ]
+    },
+    "user_sid": {
+      "label": "User SID",
+      "type": "user_id",
+      "description": "Windows security identifier of the account the process ran as; stable per account where UserName is not.",
+      "role": "user_id"
+    },
+    "integrity_level": {
+      "label": "Integrity level",
+      "type": "enum",
+      "description": "Windows Mandatory Integrity Control level of the process, as the numeric RID of its S-1-16-<n> SID.",
+      "role": "enum",
+      "decode": {
+        "lookup": "windows-integrity-level",
+        "meaning_field": "level",
+        "values": {
+          "0": "Untrusted",
+          "4096": "Low",
+          "8192": "Medium",
+          "12288": "High (elevated)",
+          "16384": "System"
+        }
+      }
+    },
+    "desired_access": {
+      "label": "Desired access",
+      "type": "bitmask",
+      "description": "The Windows access rights mask requested when one process opened a handle on another; on ProcessHandleOpDetectInfo this is what a credential-dumping tool asked for when it opened lsass.exe. Read by mask, not as one number.",
+      "role": "other"
+    },
+    "window_title": {
+      "label": "Window title",
+      "type": "text",
+      "description": "Title of the process's main window, when it had one."
+    },
+    "authentication_id": {
+      "label": "Authentication id",
+      "type": "session_id",
+      "description": "The Windows logon authentication id (LUID) of the process's token.",
+      "role": "session_id"
+    },
+    "tree_id": {
+      "label": "Tree id",
+      "type": "identifier",
+      "description": "A sensor-assigned id grouping related events under one process tree."
+    },
+    "tags": {
+      "label": "Tags",
+      "type": "text",
+      "description": "A comma-separated list of CrowdStrike's own internal numeric tag ids for the event; no public table of what each number means is in this pack's sources."
+    },
+    "event_name_version": {
+      "label": "Event name (versioned)",
+      "type": "text",
+      "description": "The event's schema name with its version suffix, for example ProcessRollup2V19."
+    },
+    "computer_name": {
+      "label": "Computer name",
+      "type": "hostname",
+      "description": "The host's name as CrowdStrike reported it on the detection.",
+      "role": "hostname"
+    },
+    "user_name": {
+      "label": "User name",
+      "type": "user_name",
+      "description": "The account the detected process ran as, DOMAIN\\\\user form.",
+      "role": "user_name"
+    },
+    "machine_domain": {
+      "label": "Machine domain",
+      "type": "domain",
+      "description": "The Windows domain the host is joined to."
+    },
+    "local_ip": {
+      "label": "Local IP",
+      "type": "source_ip",
+      "description": "The host's own local network interface address, as the sensor reported it. Distinct from aip on sensor:ithr (the egress address the CrowdStrike cloud sees).",
+      "role": "ip"
+    },
+    "origin_source_ip": {
+      "label": "Origin source IP",
+      "type": "source_ip",
+      "description": "A second address field on the detection record; equal to LocalIP in the seeded sample. No source in this pack's lanes distinguishes its meaning from local_ip.",
+      "role": "ip"
+    },
+    "detect_id": {
+      "label": "Detect id",
+      "type": "identifier",
+      "description": "CrowdStrike's id for the detection, of the form ldt:<aid>:<counter>; usable in the Detection Resolution and ThreatGraph APIs per Splunk's field reference.",
+      "hazards": [
+        "id_namespaces"
+      ]
+    },
+    "detect_name": {
+      "label": "Detect name",
+      "type": "text",
+      "description": "A short name for the detection."
+    },
+    "detect_description": {
+      "label": "Detect description",
+      "type": "text",
+      "description": "A prose description of what the adversary was trying to do and how to start investigating."
+    },
+    "severity": {
+      "label": "Severity",
+      "type": "count",
+      "description": "A numeric severity for the detection; see the severity_scale hazard before treating the number as a small fixed range.",
+      "hazards": [
+        "severity_scale"
+      ]
+    },
+    "severity_name": {
+      "label": "Severity name",
+      "type": "enum",
+      "description": "The word form of Severity, for example Critical. Only Critical is confirmed in this pack's sources; see the severity_scale hazard.",
+      "role": "enum"
+    },
+    "tactic": {
+      "label": "Tactic",
+      "type": "text",
+      "description": "The MITRE ATT&CK tactic name CrowdStrike associated with the behavior, for example Credential Access."
+    },
+    "technique": {
+      "label": "Technique",
+      "type": "text",
+      "description": "The MITRE ATT&CK technique name (and id) CrowdStrike associated with the behavior, for example OS Credential Dumping: LSASS Memory (T1003.001)."
+    },
+    "objective": {
+      "label": "Objective",
+      "type": "text",
+      "description": "The MITRE ATT&CK-aligned objective name CrowdStrike associated with the behavior."
+    },
+    "pattern_disposition_value": {
+      "label": "Pattern disposition value",
+      "type": "bitmask",
+      "description": "The numeric id of the pattern disposition: what action CrowdStrike's policy took on the behavior, packed as a bitmask. The individual named bits (PatternDispositionFlags.Detect, .KillProcess, .QuarantineFile and 17 others) are not bound by this pack; read PatternDispositionDescription for the words.",
+      "role": "other"
+    },
+    "pattern_disposition_description": {
+      "label": "Pattern disposition description",
+      "type": "text",
+      "description": "Words for what PatternDispositionValue means, for example \"Detected, standard detection, no action taken.\""
+    },
+    "falcon_host_link": {
+      "label": "Falcon console link",
+      "type": "text",
+      "description": "A URL straight to the detection in the Falcon console."
+    },
+    "ioc_type": {
+      "label": "IOC type",
+      "type": "enum",
+      "description": "What kind of indicator IOCValue is. Only hash_sha256 is in the seeded sample.",
+      "role": "enum"
+    },
+    "ioc_value": {
+      "label": "IOC value",
+      "type": "identifier",
+      "description": "The indicator value itself; its shape depends on IOCType (a hash in the sample)."
+    },
+    "host_groups": {
+      "label": "Host groups",
+      "type": "text",
+      "description": "The Falcon host group(s) the machine belongs to, as a JSON array written into one string field."
+    },
+    "mac_address": {
+      "label": "MAC address",
+      "type": "identifier",
+      "description": "The host's network interface hardware address."
+    },
+    "file_name": {
+      "label": "File name",
+      "type": "file_name",
+      "description": "Base file name (no path) of the file involved in the detection."
+    },
+    "file_path": {
+      "label": "File path",
+      "type": "file_path",
+      "description": "Full path of the file involved in the detection."
+    },
+    "grandparent_image_file_name": {
+      "label": "Grandparent image file name",
+      "type": "file_path",
+      "description": "Full path to the grandparent process's executable image."
+    },
+    "grandparent_command_line": {
+      "label": "Grandparent command line",
+      "type": "command_line",
+      "description": "The full command line of the grandparent process."
+    },
+    "record_kind_raw": {
+      "label": "Record kind (raw EventType)",
+      "type": "record_type",
+      "description": "A duplicate of record_kind's value with the Event_ prefix stripped, from the raw event's own EventType key. Splunk indexes it as extracted_EventType because eventtype is a reserved field name.",
+      "hazards": [
+        "id_namespaces"
+      ]
+    },
+    "event_time_iso": {
+      "label": "Event time (ISO 8601)",
+      "type": "event_time",
+      "description": "A duplicate of UTCTimestamp in human-readable ISO 8601 form.",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_fields"
+      ]
+    },
+    "event_sequence": {
+      "label": "Event sequence (eid)",
+      "type": "identifier",
+      "description": "A small integer on the record; its exact meaning (a per-file or per-session sequence number) is not confirmed in this pack's sources. 1 in the seeded sample."
+    },
+    "nonce": {
+      "label": "Nonce",
+      "type": "identifier",
+      "description": "A small integer field on the record; its purpose is not confirmed in this pack's sources."
+    },
+    "device_id": {
+      "label": "Device id (device_id)",
+      "type": "host_id",
+      "description": "CrowdStrike's identifier for the host, on the device record the Hosts API returns.",
+      "role": "agent_id",
+      "hazards": [
+        "device_id_namespace"
+      ]
+    },
+    "external_ip": {
+      "label": "External IP",
+      "type": "source_ip",
+      "description": "The host's public IP address as the Hosts API reports it.",
+      "role": "ip"
+    },
+    "host_platform": {
+      "label": "Platform name (platform_name)",
+      "type": "enum",
+      "description": "The host's OS platform family, as the Hosts API names it.",
+      "role": "enum",
+      "hazards": [
+        "small_dev_tenant"
+      ]
+    },
+    "host_product_type": {
+      "label": "Product type (product_type_desc)",
+      "type": "enum",
+      "description": "What kind of endpoint the Hosts API considers this: workstation, server and so on.",
+      "role": "enum",
+      "hazards": [
+        "small_dev_tenant"
+      ]
+    },
+    "host_os_version": {
+      "label": "OS version",
+      "type": "text",
+      "description": "The operating system version string as CrowdStrike's sensor reported it to the cloud.",
+      "role": "text"
+    },
+    "host_kernel_version": {
+      "label": "Kernel version",
+      "type": "text",
+      "description": "The host kernel's version string.",
+      "role": "text"
+    },
+    "sensor_agent_version": {
+      "label": "Falcon sensor version (agent_version)",
+      "type": "version",
+      "description": "The installed Falcon sensor's version string.",
+      "role": "version"
+    },
+    "host_first_seen": {
+      "label": "Host first seen",
+      "type": "event_time",
+      "description": "When CrowdStrike's cloud first recorded this host.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_fields"
+      ]
+    },
+    "host_last_seen": {
+      "label": "Host last seen",
+      "type": "event_time",
+      "description": "When CrowdStrike's cloud last heard from this host's sensor.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_fields"
+      ]
+    },
+    "last_login_user": {
+      "label": "Last login user",
+      "type": "user_name",
+      "description": "The account name of the last interactive login the sensor observed on the host.",
+      "role": "user_id",
+      "hazards": [
+        "tenant_values_excluded"
+      ]
+    },
+    "last_login_user_sid": {
+      "label": "Last login user SID",
+      "type": "user_id",
+      "description": "The Windows security identifier of the last interactive login's account.",
+      "role": "user_id",
+      "hazards": [
+        "tenant_values_excluded"
+      ]
+    },
+    "host_status": {
+      "label": "Status (status)",
+      "type": "enum",
+      "description": "The host record's own status field, as the Hosts API names it.",
+      "role": "enum",
+      "hazards": [
+        "small_dev_tenant"
+      ]
+    },
+    "provision_status": {
+      "label": "Provision status",
+      "type": "enum",
+      "description": "Where the host sits in CrowdStrike's provisioning flow.",
+      "role": "enum",
+      "hazards": [
+        "small_dev_tenant"
+      ]
+    },
+    "rtr_state": {
+      "label": "Real Time Response state (rtr_state)",
+      "type": "enum",
+      "description": "Whether Real Time Response is enabled for the host, as the field names it.",
+      "role": "enum",
+      "hazards": [
+        "small_dev_tenant"
+      ]
+    },
+    "reduced_functionality_mode": {
+      "label": "Reduced functionality mode",
+      "type": "flag",
+      "description": "Whether the sensor is running in a degraded state with reduced capability.",
+      "role": "bool",
+      "hazards": [
+        "small_dev_tenant"
+      ]
+    },
+    "safe_mode": {
+      "label": "Safe mode",
+      "type": "flag",
+      "description": "Whether the host was last seen booted into an OS safe mode.",
+      "role": "bool",
+      "hazards": [
+        "small_dev_tenant"
+      ]
+    },
+    "filesystem_containment_status": {
+      "label": "Filesystem containment status",
+      "type": "enum",
+      "description": "Whether CrowdStrike's network containment is applied to the host's filesystem access.",
+      "role": "enum",
+      "hazards": [
+        "small_dev_tenant"
+      ]
+    },
+    "host_criticality": {
+      "label": "Criticality",
+      "type": "enum",
+      "description": "An asset-criticality tag an analyst or policy can set on the host.",
+      "role": "enum",
+      "hazards": [
+        "small_dev_tenant"
+      ]
+    },
+    "chassis_type_desc": {
+      "label": "Chassis type",
+      "type": "enum",
+      "description": "The hardware chassis type CrowdStrike inferred for the host.",
+      "role": "enum",
+      "hazards": [
+        "small_dev_tenant"
+      ]
+    },
+    "system_manufacturer": {
+      "label": "System manufacturer",
+      "type": "text",
+      "description": "The hardware manufacturer string the sensor read from the host.",
+      "role": "text"
+    },
+    "system_product_name": {
+      "label": "System product name",
+      "type": "text",
+      "description": "The hardware model string the sensor read from the host.",
+      "role": "text"
+    },
+    "host_serial_number": {
+      "label": "Serial number",
+      "type": "identifier",
+      "description": "The hardware serial number the sensor read from the host.",
+      "role": "identifier",
+      "hazards": [
+        "tenant_values_excluded"
+      ]
+    },
+    "host_group_hash": {
+      "label": "Host group hash (group_hash)",
+      "type": "identifier",
+      "description": "A hash CrowdStrike derives from the host's group membership; changes when group membership changes.",
+      "role": "identifier"
+    },
+    "policy_type": {
+      "label": "Policy type",
+      "type": "enum",
+      "description": "Which policy category a device_policies entry is for (sensor update, prevention and so on); this pack binds one representative entry, sensor_update, out of eight device_policies categories the record carries.",
+      "role": "enum"
+    },
+    "policy_id": {
+      "label": "Policy id",
+      "type": "identifier",
+      "description": "The id of the policy applied to the host for one policy category.",
+      "role": "identifier"
+    },
+    "policy_applied": {
+      "label": "Policy applied",
+      "type": "flag",
+      "description": "Whether the assigned policy has actually been applied to the host.",
+      "role": "bool"
+    },
+    "policy_applied_date": {
+      "label": "Policy applied date",
+      "type": "event_time",
+      "description": "When the assigned policy was applied to the host.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_fields"
+      ]
+    },
+    "policy_assigned_date": {
+      "label": "Policy assigned date",
+      "type": "event_time",
+      "description": "When the policy was assigned to the host (may predate applied_date).",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_fields"
+      ]
+    },
+    "audit_event_type": {
+      "label": "Audit event type (metadata.eventType)",
+      "type": "record_type",
+      "description": "The streaming envelope's own category name for the record.",
+      "role": "event_name"
+    },
+    "audit_category": {
+      "label": "Audit category",
+      "type": "enum",
+      "description": "Which CrowdStrike service or channel produced the record; event.Category, event.ServiceName and event.Source carry the same small value set in the sample and are bound to this one concept.",
+      "role": "enum",
+      "hazards": [
+        "small_dev_tenant"
+      ]
+    },
+    "audit_action": {
+      "label": "Audit action",
+      "type": "enum",
+      "description": "The specific action or lifecycle event the audit record names.",
+      "role": "enum",
+      "hazards": [
+        "small_dev_tenant"
+      ]
+    },
+    "actor_type_code": {
+      "label": "Actor type code",
+      "type": "enum",
+      "description": "A small integer code for the kind of actor that performed the action.",
+      "role": "enum",
+      "hazards": [
+        "undocumented_codes"
+      ]
+    },
+    "actor_id": {
+      "label": "Actor id",
+      "type": "user_id",
+      "description": "An id for who or what performed the action (a user id or a client id, depending on actor_type_code).",
+      "role": "user_id",
+      "hazards": [
+        "tenant_values_excluded"
+      ]
+    },
+    "api_client_id": {
+      "label": "API client id",
+      "type": "app_id",
+      "description": "The OAuth2 API client id that made the request, when the actor was an API client.",
+      "role": "identifier",
+      "hazards": [
+        "tenant_values_excluded"
+      ]
+    },
+    "request_method": {
+      "label": "Request method",
+      "type": "enum",
+      "description": "The HTTP method of the API request the audit record covers.",
+      "role": "enum"
+    },
+    "audit_status_code": {
+      "label": "Status code",
+      "type": "enum",
+      "description": "The HTTP status code the API request returned.",
+      "role": "enum"
+    },
+    "audit_success": {
+      "label": "Success flag",
+      "type": "flag",
+      "description": "Whether the audited action succeeded.",
+      "role": "bool",
+      "hazards": [
+        "small_dev_tenant"
+      ]
+    },
+    "target_type_code": {
+      "label": "Target type code",
+      "type": "raw_object",
+      "description": "A code naming the kind of object the action targeted.",
+      "role": "other",
+      "hazards": [
+        "undocumented_codes"
+      ]
+    },
+    "audit_geo_country": {
+      "label": "Actor geo country",
+      "type": "enum",
+      "description": "The country CrowdStrike attributed to the request's origin.",
+      "role": "enum",
+      "hazards": [
+        "small_dev_tenant"
+      ]
+    },
+    "stream_offset": {
+      "label": "Stream offset (offset)",
+      "type": "identifier",
+      "description": "The Streaming API's position marker for the record, used to resume a feed without loss or duplication.",
+      "role": "identifier"
+    },
+    "envelope_version": {
+      "label": "Envelope version",
+      "type": "version",
+      "description": "The streaming envelope's own schema version string.",
+      "role": "version"
+    }
+  },
+  "containers": {
+    "crowdstrike:events:sensor:ithr": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Falcon sensor telemetry indexed with index-time host resolution enabled (cs_ithr_type). The Splunk_TA_CrowdStrike_FDR ships this stanza as a byte-identical copy of crowdstrike:events:sensor's props; the TA's own transforms.conf then rewrites every event's sourcetype to crowdstrike:events:sensor unconditionally before it reaches disk, so events landing under this literal sourcetype name are not observable in a normally configured install.",
+      "note": "Dev Splunk confirms the rewrite: 43 seeded events all landed as sourcetype=crowdstrike:events:sensor. Fields and examples here come from the same NDJSON sample (Splunk's attack_data T1003.001 corpus), read before the rewrite."
+    },
+    "crowdstrike:events:external": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "CrowdStrike external security events: activity outside the sensors, delivered through FDR's External API Event stream (ExternalApiType). Only Event_DetectionSummaryEvent (a Falcon detection) is in the dev workspace's seeded data; CrowdStrike's Event Streams API also emits AuthActivityAuditEvent, UserActivityAuditEvent and IncidentSummaryEvent under the same sourcetype shape, not confirmed here.",
+      "note": "collect_external_events defaults to 0 in inputs.conf; the TA does not forward this sourcetype until an admin turns it on. The dev Splunk's one record is a hand-seeded row (source=/tmp/seed/detection-attack.json), not vendor-published; see the synthetic_external_sample hazard. The raw JSON's own EventType key collides with Splunk's reserved eventtype field and is indexed as extracted_EventType; ExternalApiType (Event_-prefixed) is the field this pack binds as record_kind."
+    },
+    "crowdstrike:hosts": {
+      "platform": "splunk",
+      "kind": "custom",
+      "description": "A device snapshot from the Falcon Hosts API (GetDeviceDetailsV2 / PostDeviceDetailsV2), one JSON object per host, pulled from a Falcon trial tenant. Not a Splunkbase TA sourcetype; the stanza is the repo's own dev-app definition (DATETIME_CONFIG=CURRENT, so index time is the event time, not a field CrowdStrike sends).",
+      "note": "106 fields observed in the dev Splunk (index=crowdstrike, 4 devices from one Falcon trial tenant). Field names cross checked against the public schema at developer.crowdstrike.com/api-reference/collections/hosts/ (read 2026-09-19), which renders every field as a JSON-Schema placeholder (\"string\", \"0\") with no description text to cite."
+    },
+    "crowdstrike:events": {
+      "platform": "splunk",
+      "kind": "custom",
+      "description": "The Falcon Streaming API's audit/API-activity envelope: a metadata block (customerIDString, offset, eventType, eventCreationTime, version) wrapping an event body, pulled from the /sensors/entities/datafeed/v2 connection on a Falcon trial tenant. Not a Splunkbase TA sourcetype; the stanza is the repo's own dev-app definition (KV_MODE=json, TIME_PREFIX on eventCreationTime).",
+      "note": "91 fields observed in the dev Splunk (index=crowdstrike, 467 records from one Falcon trial tenant, all AuthActivityAuditEvent/APIActivityAuditEvent/AuditLogV3Event). The event body carries two parallel field sets, Attributes.* and Extensions.*, that repeat the same request/audit fields under different keys (Category values api_request vs Crowdstrike API Client/Streaming API); this pack binds the Extensions.* copy and leaves Attributes.* unbound. developer.crowdstrike.com/api-reference/collections/event-streams/ documents only the datafeed-discovery operations (listAvailableStreamsOAuth2, refreshActiveStreamSession), not this envelope or its eventType values; read 2026-09-19."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "event_simpleName",
+      "concept": "record_kind",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "INDEXED_EXTRACTIONS=json flattens the raw NDJSON body; event_simpleName is a top-level key.",
+        "cite": {
+          "url": "https://splunk.github.io/splunk-add-on-for-crowdstrike-fdr/Sourcetypes/",
+          "title": "Splunk Add-on for CrowdStrike FDR: Sourcetypes",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "timestamp",
+      "concept": "event_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "Top-level key, also TIME_PREFIX for _time."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "aid",
+      "concept": "aid",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "aip",
+      "concept": "aip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "cid",
+      "concept": "cid",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "event_platform",
+      "concept": "event_platform",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "RawProcessId",
+      "concept": "raw_process_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/cbb06880-9dd9-4542-ac60-bd6e5d3c3e4e/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike ProcessRollup2",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "TargetProcessId",
+      "concept": "target_process_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/cbb06880-9dd9-4542-ac60-bd6e5d3c3e4e/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike ProcessRollup2",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "ParentProcessId",
+      "concept": "parent_process_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/cbb06880-9dd9-4542-ac60-bd6e5d3c3e4e/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike ProcessRollup2",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "ContextProcessId",
+      "concept": "context_process_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "SourceProcessId",
+      "concept": "source_process_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "ProcessStartTime",
+      "concept": "process_start_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/cbb06880-9dd9-4542-ac60-bd6e5d3c3e4e/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike ProcessRollup2",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "ProcessEndTime",
+      "concept": "process_end_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/cbb06880-9dd9-4542-ac60-bd6e5d3c3e4e/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike ProcessRollup2",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "ContextTimeStamp",
+      "concept": "context_timestamp",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "CommandLine",
+      "concept": "command_line",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/cbb06880-9dd9-4542-ac60-bd6e5d3c3e4e/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike ProcessRollup2",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "ParentCommandLine",
+      "concept": "parent_command_line",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "ImageFileName",
+      "concept": "image_file_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/cbb06880-9dd9-4542-ac60-bd6e5d3c3e4e/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike ProcessRollup2",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "ParentImageFileName",
+      "concept": "parent_image_file_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "ParentBaseFileName",
+      "concept": "parent_base_file_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/cbb06880-9dd9-4542-ac60-bd6e5d3c3e4e/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike ProcessRollup2",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "GrandParentBaseFileName",
+      "concept": "grand_parent_base_file_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "TargetFileName",
+      "concept": "target_file_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "SHA256HashData",
+      "concept": "sha256",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/cbb06880-9dd9-4542-ac60-bd6e5d3c3e4e/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike ProcessRollup2",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "SHA1HashData",
+      "concept": "sha1",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/cbb06880-9dd9-4542-ac60-bd6e5d3c3e4e/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike ProcessRollup2",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "MD5HashData",
+      "concept": "md5",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/cbb06880-9dd9-4542-ac60-bd6e5d3c3e4e/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike ProcessRollup2",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "UserSid",
+      "concept": "user_sid",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/cbb06880-9dd9-4542-ac60-bd6e5d3c3e4e/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike ProcessRollup2",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "IntegrityLevel",
+      "concept": "integrity_level",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/cbb06880-9dd9-4542-ac60-bd6e5d3c3e4e/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike ProcessRollup2",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "DesiredAccess",
+      "concept": "desired_access",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "id",
+      "concept": "event_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "SessionId",
+      "concept": "session_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/cbb06880-9dd9-4542-ac60-bd6e5d3c3e4e/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike ProcessRollup2",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "WindowTitle",
+      "concept": "window_title",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "AuthenticationId",
+      "concept": "authentication_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "TreeId",
+      "concept": "tree_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "Tags",
+      "concept": "tags",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor:ithr",
+      "column": "name",
+      "concept": "event_name_version",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "ExternalApiType",
+      "concept": "record_kind",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "Top-level key in the raw event body, present alongside a duplicate EventType key that Splunk renames to extracted_EventType because eventtype is reserved.",
+        "cite": {
+          "url": "https://splunk.github.io/splunk-add-on-for-crowdstrike-fdr/Sourcetypes/",
+          "title": "Splunk Add-on for CrowdStrike FDR: Sourcetypes",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "extracted_EventType",
+      "concept": "record_kind_raw",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "Splunk_TA_CrowdStrike_FDR default/props.conf has no FIELDALIAS or EVAL for this name; the extracted_ prefix is Splunk's own indexed-extraction behavior avoiding the reserved eventtype field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "UTCTimestamp",
+      "concept": "event_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "Top-level key, also TIME_PREFIX for _time."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "timestamp",
+      "concept": "event_time_iso",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "cid",
+      "concept": "cid",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "SensorId",
+      "concept": "aid",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "AgentIdString carries the same value in the seeded sample and is left out as redundant.",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "ComputerName",
+      "concept": "computer_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "UserName",
+      "concept": "user_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "MachineDomain",
+      "concept": "machine_domain",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "LocalIP",
+      "concept": "local_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "OriginSourceIpAddress",
+      "concept": "origin_source_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "DetectId",
+      "concept": "detect_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "DetectName",
+      "concept": "detect_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "DetectDescription",
+      "concept": "detect_description",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "Severity",
+      "concept": "severity",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "SeverityName",
+      "concept": "severity_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "Tactic",
+      "concept": "tactic",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "Technique",
+      "concept": "technique",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "Objective",
+      "concept": "objective",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "PatternDispositionValue",
+      "concept": "pattern_disposition_value",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "PatternDispositionDescription",
+      "concept": "pattern_disposition_description",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "FalconHostLink",
+      "concept": "falcon_host_link",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "IOCType",
+      "concept": "ioc_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "IOCValue",
+      "concept": "ioc_value",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "HostGroups",
+      "concept": "host_groups",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "MACAddress",
+      "concept": "mac_address",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "EventUUID",
+      "concept": "event_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "eid",
+      "concept": "event_sequence",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "Nonce",
+      "concept": "nonce",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "ParentProcessId",
+      "concept": "parent_process_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "ParentCommandLine",
+      "concept": "parent_command_line",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "ParentImageFileName",
+      "concept": "parent_image_file_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "GrandparentImageFileName",
+      "concept": "grandparent_image_file_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "GrandparentCommandLine",
+      "concept": "grandparent_command_line",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "ProcessId",
+      "concept": "raw_process_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "Same OS-pid meaning as RawProcessId on the sensor sourcetype; named ProcessId here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "ProcessStartTime",
+      "concept": "process_start_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "ProcessEndTime",
+      "concept": "process_end_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "CommandLine",
+      "concept": "command_line",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "ImageFileName",
+      "concept": "image_file_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "FileName",
+      "concept": "file_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "FilePath",
+      "concept": "file_path",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "AssociatedFile",
+      "concept": "target_file_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "The artifact the detection produced (the LSASS dump path in the sample), same role as TargetFileName on sensor events."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "SHA256String",
+      "concept": "sha256",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "SHA1String",
+      "concept": "sha1",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:external",
+      "column": "MD5String",
+      "concept": "md5",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://research.splunk.com/sources/52b38751-b0db-4965-a800-ebaabd1fd7d5/",
+          "title": "Splunk Security Content: Data Source: CrowdStrike Falcon Stream Alert",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "cid",
+      "concept": "cid",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "Top-level key on the Hosts API device record, shared with the FDR sourcetypes' cid."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "local_ip",
+      "concept": "local_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "Top-level key, shares the local_ip concept with the sensor sourcetypes."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "mac_address",
+      "concept": "mac_address",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "Top-level key, shares the mac_address concept."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "machine_domain",
+      "concept": "machine_domain",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "Top-level key, shares the machine_domain concept."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "hostname",
+      "concept": "computer_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "Top-level key; shares the computer_name concept the sensor sourcetypes bind as ComputerName."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "device_id",
+      "concept": "device_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "external_ip",
+      "concept": "external_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "platform_name",
+      "concept": "host_platform",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "product_type_desc",
+      "concept": "host_product_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "os_version",
+      "concept": "host_os_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "kernel_version",
+      "concept": "host_kernel_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "agent_version",
+      "concept": "sensor_agent_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "first_seen",
+      "concept": "host_first_seen",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "last_seen",
+      "concept": "host_last_seen",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "last_login_user",
+      "concept": "last_login_user",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "last_login_user_sid",
+      "concept": "last_login_user_sid",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "status",
+      "concept": "host_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "provision_status",
+      "concept": "provision_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "rtr_state",
+      "concept": "rtr_state",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "reduced_functionality_mode",
+      "concept": "reduced_functionality_mode",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "safe_mode",
+      "concept": "safe_mode",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "filesystem_containment_status",
+      "concept": "filesystem_containment_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "criticality",
+      "concept": "host_criticality",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "chassis_type_desc",
+      "concept": "chassis_type_desc",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "system_manufacturer",
+      "concept": "system_manufacturer",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "system_product_name",
+      "concept": "system_product_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "serial_number",
+      "concept": "host_serial_number",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "group_hash",
+      "concept": "host_group_hash",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "device_policies.sensor_update.policy_type",
+      "concept": "policy_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "One of eight device_policies categories the record carries; sensor_update is the representative bound here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "device_policies.sensor_update.policy_id",
+      "concept": "policy_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "device_policies.sensor_update.applied",
+      "concept": "policy_applied",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "device_policies.sensor_update.applied_date",
+      "concept": "policy_applied_date",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:hosts",
+      "column": "device_policies.sensor_update.assigned_date",
+      "concept": "policy_assigned_date",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "event.Extensions.cid",
+      "concept": "cid",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "Shares the cid concept the FDR sourcetypes bind."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "metadata.customerIDString",
+      "concept": "cid",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "The envelope's own copy of the tenant id, alongside event.Extensions.cid."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "metadata.eventCreationTime",
+      "concept": "event_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "Shares the event_time concept; epoch milliseconds, matching UTCTimestamp's units on the external sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "metadata.eventType",
+      "concept": "audit_event_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "event.Category",
+      "concept": "audit_category",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "event.ServiceName",
+      "concept": "audit_category",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "event.Source",
+      "concept": "audit_category",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "event.Action",
+      "concept": "audit_action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "event.ActorType",
+      "concept": "actor_type_code",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "event.ActorID",
+      "concept": "actor_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "event.Extensions.APIClientID",
+      "concept": "api_client_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "event.Extensions.request_method",
+      "concept": "request_method",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "event.Extensions.status_code",
+      "concept": "audit_status_code",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "event.Extensions.success",
+      "concept": "audit_success",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "event.TargetType",
+      "concept": "target_type_code",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "event.GeoCountry",
+      "concept": "audit_geo_country",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "metadata.offset",
+      "concept": "stream_offset",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events",
+      "column": "metadata.version",
+      "concept": "envelope_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    }
+  ],
+  "hazards": {
+    "pid_recycling": {
+      "text": "RawProcessId (sensor:ithr) and ProcessId (external) are literal OS process ids, recycled across process lifetimes on the host. TargetProcessId, ParentProcessId, ContextProcessId and SourceProcessId are a different, larger numbering the sensor assigns per process; in the sample RawProcessId is a small number (4036) while TargetProcessId/ParentProcessId are nine digits (307075862, 332855234). Splunk's own ProcessRollup2 field-reference page lists RawProcessId and TargetProcessId as separate fields; this pack does not have a documented source for why the two ranges differ, only that the sample shows they do."
+    },
+    "time_fields": {
+      "text": "event_ingest_time is set by the TA's own crowdstrike_ta_event_ingest_time transform (INGEST_EVAL = event_ingest_time=time()) at index time; it is Splunk's own ingest clock, not a field CrowdStrike sends, and this pack does not bind it as a time concept. The event's own times are timestamp (sensor:ithr, also duplicated in ISO 8601 form on external's timestamp field) and UTCTimestamp (external), both epoch milliseconds; ProcessStartTime and ProcessEndTime are epoch seconds and can be empty when a process is still running or the sensor never saw it end."
+    },
+    "id_namespaces": {
+      "text": "cid (tenant), aid/SensorId (sensor install), id/EventUUID (one record), eid (a small per-record sequence number) and DetectId (one detection, itself built from the aid plus a counter, ldt:<aid>:<n>) are five different id spaces that can all look like hex strings, GUIDs or plain integers; a match on one says nothing about the others."
+    },
+    "severity_scale": {
+      "text": "The sample's one external record carries Severity=90 with SeverityName=Critical. This pack has no source in its allowed lanes (the TA's own docs, or a Splunk-published field reference) for what range Severity is drawn from or what other SeverityName words exist; do not assume a small fixed scale from the single observed pair."
+    },
+    "synthetic_external_sample": {
+      "text": "The only crowdstrike:events:external record in the dev Splunk is a single hand-built row at source=/tmp/seed/detection-attack.json, seeded to narrate the same T1003.001 credential-dumping scenario as the sensor:ithr sample (same aid, cid, procdump.exe, timestamps). It is genuinely indexed (an observed event), but it is not vendor-published data: its SHA1String value is 39 characters (one short of a valid SHA-1) and its MD5String is the MD5 of the literal string 'password'. Treat its field values as illustrative shapes, not as evidence of what CrowdStrike actually emits."
+    },
+    "device_id_namespace": {
+      "text": "device_id (crowdstrike:hosts, from the Hosts API) is a sixth id space beside the five already listed in id_namespaces: this pack has no source in an allowed lane stating device_id and aid/SensorId (the sensor telemetry sourcetypes) are the same value for the same host."
+    },
+    "undocumented_codes": {
+      "text": "event.ActorType (crowdstrike:events) is observed only as the raw integers 1, 2 and 3; event.TargetType is observed only as 0. No source in an allowed lane (CrowdStrike's own docs, or Splunk's) gives these codes names. Treat them as opaque until a source turns up."
+    },
+    "small_dev_tenant": {
+      "text": "crowdstrike:hosts holds 4 devices and crowdstrike:events holds 467 records, all from one Falcon trial tenant (index=crowdstrike in the dev Splunk). Every enumerated value in this pack for these two sourcetypes (platform_name=Mac, product_type_desc=Workstation, chassis_type_desc=Other, event.Category's three literals, and so on) is only what this one small population showed; other CrowdStrike-documented literals (Windows, Linux, other chassis types, other audit categories) are not confirmed absent, only unobserved here."
+    },
+    "tenant_values_excluded": {
+      "text": "crowdstrike:hosts and crowdstrike:events carry the trial tenant's own hostnames, IPs, MAC addresses, usernames, SIDs, serial numbers and client/actor ids. The raw pulled files are kept out of the repository for the same reason; this pack does not copy those values into an example either. Fields bound below for identity or network columns carry a format description but no example value."
+    }
+  },
+  "edges": [
+    {
+      "id": "cs_host_events",
+      "kind": "host",
+      "label": "Everything this host reported",
+      "src": {
+        "concept": "aid"
+      },
+      "dst": {
+        "concept": "aid"
+      },
+      "basis": "confirmed",
+      "basis_ref": "aid/SensorId rides on every sensor and external event",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [],
+      "intent": {
+        "filter": [
+          {
+            "concept": "aid",
+            "op": "eq",
+            "value": "$value"
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "event_time",
+            "record_kind",
+            "image_file_name",
+            "command_line",
+            "target_file_name"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "cs_hash_everywhere",
+      "kind": "file",
+      "label": "Everywhere this hash appeared",
+      "src": {
+        "concept": "sha256"
+      },
+      "dst": {
+        "concept": "sha256"
+      },
+      "basis": "confirmed",
+      "basis_ref": "SHA256HashData/SHA256String on both containers of this pack",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [],
+      "intent": {
+        "filter": [
+          {
+            "concept": "sha256",
+            "op": "eq_ci",
+            "value": "$value"
+          }
+        ],
+        "window": {
+          "since": "$earliest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "aid",
+            "record_kind",
+            "event_time",
+            "image_file_name"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "cs_process_lineage",
+      "kind": "process",
+      "label": "The process that started this one",
+      "src": {
+        "concept": "parent_process_id"
+      },
+      "dst": {
+        "concept": "target_process_id"
+      },
+      "basis": "asserted",
+      "basis_ref": "Splunk's ProcessRollup2 field reference lists both fields; a spawned process's own TargetProcessId is what its children name as ParentProcessId (not itself stated on that page, carried over from the sibling crowdstrike-falcon pack's confirmed edge on crowdstrike:events:sensor, the same body under a different sourcetype label)",
+      "cardinality": "n:1",
+      "scope": [
+        "aid"
+      ],
+      "hazards": [
+        "pid_recycling"
+      ],
+      "intent": {
+        "filter": [
+          {
+            "concept": "aid",
+            "op": "eq",
+            "value": "$aid"
+          },
+          {
+            "concept": "target_process_id",
+            "op": "eq",
+            "value": "$value"
+          }
+        ],
+        "record_types": [
+          "ProcessRollup2",
+          "SyntheticProcessRollup2"
+        ],
+        "window": {
+          "since": "$earliest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "target_process_id",
+            "parent_process_id",
+            "image_file_name",
+            "command_line"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cs_process_events",
+      "kind": "process",
+      "label": "Everything this process did",
+      "src": {
+        "concept": "target_process_id"
+      },
+      "dst": {
+        "concept": "context_process_id"
+      },
+      "basis": "asserted",
+      "basis_ref": "carried over from the sibling crowdstrike-falcon pack's confirmed edge on crowdstrike:events:sensor (file, handle and dump events carry the acting process as ContextProcessId or SourceProcessId); not independently confirmed for the :ithr label",
+      "cardinality": "1:n",
+      "scope": [
+        "aid"
+      ],
+      "hazards": [
+        "pid_recycling"
+      ],
+      "intent": {
+        "filter": [
+          {
+            "concept": "aid",
+            "op": "eq",
+            "value": "$aid"
+          },
+          {
+            "any": [
+              {
+                "concept": "context_process_id",
+                "op": "eq",
+                "value": "$value"
+              },
+              {
+                "concept": "source_process_id",
+                "op": "eq",
+                "value": "$value"
+              }
+            ]
+          }
+        ],
+        "window": {
+          "since": "$earliest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "event_time",
+            "record_kind",
+            "target_file_name",
+            "context_process_id",
+            "source_process_id"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "asc"
+          }
+        }
+      }
+    }
+  ],
+  "templates": []
+}

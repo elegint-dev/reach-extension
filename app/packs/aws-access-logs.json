@@ -1,0 +1,1660 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "aws-access-logs",
+  "name": "AWS data plane access logs",
+  "pack_version": "0.1.0",
+  "description": "Request- and flow-level access logs from four AWS data-plane services (Application Load Balancer, S3, CloudFront, Transit Gateway), as the Splunk Add-on for AWS ingests each from S3 delivery.",
+  "source": "AWS's own log-format reference pages for each service, checked against a live dev Splunk instance seeded with Splunk_TA_aws and, where available, AWS's own worked sample log lines.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "aws_access_logs",
+    "label": "AWS data plane access logs",
+    "description": "What was requested, by whom, from where, with what result, across a load balancer, a bucket, an edge network and a transit gateway.",
+    "tags": [
+      "aws",
+      "cloud",
+      "access",
+      "network",
+      "logs"
+    ]
+  },
+  "concepts": {
+    "access_client_ip": {
+      "label": "Client address",
+      "type": "source_ip",
+      "description": "The IP address of the requester as the AWS edge or load balancer saw it: a proxy's or load balancer's address in front of the real client, not necessarily the real client."
+    },
+    "access_dest_ip": {
+      "label": "Destination address",
+      "type": "dest_ip",
+      "description": "The IP address the traffic was addressed to on the far side of the flow."
+    },
+    "access_client_port": {
+      "label": "Client port",
+      "type": "identifier",
+      "description": "The TCP or UDP port the requester connected from."
+    },
+    "access_dest_port": {
+      "label": "Destination port",
+      "type": "identifier",
+      "description": "The TCP or UDP port on the target or destination side of the connection."
+    },
+    "access_http_status": {
+      "label": "HTTP status",
+      "type": "outcome",
+      "description": "The numeric HTTP status code of the response, as this tier generated or observed it."
+    },
+    "access_user_agent": {
+      "label": "User agent",
+      "type": "user_agent",
+      "description": "The client's User-Agent header, quoted as sent."
+    },
+    "access_http_method": {
+      "label": "HTTP method",
+      "type": "enum",
+      "description": "The HTTP request method (GET, PUT, POST, and so on)."
+    },
+    "access_domain": {
+      "label": "Host",
+      "type": "domain",
+      "description": "The domain the request was addressed to: an SNI value, a Host header, or the endpoint the client connected to, depending on the sourcetype."
+    },
+    "access_request_id": {
+      "label": "Request id",
+      "type": "request_id",
+      "description": "An id that ties one request (or, for ELB, one X-Ray trace) to this one log record."
+    },
+    "access_bytes_out": {
+      "label": "Response bytes",
+      "type": "count",
+      "description": "The size in bytes of the response sent to the client."
+    },
+    "access_bytes_in": {
+      "label": "Request bytes",
+      "type": "count",
+      "description": "The size in bytes of the request received from the client."
+    },
+    "elb_type": {
+      "label": "Listener type",
+      "type": "enum",
+      "description": "The type of request or connection the listener handled."
+    },
+    "elb_response_time": {
+      "label": "Response time",
+      "type": "event_time",
+      "description": "When the load balancer generated a response to the client (ISO 8601); for WebSockets, when the connection closed. This sourcetype's time field.",
+      "hazards": [
+        "elb_two_timestamps"
+      ]
+    },
+    "elb_request_creation_time": {
+      "label": "Request creation time",
+      "type": "event_time",
+      "description": "When the load balancer received the request from the client (ISO 8601).",
+      "hazards": [
+        "elb_two_timestamps"
+      ]
+    },
+    "elb_id": {
+      "label": "Load balancer id",
+      "type": "resource_id",
+      "description": "The resource id of the load balancer; can contain forward slashes."
+    },
+    "elb_target_status_code": {
+      "label": "Target status code",
+      "type": "outcome",
+      "description": "The HTTP status code of the response from the target itself, recorded only when a connection to the target was established and it responded; a dash otherwise."
+    },
+    "elb_request_line": {
+      "label": "Request line",
+      "type": "text",
+      "description": "The client's request line, quoted: HTTP method, protocol://host:port/uri, HTTP version, exactly as the load balancer received it."
+    },
+    "elb_target_group_arn": {
+      "label": "Target group ARN",
+      "type": "resource_id",
+      "description": "The ARN of the target group the request was routed to."
+    },
+    "elb_target_endpoint": {
+      "label": "Target endpoint",
+      "type": "identifier",
+      "description": "The IP address and port of the target that received the request, colon-joined exactly as this field arrives; a dash when no target received the request (for example a fixed response, a redirect, or a failed Lambda invocation). This TA does not split the field into separate IP and port columns."
+    },
+    "elb_tls": {
+      "label": "TLS negotiation",
+      "type": "enum",
+      "description": "The negotiated SSL/TLS cipher and protocol for an HTTPS listener; a dash on both bindings when the listener is not HTTPS."
+    },
+    "elb_actions_executed": {
+      "label": "Actions taken",
+      "type": "enum",
+      "description": "The comma-separated list of actions the load balancer took while processing the request, quoted; a dash if none (for example a malformed request)."
+    },
+    "elb_error_reason": {
+      "label": "Error reason",
+      "type": "enum",
+      "description": "The error reason code, quoted, when an authenticate or Lambda-target action failed; a dash otherwise."
+    },
+    "elb_matched_rule_priority": {
+      "label": "Matched rule priority",
+      "type": "count",
+      "description": "The priority (1-50000) of the listener rule that matched, 0 if the default action was taken, -1 on a rules-evaluation error, or a dash for any other error."
+    },
+    "s3_bucket_owner": {
+      "label": "Bucket owner / requester",
+      "type": "account_id",
+      "description": "The canonical user ID of the bucket owner or, on the requester binding, of whoever made the request (or the assumed-role ARN, or a dash if unauthenticated): another form of the AWS account ID, not the 12-digit account number itself.",
+      "hazards": [
+        "canonical_id_not_account_id"
+      ]
+    },
+    "s3_bucket_name": {
+      "label": "Bucket name",
+      "type": "resource_id",
+      "description": "The bucket the request was processed against."
+    },
+    "s3_operation": {
+      "label": "Operation",
+      "type": "enum",
+      "description": "The S3 operation, written as SOAP.op, REST.method.resource, WEBSITE.method.resource, BATCH.DELETE.OBJECT, or S3.action.resource; S3.COMPUTE.OBJECT.CHECKSUM for a Compute checksum job."
+    },
+    "s3_key": {
+      "label": "Object key",
+      "type": "file_path",
+      "description": "The key (object name) part of the request; a dash for an operation that takes no key, such as a bucket-level request."
+    },
+    "s3_request_uri": {
+      "label": "Request-URI",
+      "type": "text",
+      "description": "The Request-URI part of the HTTP request message, quoted, including the query string."
+    },
+    "s3_error_code": {
+      "label": "S3 error code",
+      "type": "enum",
+      "description": "The Amazon S3 error response code, or a dash when the request succeeded."
+    },
+    "s3_object_size": {
+      "label": "Object size",
+      "type": "count",
+      "description": "The total size in bytes of the object the request concerned; a dash when not applicable."
+    },
+    "s3_total_time": {
+      "label": "Total time",
+      "type": "count",
+      "description": "Milliseconds the request was in flight from S3's side: from receipt to the last response byte sent."
+    },
+    "s3_turn_around_time": {
+      "label": "Turn-around time",
+      "type": "count",
+      "description": "Milliseconds S3 spent processing the request: from the last request byte received to the first response byte sent."
+    },
+    "s3_request_time": {
+      "label": "Request time",
+      "type": "event_time",
+      "description": "When the request was received, in UTC. This sourcetype's time field."
+    },
+    "cf_edge_location": {
+      "label": "Edge location",
+      "type": "identifier",
+      "description": "The three-letter-plus-number code of the edge location that served the request (commonly the nearby airport's IATA code, for example NRT12-P4)."
+    },
+    "cf_edge_result": {
+      "label": "Edge cache result",
+      "type": "enum",
+      "description": "How CloudFront classified the response against its cache: served from cache, revalidated, missed to origin, or one of the error, limit or redirect outcomes.",
+      "hazards": [
+        "cloudfront_two_result_fields"
+      ]
+    },
+    "cf_protocol": {
+      "label": "Viewer protocol",
+      "type": "enum",
+      "description": "The protocol the viewer used for the request."
+    },
+    "cf_protocol_version": {
+      "label": "HTTP version",
+      "type": "version",
+      "description": "The HTTP version the viewer specified in the request."
+    },
+    "cf_uri_stem": {
+      "label": "URI stem",
+      "type": "file_path",
+      "description": "The path and object portion of the request URL; question marks and query strings are not included."
+    },
+    "cf_uri_query": {
+      "label": "URI query",
+      "type": "text",
+      "description": "The query-string portion of the request URL; a dash when there is none."
+    },
+    "cf_time_taken": {
+      "label": "Time taken",
+      "type": "count",
+      "description": "Seconds, to the thousandth, from receiving the viewer's request to writing the last response byte, as measured on the server."
+    },
+    "cf_time_to_first_byte": {
+      "label": "Time to first byte",
+      "type": "count",
+      "description": "Seconds between receiving the request and writing the first response byte, as measured on the server."
+    },
+    "cf_fle_status": {
+      "label": "Field-level encryption status",
+      "type": "enum",
+      "description": "Whether a field-level-encryption-configured distribution processed the request body successfully; a dash when field-level encryption is not configured."
+    },
+    "cf_tls": {
+      "label": "TLS negotiation",
+      "type": "enum",
+      "description": "The negotiated SSL/TLS protocol and cipher when the request used HTTPS; a dash on both bindings when it used plain HTTP."
+    },
+    "cf_event_time": {
+      "label": "Event time",
+      "type": "event_time",
+      "description": "The UTC date and time CloudFront finished responding (or, for a WebSocket, when the connection closed); this sourcetype's time field is built from these two columns together.",
+      "hazards": [
+        "cloudfront_split_time"
+      ]
+    },
+    "cf_forwarded_client_ip": {
+      "label": "Forwarded client address",
+      "type": "source_ip",
+      "description": "The viewer's own IP address when it reached CloudFront through an HTTP proxy or load balancer, taken from the request's forwarding header; a dash when there was no proxy in the path."
+    },
+    "cf_distribution_domain": {
+      "label": "Distribution domain",
+      "type": "domain",
+      "description": "The CloudFront distribution's own domain name (its d111111abcdef8.cloudfront.net form), regardless of what domain the viewer actually asked for."
+    },
+    "tgw_id": {
+      "label": "Transit gateway id",
+      "type": "resource_id",
+      "description": "The id of the transit gateway the flow was recorded on.",
+      "hazards": [
+        "tgw_aggregation_lag"
+      ]
+    },
+    "tgw_attachment_id": {
+      "label": "Attachment id",
+      "type": "resource_id",
+      "description": "The id of the transit gateway attachment the flow was recorded on."
+    },
+    "tgw_account_id": {
+      "label": "Owner account id",
+      "type": "account_id",
+      "description": "The AWS account id that owns the source transit gateway."
+    },
+    "tgw_src_vpc_id": {
+      "label": "Source VPC id",
+      "type": "resource_id",
+      "description": "The id of the source VPC for the transit gateway traffic."
+    },
+    "tgw_dst_vpc_id": {
+      "label": "Destination VPC id",
+      "type": "resource_id",
+      "description": "The id of the destination VPC for the transit gateway traffic."
+    },
+    "tgw_protocol": {
+      "label": "IANA protocol number",
+      "type": "identifier",
+      "description": "The IANA protocol number of the traffic (for example 6 for TCP, 17 for UDP)."
+    },
+    "tgw_packets": {
+      "label": "Packets",
+      "type": "count",
+      "description": "The number of packets transferred during the flow's aggregation interval."
+    },
+    "tgw_bytes": {
+      "label": "Bytes",
+      "type": "count",
+      "description": "The number of bytes transferred during the flow's aggregation interval."
+    },
+    "tgw_flow_start": {
+      "label": "Flow start",
+      "type": "event_time",
+      "description": "Unix seconds when the first packet of the flow was received within the aggregation interval; can be up to 60 seconds after the packet was actually seen.",
+      "hazards": [
+        "tgw_aggregation_lag"
+      ]
+    },
+    "tgw_flow_end": {
+      "label": "Flow end",
+      "type": "event_time",
+      "description": "Unix seconds when the last packet of the flow was received within the aggregation interval; can be up to 60 seconds after the packet was actually seen.",
+      "hazards": [
+        "tgw_aggregation_lag"
+      ]
+    },
+    "tgw_log_status": {
+      "label": "Log status",
+      "type": "outcome",
+      "description": "Whether the flow log delivered normally, saw no traffic in the interval, or skipped records."
+    },
+    "tgw_flow_direction": {
+      "label": "Flow direction",
+      "type": "enum",
+      "description": "The direction of the flow relative to the transit gateway."
+    },
+    "tgw_type": {
+      "label": "Traffic type",
+      "type": "enum",
+      "description": "The IP or fabric type of the traffic in the flow."
+    }
+  },
+  "containers": {
+    "aws:elb:accesslogs": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Application Load Balancer access logs: one line per request (or, for WebSockets, per closed connection), delivered to S3 and pulled by the Splunk Add-on for AWS's generic S3 input. Space-delimited, with double-quoted fields for values that can contain spaces.",
+      "note": "Sample: the awsdocs ALB user guide's three worked examples (HTTP, HTTPS, a failed Lambda target), frozen at field 25 (error_reason); the live page has since grown to 34 fields (target:port_list onward) that this snapshot does not carry. Source: AWS Elastic Load Balancing User Guide for Application Load Balancers, 'Access log entry examples', https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html.",
+      "hazards": [
+        "elb_two_timestamps",
+        "best_effort_delivery"
+      ]
+    },
+    "aws:s3:accesslogs": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Amazon S3 server access logs: one line per request against a logging-enabled bucket, delivered to S3 and pulled by the Splunk Add-on for AWS's generic S3 input. Space-delimited; any field can read a dash when unknown, unavailable or not applicable.",
+      "note": "Sample: the awsdocs S3 user guide's five-record worked example (four bucket-level GETs and one object PUT). Source: Amazon S3 User Guide, 'Amazon S3 server access log format', https://docs.aws.amazon.com/AmazonS3/latest/userguide/LogFormat.html.",
+      "hazards": [
+        "canonical_id_not_account_id"
+      ]
+    },
+    "aws:cloudfront:accesslogs": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "CloudFront standard (access) logs: one line per viewer request, delivered to S3 and pulled by the Splunk Add-on for AWS's generic S3 input. Tab-delimited, W3C extended log format, with a #Fields header line the TA strips.",
+      "note": "No vendor-published worked sample was found for this sourcetype. Every binding below and every example in the sidecar is read from one genuine event already indexed (Splunk Security Content attack_data, T1485/decommissioned_buckets), not from a vendor page.",
+      "hazards": [
+        "best_effort_delivery",
+        "cloudfront_two_result_fields",
+        "cloudfront_split_time"
+      ]
+    },
+    "aws:transitgateway:flowlogs": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Transit Gateway flow logs, default (all-fields) format: one line per recorded network flow, delivered to S3 and pulled by the Splunk Add-on for AWS's generic S3 input. Space-delimited, 36 fields in the default format.",
+      "note": "No sample exists for this sourcetype and none is indexed (0 events). An exhaustive search found none: AWS publishes the field table but never a worked example record for this sourcetype, and every candidate record found elsewhere was either the wrong (custom) field count or not an AWS/Splunk-published source. Every concept and binding below comes from that field table alone.",
+      "hazards": [
+        "tgw_aggregation_lag"
+      ]
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "RequestType",
+      "concept": "elb_type",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "type",
+      "concept": "elb_type",
+      "alias_of": "RequestType",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "ResponseTime",
+      "concept": "elb_response_time",
+      "note": "This sourcetype's TIME_PREFIX/TIME_FORMAT field (entry.json time_field).",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "response_time",
+      "concept": "elb_response_time",
+      "alias_of": "ResponseTime",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "RequestCreationTime",
+      "concept": "elb_request_creation_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "request_creation_time",
+      "concept": "elb_request_creation_time",
+      "alias_of": "RequestCreationTime",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "ELB",
+      "concept": "elb_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "elb",
+      "concept": "elb_id",
+      "alias_of": "ELB",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "ClientSrcIP",
+      "concept": "access_client_ip",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "client_ip",
+      "concept": "access_client_ip",
+      "alias_of": "ClientSrcIP",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "ClientSrcPort",
+      "concept": "access_client_port",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "client_port",
+      "concept": "access_client_port",
+      "alias_of": "ClientSrcPort",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "TargetPort",
+      "concept": "elb_target_endpoint",
+      "note": "Field 5 of the record (target:port_list), captured whole by this TA's regex; confirmed against a real indexed event.",
+      "basis": "confirmed",
+      "basis_ref": "the dev index, read 2026-09-19: TargetPort and target both read 10.0.0.1:80 (or - together) on the same events; dest_port never populates a value there.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "target",
+      "concept": "elb_target_endpoint",
+      "alias_of": "TargetPort",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "ELBStatusCode",
+      "concept": "access_http_status",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "elb_status_code",
+      "concept": "access_http_status",
+      "alias_of": "ELBStatusCode",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "TargetStatusCode",
+      "concept": "elb_target_status_code",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "target_status_code",
+      "concept": "elb_target_status_code",
+      "alias_of": "TargetStatusCode",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "ReceivedBytes",
+      "concept": "access_bytes_in",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "received_bytes",
+      "concept": "access_bytes_in",
+      "alias_of": "ReceivedBytes",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "SentBytes",
+      "concept": "access_bytes_out",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "sent_bytes",
+      "concept": "access_bytes_out",
+      "alias_of": "SentBytes",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "Request",
+      "concept": "elb_request_line",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "request",
+      "concept": "elb_request_line",
+      "alias_of": "Request",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "http_method",
+      "concept": "access_http_method",
+      "note": "The method token of the Request line, split out by the TA.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "UserAgent",
+      "concept": "access_user_agent",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "user_agent",
+      "concept": "access_user_agent",
+      "alias_of": "UserAgent",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "SSLCipher",
+      "concept": "elb_tls",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "SSLProtocol",
+      "concept": "elb_tls",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "TargetGroupArn",
+      "concept": "elb_target_group_arn",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "target_group_arn",
+      "concept": "elb_target_group_arn",
+      "alias_of": "TargetGroupArn",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "TraceId",
+      "concept": "access_request_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "trace_id",
+      "concept": "access_request_id",
+      "alias_of": "TraceId",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "DomainName",
+      "concept": "access_domain",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "domain_name",
+      "concept": "access_domain",
+      "alias_of": "DomainName",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "MatchedRulePriority",
+      "concept": "elb_matched_rule_priority",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "ActionExecuted",
+      "concept": "elb_actions_executed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "actions_executed",
+      "concept": "elb_actions_executed",
+      "alias_of": "ActionExecuted",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "ErrorReason",
+      "concept": "elb_error_reason",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:elb:accesslogs",
+      "column": "error_reason",
+      "concept": "elb_error_reason",
+      "alias_of": "ErrorReason",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "bucket_owner",
+      "concept": "s3_bucket_owner",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "requester",
+      "concept": "s3_bucket_owner",
+      "note": "Same shape as bucket_owner (canonical user id, assumed-role ARN, or dash); bound to the same concept because it is the same kind of value, not the same party.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "bucket_name",
+      "concept": "s3_bucket_name",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "remote_ip",
+      "concept": "access_client_ip",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "src_ip",
+      "concept": "access_client_ip",
+      "alias_of": "remote_ip",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "request_time",
+      "concept": "s3_request_time",
+      "note": "This sourcetype's TIME_PREFIX/TIME_FORMAT field (entry.json time_field), format [%d/%b/%Y:%H:%M:%S %z].",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "request_id",
+      "concept": "access_request_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "operation",
+      "concept": "s3_operation",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "action",
+      "concept": "s3_operation",
+      "alias_of": "operation",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "key",
+      "concept": "s3_key",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "file_path",
+      "concept": "s3_key",
+      "alias_of": "key",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "request_uri",
+      "concept": "s3_request_uri",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "uri",
+      "concept": "s3_request_uri",
+      "alias_of": "request_uri",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "http_method",
+      "concept": "access_http_method",
+      "note": "The method token of the Request-URI line, split out by the TA.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "http_status",
+      "concept": "access_http_status",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "status",
+      "concept": "access_http_status",
+      "alias_of": "http_status",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "error_code",
+      "concept": "s3_error_code",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "bytes_sent",
+      "concept": "access_bytes_out",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "bytes_out",
+      "concept": "access_bytes_out",
+      "alias_of": "bytes_sent",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "object_size",
+      "concept": "s3_object_size",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "total_time",
+      "concept": "s3_total_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "turn_around_time",
+      "concept": "s3_turn_around_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "user_agent",
+      "concept": "access_user_agent",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "http_user_agent",
+      "concept": "access_user_agent",
+      "alias_of": "user_agent",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:s3:accesslogs",
+      "column": "host_header",
+      "concept": "access_domain",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "x_edge_location",
+      "concept": "cf_edge_location",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "edge_location_name",
+      "concept": "cf_edge_location",
+      "alias_of": "x_edge_location",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "c_ip",
+      "concept": "access_client_ip",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "client_ip",
+      "concept": "access_client_ip",
+      "alias_of": "c_ip",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "c_port",
+      "concept": "access_client_port",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "src_port",
+      "concept": "access_client_port",
+      "alias_of": "c_port",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "cs_method",
+      "concept": "access_http_method",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "http_method",
+      "concept": "access_http_method",
+      "alias_of": "cs_method",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "cs_host",
+      "concept": "cf_distribution_domain",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "x_host_header",
+      "concept": "access_domain",
+      "note": "What the viewer actually put in its Host header; can differ from cs_host when the distribution uses an alternate domain name (CNAME).",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "sc_status",
+      "concept": "access_http_status",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "status",
+      "concept": "access_http_status",
+      "alias_of": "sc_status",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "cs_user_agent",
+      "concept": "access_user_agent",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "http_user_agent",
+      "concept": "access_user_agent",
+      "alias_of": "cs_user_agent",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "x_edge_request_id",
+      "concept": "access_request_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "sc_bytes",
+      "concept": "access_bytes_out",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "bytes_out",
+      "concept": "access_bytes_out",
+      "alias_of": "sc_bytes",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "cs_bytes",
+      "concept": "access_bytes_in",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "bytes_in",
+      "concept": "access_bytes_in",
+      "alias_of": "cs_bytes",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "x_edge_result_type",
+      "concept": "cf_edge_result",
+      "note": "The result after the last byte left the server.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "x_edge_response_result_type",
+      "concept": "cf_edge_result",
+      "note": "The result just before the response was returned to the viewer; see the cloudfront_two_result_fields hazard.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "cached",
+      "concept": "cf_edge_result",
+      "note": "TA CIM-style alias; despite the name this is the cache/edge classification code (Hit, Miss, Error, ...), not a boolean.",
+      "alias_of": "x_edge_result_type",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "cs_protocol",
+      "concept": "cf_protocol",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "cs_protocol_version",
+      "concept": "cf_protocol_version",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "cs_uri_stem",
+      "concept": "cf_uri_stem",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "uri_path",
+      "concept": "cf_uri_stem",
+      "alias_of": "cs_uri_stem",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "cs_uri_query",
+      "concept": "cf_uri_query",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "uri_query",
+      "concept": "cf_uri_query",
+      "alias_of": "cs_uri_query",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "time_taken",
+      "concept": "cf_time_taken",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "time_to_first_byte",
+      "concept": "cf_time_to_first_byte",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "fle_status",
+      "concept": "cf_fle_status",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "ssl_protocol",
+      "concept": "cf_tls",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "ssl_cipher",
+      "concept": "cf_tls",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "date",
+      "concept": "cf_event_time",
+      "note": "This sourcetype's time field is built from date and time together.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "time",
+      "concept": "cf_event_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudfront:accesslogs",
+      "column": "x_forwarded_for",
+      "concept": "cf_forwarded_client_ip",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "tgw_id",
+      "concept": "tgw_id",
+      "note": "Shape (36 named capture groups, all-or-nothing regex) confirmed from the TA's transforms.conf; no worked vendor sample exists for this sourcetype.",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "tgw_attachment_id",
+      "concept": "tgw_attachment_id",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "account_id",
+      "concept": "tgw_account_id",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "tgw_src_vpc_id",
+      "concept": "tgw_src_vpc_id",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "tgw_dst_vpc_id",
+      "concept": "tgw_dst_vpc_id",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "srcaddr",
+      "concept": "access_client_ip",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "dstaddr",
+      "concept": "access_dest_ip",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "srcport",
+      "concept": "access_client_port",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "dstport",
+      "concept": "access_dest_port",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "protocol",
+      "concept": "tgw_protocol",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "packets",
+      "concept": "tgw_packets",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "bytes",
+      "concept": "tgw_bytes",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "start",
+      "concept": "tgw_flow_start",
+      "note": "Token 24 of the 36-token record; props.conf's TIME_PREFIX skips the first 23 tokens and TIME_FORMAT=%s reads this one, so this is also the sourcetype's indexed _time.",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "end",
+      "concept": "tgw_flow_end",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "log_status",
+      "concept": "tgw_log_status",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "flow_direction",
+      "concept": "tgw_flow_direction",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:transitgateway:flowlogs",
+      "column": "type",
+      "concept": "tgw_type",
+      "basis": "validated",
+      "basis_ref": "TA transforms.conf [report-transitgatewayflowlogs-default], read 2026-09-19: capture group names match these 17 bound columns exactly (36 groups total; 19 unbound, out of scope for this pack).",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html",
+          "title": "AWS Transit Gateway Flow Logs - Amazon VPC Transit Gateways",
+          "read_on": "2026-09-19"
+        }
+      }
+    }
+  ],
+  "hazards": {
+    "best_effort_delivery": {
+      "level": "note",
+      "text": "ELB and CloudFront both log on a best-effort basis: a request can be missing from access logs entirely, and delivery can lag well behind the request itself. Read these logs as a picture of traffic shape, not a complete accounting of every request."
+    },
+    "canonical_id_not_account_id": {
+      "level": "caution",
+      "text": "S3's bucket owner and requester fields carry the canonical user ID (a 64-character hex string, another form of the AWS account ID) or, for an assumed role, the role ARN. Neither is the 12-digit AWS account number; do not compare one to the other."
+    },
+    "elb_two_timestamps": {
+      "level": "note",
+      "text": "ELB logs two ISO 8601 timestamps: request_creation_time (when the load balancer received the request) and the record's own time field (when it finished responding, or a WebSocket closed). The gap between them covers the whole request, not one processing stage."
+    },
+    "tgw_aggregation_lag": {
+      "level": "caution",
+      "text": "No genuine sample of this sourcetype was found or is indexed in the dev Splunk; every field here is read from AWS's field table alone, never from a real record. The start and end fields are Unix seconds for an aggregation interval, and AWS's own doc says a record can appear up to 60 seconds after the packet was actually seen."
+    },
+    "cloudfront_two_result_fields": {
+      "level": "note",
+      "text": "CloudFront logs the edge cache result twice: once after the last byte left the server (x-edge-result-type) and once just before the response was returned to the viewer (x-edge-response-result-type). They usually match; they differ when the viewer disconnects mid-response."
+    },
+    "cloudfront_split_time": {
+      "level": "note",
+      "text": "CloudFront's date and time are two separate columns (UTC calendar date, UTC clock time); both are needed to reconstruct one timestamp, and for a WebSocket connection both mark when the connection closed, not when it opened."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

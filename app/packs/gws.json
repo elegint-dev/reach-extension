@@ -1,0 +1,721 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "gws",
+  "name": "Google Workspace Reports",
+  "pack_version": "0.1.0",
+  "description": "Google Workspace admin and login activity: who did what, from where, in which application. One feed for the gws:reports:login, gws:reports:admin and gws:reports:drive sourcetypes and their Sentinel connector tables.",
+  "source": "Google Workspace Admin SDK Reports API, activities resource and the per-application event appendices; TA-GoogleWorkspaceForSplunk field extraction; the Google Workspace Reports solution's GWorkspaceActivityReports.yaml parser",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "gws_reports",
+    "label": "Google Workspace Reports",
+    "description": "Google Workspace admin console and login activity from the Reports API: sign-ins, admin console changes and Drive sharing changes, one record per event.",
+    "tags": [
+      "identity",
+      "gws",
+      "saas"
+    ],
+    "discriminator": "event_name"
+  },
+  "concepts": {
+    "event_time": {
+      "label": "Event time",
+      "type": "event_time",
+      "description": "When the activity happened (id.time on the Reports API; TimeGenerated is Sentinel's own ingestion column).",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ]
+    },
+    "actor_email": {
+      "label": "Actor email",
+      "type": "principal",
+      "description": "The email address of the user or admin who performed the activity.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "actor_profile_id": {
+      "label": "Actor profile id",
+      "type": "user_id",
+      "description": "A stable, opaque id for the actor's Workspace profile."
+    },
+    "actor_caller_type": {
+      "label": "Actor caller type",
+      "type": "enum",
+      "description": "Who or what made the call, for example USER; present on admin console activities."
+    },
+    "source_ip": {
+      "label": "Source IP address",
+      "type": "source_ip",
+      "description": "The address the request came from.",
+      "hazards": [
+        "ip_shared"
+      ]
+    },
+    "application_name": {
+      "label": "Application name",
+      "type": "record_type",
+      "description": "Which Reports API application the activity belongs to, for example login or admin."
+    },
+    "customer_id": {
+      "label": "Customer id",
+      "type": "account_id",
+      "description": "The Workspace customer id the activity belongs to."
+    },
+    "unique_qualifier": {
+      "label": "Unique qualifier",
+      "type": "event_id",
+      "description": "The activity's own id, unique together with the time and application name."
+    },
+    "event_type": {
+      "label": "Event type",
+      "type": "record_type",
+      "description": "The category of activity within the application, for example login or USER_SETTINGS."
+    },
+    "event_name": {
+      "label": "Event name",
+      "type": "enum",
+      "description": "The specific event within its type, for example login_success or UNENROLL_USER_FROM_STRONG_AUTH."
+    },
+    "event_parameters": {
+      "label": "Event parameters",
+      "type": "raw_object",
+      "description": "The event's own name/value detail. On login and admin activities this is an array of {name, value|boolValue|multiValue}; the drive connector table flattens the same detail to top-level columns."
+    },
+    "etag": {
+      "label": "Etag",
+      "type": "identifier",
+      "description": "The activity record's own etag, as the Reports API returns it."
+    }
+  },
+  "containers": {
+    "gws:reports:login": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Google Workspace login activity (the Reports API's login application) as TA-GoogleWorkspaceForSplunk indexes it: one record per event, actor and id nested, event.parameters an array."
+    },
+    "gws:reports:admin": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Google Workspace admin console activity (the Reports API's admin application), same nested shape as login."
+    },
+    "gws:reports:drive": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Google Drive sharing activity, already flattened by this capture's source (http:gsuite): parameters is one object, not an array.",
+      "note": "The Reports API's own drive application uses the same nested id/actor/event shape as login and admin; this container is the flattened form the seeded capture actually carries."
+    },
+    "GWorkspace_ReportsAPI_login_CL": {
+      "platform": "sentinel",
+      "kind": "vendor",
+      "description": "The Google Workspace Reports solution's per-application ingest table for login activities."
+    },
+    "GWorkspace_ReportsAPI_admin_CL": {
+      "platform": "sentinel",
+      "kind": "vendor",
+      "description": "The Google Workspace Reports solution's per-application ingest table for admin console activities."
+    },
+    "GWorkspace_ReportsAPI_drive_CL": {
+      "platform": "sentinel",
+      "kind": "vendor",
+      "description": "The Google Workspace Reports solution's per-application ingest table for Drive activities; parameters land as top-level, type-suffixed columns (doc_id_s, owner_s, and so on)."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "gws:reports:login",
+      "column": "id.time",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:login",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:login",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:login",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:login",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:login",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:login",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:login",
+      "column": "event.type",
+      "concept": "event_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:login",
+      "column": "event.name",
+      "concept": "event_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:login",
+      "column": "event.parameters",
+      "concept": "event_parameters",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:login",
+      "column": "etag",
+      "concept": "etag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:admin",
+      "column": "id.time",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:admin",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:admin",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:admin",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:admin",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:admin",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:admin",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:admin",
+      "column": "event.type",
+      "concept": "event_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:admin",
+      "column": "event.name",
+      "concept": "event_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:admin",
+      "column": "event.parameters",
+      "concept": "event_parameters",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:admin",
+      "column": "etag",
+      "concept": "etag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:admin",
+      "column": "actor.callerType",
+      "concept": "actor_caller_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "TA-GoogleWorkspaceForSplunk indexes the activities.list response per event, nested JSON flattened to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:drive",
+      "column": "timestamp",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "This capture's own source (http:gsuite) lands drive activities already flattened: parameters as one object of named fields, not the Reports API's name/value array."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:drive",
+      "column": "email",
+      "concept": "actor_email",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "This capture's own source (http:gsuite) lands drive activities already flattened: parameters as one object of named fields, not the Reports API's name/value array."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:drive",
+      "column": "ip_address",
+      "concept": "source_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "This capture's own source (http:gsuite) lands drive activities already flattened: parameters as one object of named fields, not the Reports API's name/value array."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:drive",
+      "column": "unique_id",
+      "concept": "unique_qualifier",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "This capture's own source (http:gsuite) lands drive activities already flattened: parameters as one object of named fields, not the Reports API's name/value array."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:drive",
+      "column": "type",
+      "concept": "event_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "This capture's own source (http:gsuite) lands drive activities already flattened: parameters as one object of named fields, not the Reports API's name/value array."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:drive",
+      "column": "name",
+      "concept": "event_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "This capture's own source (http:gsuite) lands drive activities already flattened: parameters as one object of named fields, not the Reports API's name/value array."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:drive",
+      "column": "parameters",
+      "concept": "event_parameters",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "This capture's own source (http:gsuite) lands drive activities already flattened: parameters as one object of named fields, not the Reports API's name/value array."
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_login_CL",
+      "column": "actor_email_s",
+      "concept": "actor_email",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_login_CL",
+      "column": "actor_profileId_s",
+      "concept": "actor_profile_id",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_login_CL",
+      "column": "IPAddress",
+      "concept": "source_ip",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_login_CL",
+      "column": "id_applicationName_s",
+      "concept": "application_name",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_login_CL",
+      "column": "id_customerId_s",
+      "concept": "customer_id",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_login_CL",
+      "column": "event_type_s",
+      "concept": "event_type",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_login_CL",
+      "column": "event_name_s",
+      "concept": "event_name",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_login_CL",
+      "column": "etag_s",
+      "concept": "etag",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_login_CL",
+      "column": "TimeGenerated",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_admin_CL",
+      "column": "actor_email_s",
+      "concept": "actor_email",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_admin_CL",
+      "column": "actor_profileId_s",
+      "concept": "actor_profile_id",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_admin_CL",
+      "column": "IPAddress",
+      "concept": "source_ip",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_admin_CL",
+      "column": "id_applicationName_s",
+      "concept": "application_name",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_admin_CL",
+      "column": "id_customerId_s",
+      "concept": "customer_id",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_admin_CL",
+      "column": "event_type_s",
+      "concept": "event_type",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_admin_CL",
+      "column": "event_name_s",
+      "concept": "event_name",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_admin_CL",
+      "column": "etag_s",
+      "concept": "etag",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_admin_CL",
+      "column": "TimeGenerated",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_admin_CL",
+      "column": "actor_callerType_s",
+      "concept": "actor_caller_type",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_drive_CL",
+      "column": "actor_email_s",
+      "concept": "actor_email",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_drive_CL",
+      "column": "IPAddress",
+      "concept": "source_ip",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_drive_CL",
+      "column": "event_type_s",
+      "concept": "event_type",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_drive_CL",
+      "column": "event_name_s",
+      "concept": "event_name",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_drive_CL",
+      "column": "etag_s",
+      "concept": "etag",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_drive_CL",
+      "column": "TimeGenerated",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_drive_CL",
+      "column": "id_applicationName_s",
+      "concept": "application_name",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "GWorkspace_ReportsAPI_drive_CL",
+      "column": "id_customerId_s",
+      "concept": "customer_id",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Google Workspace Reports solution, GWorkspaceActivityReports.yaml parser (Azure/Azure-Sentinel, Solutions/GoogleWorkspaceReports/Parsers), read 2026-09-18"
+      }
+    }
+  ],
+  "hazards": {
+    "ip_shared": {
+      "text": "A NAT gateway, VPN exit or shared proxy can put many people behind one address; a match is a lead, not a link."
+    },
+    "names_not_stable": {
+      "text": "An actor is identified by email; a rename or an alias change moves the identifier, not the person."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

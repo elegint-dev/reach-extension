@@ -1,0 +1,8 @@
+{
+  "search": "index=main sourcetype=crowdstrike:events:sensor aid=f0778584e83c4efc9cf026bc1e7f0489 event_simpleName=ProcessRollup2",
+  "path": "/en-US/app/search/search",
+  "query": {
+    "q": "search index=main sourcetype=crowdstrike:events:sensor aid=f0778584e83c4efc9cf026bc1e7f0489 event_simpleName=ProcessRollup2",
+    "sid": "1700000000.1"
+  }
+}

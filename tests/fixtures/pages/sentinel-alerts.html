@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Logs, SecurityAlert (fixture)</title>
+<style>
+body{margin:0;background:#fff;color:#323130;font:13px/1.4 "Segoe UI",-apple-system,Roboto,sans-serif}
+.query-editor{padding:12px 16px;border-bottom:1px solid #e1dfdd}
+.monaco-editor{width:900px;height:48px;border:1px solid #c8c6c4;padding:4px 8px;font:13px/20px Consolas,Menlo,monospace;overflow:hidden}
+.view-line{white-space:pre;height:20px}
+.results{padding:12px 16px}
+.ag-root-wrapper{position:relative;height:720px;border:1px solid #e1dfdd}
+.ag-root{position:relative;height:100%;overflow:hidden}
+.ag-header{height:32px;border-bottom:1px solid #e1dfdd;background:#faf9f8}
+.ag-header-row,.ag-row{position:absolute;left:0;right:0;height:32px;display:flex}
+.ag-header-cell,.ag-cell{flex:0 0 auto;padding:6px 8px;box-sizing:border-box;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border-right:1px solid #f3f2f1}
+.ag-body{position:relative;height:calc(100% - 32px)}
+.ag-row{border-bottom:1px solid #f3f2f1}
+.c1{width:170px}.c2{width:130px}.c3{width:240px}.c4{width:280px}.c5{width:160px}.c6{width:150px}.c7{width:420px}
+.ag-popup{position:absolute;inset:0;pointer-events:none}
+.ag-popup-child{position:absolute;pointer-events:auto}
+.ag-menu{background:#fff;border:1px solid #c8c6c4;box-shadow:0 1.6px 3.6px rgba(0,0,0,.13),0 .3px .9px rgba(0,0,0,.11);border-radius:2px}
+.ag-menu-list{display:table;min-width:180px;padding:4px 0}
+.ag-menu-option{display:table-row;cursor:pointer}
+.ag-menu-option-part{display:table-cell;padding:6px 12px}
+</style>
+</head>
+<body>
+<div class="query-editor">
+  <div class="monaco-editor" role="code">
+    <div class="view-lines">
+      <div class="view-line"><span>SecurityAlert</span></div>
+      <div class="view-line"><span>| where ProviderName == "ASI Scheduled Alerts"</span></div>
+    </div>
+  </div>
+</div>
+<div class="results">
+<div class="ag-root-wrapper">
+<div class="ag-root" role="grid" aria-rowcount="3" aria-colcount="7">
+  <div class="ag-header" role="presentation">
+    <div class="ag-header-row" role="row" aria-rowindex="1">
+      <div class="ag-header-cell c1" role="columnheader" aria-colindex="1" col-id="TimeGenerated"><span class="ag-header-cell-text">TimeGenerated [UTC]</span></div>
+      <div class="ag-header-cell c2" role="columnheader" aria-colindex="2" col-id="Type"><span class="ag-header-cell-text">Type</span></div>
+      <div class="ag-header-cell c3" role="columnheader" aria-colindex="3" col-id="AlertName"><span class="ag-header-cell-text">AlertName</span></div>
+      <div class="ag-header-cell c4" role="columnheader" aria-colindex="4" col-id="AlertType"><span class="ag-header-cell-text">AlertType</span></div>
+      <div class="ag-header-cell c5" role="columnheader" aria-colindex="5" col-id="CompromisedEntity"><span class="ag-header-cell-text">CompromisedEntity</span></div>
+      <div class="ag-header-cell c6" role="columnheader" aria-colindex="6" col-id="Techniques"><span class="ag-header-cell-text">Techniques</span></div>
+      <div class="ag-header-cell c7" role="columnheader" aria-colindex="7" col-id="Entities"><span class="ag-header-cell-text">Entities</span></div>
+    </div>
+  </div>
+  <div class="ag-body" role="presentation">
+    <div class="ag-row ag-row-level-0" role="row" aria-rowindex="2" style="top:0">
+      <div class="ag-cell c1" role="gridcell" aria-colindex="1">9/17/2026, 4:10:00.000 PM</div>
+      <div class="ag-cell c2" role="gridcell" aria-colindex="2">SecurityAlert</div>
+      <div class="ag-cell c3" role="gridcell" aria-colindex="3">GitLab - Brute-force Attempts</div>
+      <div class="ag-cell c4" role="gridcell" aria-colindex="4">6f7f1a2b-8d21-4c3e-9b7a-2f1e0c9d8b7a_9c8b7a6f-5e4d-4c3b-a291-0f1e2d3c4b5a</div>
+      <div class="ag-cell c5" role="gridcell" aria-colindex="5">10.1.2.3</div>
+      <div class="ag-cell c6" role="gridcell" aria-colindex="6">T1110</div>
+      <div class="ag-cell c7" role="gridcell" aria-colindex="7">[{&quot;$id&quot;:&quot;2&quot;,&quot;Address&quot;:&quot;10.1.2.3&quot;,&quot;Type&quot;:&quot;ip&quot;},{&quot;$id&quot;:&quot;3&quot;,&quot;Name&quot;:&quot;jdoe&quot;,&quot;Type&quot;:&quot;account&quot;},{&quot;$id&quot;:&quot;4&quot;,&quot;HostName&quot;:&quot;WEB01&quot;,&quot;Type&quot;:&quot;host&quot;}]</div>
+    </div>
+    <div class="ag-row ag-row-level-0" role="row" aria-rowindex="3" style="top:32px">
+      <div class="ag-cell c1" role="gridcell" aria-colindex="1">9/17/2026, 4:12:00.000 PM</div>
+      <div class="ag-cell c2" role="gridcell" aria-colindex="2">SecurityAlert</div>
+      <div class="ag-cell c3" role="gridcell" aria-colindex="3">SOC GitLab brute force (tuned)</div>
+      <div class="ag-cell c4" role="gridcell" aria-colindex="4">6f7f1a2b-8d21-4c3e-9b7a-2f1e0c9d8b7a_1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d</div>
+      <div class="ag-cell c5" role="gridcell" aria-colindex="5">WEB01</div>
+      <div class="ag-cell c6" role="gridcell" aria-colindex="6">T1110</div>
+      <div class="ag-cell c7" role="gridcell" aria-colindex="7">[]</div>
+    </div>
+  </div>
+  <div class="ag-popup"></div>
+</div>
+</div>
+</div>
+<script>
+// The blade's own value menu (ag-Grid's): opened by a right-click on a
+// body cell, inside the grid's overlay layer, laid out as a table with
+// Copy value / Filter for / Filter to exclude. The browser's menu is
+// suppressed on cells, not on headers, as in the blade.
+(function () {
+  var layer = document.querySelector(".ag-popup");
+  var root = document.querySelector(".ag-root");
+  document.addEventListener("contextmenu", function (e) {
+    var cell = e.target.closest && e.target.closest('[role="gridcell"]');
+    if (!cell) return;
+    e.preventDefault();
+    layer.replaceChildren();
+    var wrap = document.createElement("div");
+    wrap.className = "ag-popup-child";
+    var r = root.getBoundingClientRect();
+    wrap.style.left = Math.round(e.clientX - r.left) + "px";
+    wrap.style.top = Math.round(e.clientY - r.top) + "px";
+    var menu = document.createElement("div");
+    menu.className = "ag-menu";
+    var list = document.createElement("div");
+    list.className = "ag-menu-list";
+    list.setAttribute("role", "menu");
+    ["Copy value", "Filter for", "Filter to exclude"].forEach(function (label) {
+      var opt = document.createElement("div");
+      opt.className = "ag-menu-option";
+      opt.setAttribute("role", "menuitem");
+      opt.innerHTML = '<span class="ag-menu-option-part ag-menu-option-icon"></span><span class="ag-menu-option-part ag-menu-option-text">' + label + "</span>";
+      list.appendChild(opt);
+    });
+    menu.appendChild(list);
+    wrap.appendChild(menu);
+    layer.appendChild(wrap);
+  });
+  document.addEventListener("mousedown", function (e) {
+    if (!e.target.closest || !e.target.closest(".ag-popup-child")) layer.replaceChildren();
+  });
+})();
+</script>
+</body>
+</html>

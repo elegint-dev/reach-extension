@@ -1,0 +1,946 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "aws-metadata",
+  "name": "AWS EC2 inventory (describe-instances)",
+  "pack_version": "0.1.0",
+  "description": "EC2 instance inventory as the Splunk Add-on for AWS's metadata modular input polls it (sourcetype aws:metadata): one JSON snapshot per instance from ec2:describe-instances, indexed on a fixed schedule rather than emitted on a change, plus a CIM Inventory alias layer the TA adds over the same fields.",
+  "source": "AWS EC2 API Reference (Instance and its nested data types); AMI billing information fields (AWS EC2 User Guide); Splunk Add-on for AWS metadata modular input, checked against a live instance and an indexed event.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "aws_ec2_metadata",
+    "label": "AWS EC2 inventory (describe-instances)",
+    "description": "An EC2 instance inventory snapshot: what the instance is, where it runs, what it is attached to and what can act as it, as of the last metadata poll.",
+    "tags": [
+      "aws",
+      "cloud",
+      "inventory"
+    ]
+  },
+  "concepts": {
+    "instance_id": {
+      "label": "Instance id",
+      "type": "resource_id",
+      "description": "The id of the EC2 instance, for example i-1234567890abcdef0. The key for everything else on the record."
+    },
+    "account_id": {
+      "label": "Owning account id",
+      "type": "account_id",
+      "description": "The AWS account that owns the instance's reservation.",
+      "hazards": [
+        "owner_id_ambiguous",
+        "source_only_fields"
+      ]
+    },
+    "image_id": {
+      "label": "AMI id",
+      "type": "resource_id",
+      "description": "The id of the AMI used to launch the instance, for example ami-0abcdef1234567890."
+    },
+    "vpc_id": {
+      "label": "VPC id",
+      "type": "resource_id",
+      "description": "The id of the VPC the instance (or one of its network interfaces) runs in."
+    },
+    "subnet_id": {
+      "label": "Subnet id",
+      "type": "resource_id",
+      "description": "The id of the subnet the instance (or one of its network interfaces) runs in."
+    },
+    "region": {
+      "label": "Region",
+      "type": "region",
+      "description": "The AWS region the instance was described from.",
+      "hazards": [
+        "source_only_fields"
+      ]
+    },
+    "availability_zone": {
+      "label": "Availability zone",
+      "type": "region",
+      "description": "The Availability Zone the instance launched in, for example us-east-2a."
+    },
+    "instance_state_name": {
+      "label": "Instance state",
+      "type": "enum",
+      "description": "The current lifecycle state of the instance: one fixed word paired with instance_state_code."
+    },
+    "instance_state_code": {
+      "label": "Instance state code",
+      "type": "count",
+      "description": "The 16-bit state code paired with instance_state_name. Only the low byte (0-255) is meaningful; the high byte is for AWS's internal use and should be ignored."
+    },
+    "launch_time": {
+      "label": "Launch time",
+      "type": "event_time",
+      "description": "When the instance was last launched, ISO 8601. Determines uptime for a running instance, not when this record was collected.",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_basis"
+      ]
+    },
+    "usage_operation_update_time": {
+      "label": "Usage operation update time",
+      "type": "event_time",
+      "description": "When the instance's usageOperation (billing/operation code) was last updated, ISO 8601.",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_basis"
+      ]
+    },
+    "attachment_time": {
+      "label": "Attachment time",
+      "type": "event_time",
+      "description": "When an EBS volume's or a network interface's attachment to the instance was initiated, ISO 8601. Same meaning on both object types.",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_basis"
+      ]
+    },
+    "architecture": {
+      "label": "Architecture",
+      "type": "enum",
+      "description": "The CPU architecture of the image the instance runs."
+    },
+    "virtualization_type": {
+      "label": "Virtualization type",
+      "type": "enum",
+      "description": "Whether the instance uses hardware (hvm) or paravirtual virtualization."
+    },
+    "hypervisor": {
+      "label": "Hypervisor",
+      "type": "enum",
+      "description": "The hypervisor type of the instance."
+    },
+    "instance_type": {
+      "label": "Instance type",
+      "type": "enum",
+      "description": "The instance type (family.size), for example t3.nano. AWS's own valid-values list runs to several hundred current and legacy types; this pack does not enumerate them."
+    },
+    "platform_details": {
+      "label": "Platform details",
+      "type": "enum",
+      "description": "The billing platform of the instance's AMI, for example Linux/UNIX or Windows. Documented on the AMI billing information page, not the Instance object page."
+    },
+    "usage_operation": {
+      "label": "Usage operation",
+      "type": "enum",
+      "description": "The billing operation code for the instance, for example RunInstances (Linux/UNIX) or RunInstances:0002 (Windows). Corresponds to the lineitem/Operation column of an AWS Cost and Usage Report."
+    },
+    "root_device_type": {
+      "label": "Root device type",
+      "type": "enum",
+      "description": "Whether the AMI's root device is backed by an EBS volume or instance store."
+    },
+    "cpu_core_count": {
+      "label": "CPU core count",
+      "type": "count",
+      "description": "The number of physical CPU cores AWS allocated to the instance."
+    },
+    "vcpu_count_cim": {
+      "label": "vCPU count (CIM alias)",
+      "type": "count",
+      "description": "The Splunk Add-on's cpu_cores CIM alias. On the one sample this pack has (CoreCount 1, ThreadsPerCore 2), it carries 2, matching total vCPUs (CoreCount x ThreadsPerCore) rather than CoreCount alone; AWS's own CpuOptions page does not document this computation, so the meaning is inferred from arithmetic on a single record, not confirmed."
+    },
+    "metadata_http_tokens": {
+      "label": "IMDS token requirement",
+      "type": "enum",
+      "description": "Whether the instance requires IMDSv2 (token-backed metadata requests) or still allows IMDSv1. The field to check for the credential-theft-via-IMDSv1 exposure (MITRE ATT&CK T1552.005 is more likely to succeed when this is optional)."
+    },
+    "private_ip_address": {
+      "label": "Private IPv4 address",
+      "type": "text",
+      "description": "The instance's or one of its network interfaces' private IPv4 address inside the VPC."
+    },
+    "public_ip_address": {
+      "label": "Public IPv4 address",
+      "type": "text",
+      "description": "The instance's or one of its network interfaces' public or Elastic IPv4 address."
+    },
+    "network_interface_owner_id": {
+      "label": "Network interface owner account id",
+      "type": "account_id",
+      "description": "The AWS account that created this network interface. Not necessarily the instance's own owning account (account_id) in a cross-account ENI attachment.",
+      "hazards": [
+        "owner_id_ambiguous"
+      ]
+    },
+    "elastic_ip_owner_id": {
+      "label": "Elastic IP owner id",
+      "type": "identifier",
+      "description": "The id of the owner of the public/Elastic IP address associated with a network interface. AWS's own address, rather than a customer Elastic IP, shows as the literal string amazon instead of an account id.",
+      "hazards": [
+        "owner_id_ambiguous"
+      ]
+    },
+    "ebs_volume_id": {
+      "label": "EBS volume id",
+      "type": "resource_id",
+      "description": "The id of the EBS volume behind a block device mapping, for example vol-02e6ccdca7de29cf2."
+    },
+    "attachment_status": {
+      "label": "Attachment status",
+      "type": "enum",
+      "description": "The lifecycle state of an attachment: an EBS volume's attachment to the instance, or a network interface's attachment to the instance. Same four-value vocabulary on both object types."
+    },
+    "network_interface_status": {
+      "label": "Network interface status",
+      "type": "enum",
+      "description": "The status of the network interface itself (distinct from attachment_status, which is the attachment's own state)."
+    },
+    "private_dns_name": {
+      "label": "Private DNS name",
+      "type": "hostname",
+      "description": "The instance's or a network interface's private DNS hostname, resolvable only inside the VPC. Not set until the instance is running."
+    },
+    "public_dns_name": {
+      "label": "Public DNS name",
+      "type": "hostname",
+      "description": "The instance's or a network interface's public DNS hostname. Not set until the instance is running, and only if the VPC has DNS hostnames enabled."
+    },
+    "security_group_id": {
+      "label": "Security group id",
+      "type": "identifier",
+      "description": "The id of a security group attached to the instance or to one of its network interfaces."
+    },
+    "iam_instance_profile_arn": {
+      "label": "IAM instance profile ARN",
+      "type": "identifier",
+      "description": "The ARN of the IAM instance profile (and so the IAM role) attached to the instance. The field to pivot from an instance to what it can do in the account."
+    },
+    "tenancy": {
+      "label": "Tenancy",
+      "type": "enum",
+      "description": "Whether the instance runs on shared, single-tenant (dedicated) or Dedicated Host hardware."
+    }
+  },
+  "containers": {
+    "aws:metadata": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "One record shape per event: an EC2 Instance object from describe-instances, as the metadata modular input collects it on a schedule. No discriminator field distinguishes record types within the sourcetype; every event is an instance snapshot.",
+      "note": "Indexed with INDEXED_EXTRACTIONS = json; nested objects flatten to dotted names (Placement.AvailabilityZone) and arrays to repeating {}.field names (NetworkInterfaces{}.PrivateIpAddress). props.conf sets no TIME_PREFIX/DATETIME_CONFIG, so _time is always the collection time, never a value from the record (see hazard time_basis)."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "InstanceId",
+      "concept": "instance_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "vm_id",
+      "concept": "instance_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "nt_host",
+      "concept": "instance_id",
+      "note": "Named nt_host (a Windows/NetBIOS-style hostname field in Splunk's generic Inventory model) but on this sourcetype it carries the instance id, not a hostname.",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "OwnerId",
+      "concept": "account_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws's ec2_description.py copies the parent Reservation's OwnerId onto each instance before indexing (instance['OwnerId'] = reservation.get('OwnerId'))."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "AccountId",
+      "concept": "account_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Set by the modular input from the account id it polled, the first segment of source ('{account_id}:{region}:{api}')."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "account_id",
+      "concept": "account_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "aws_account_id",
+      "concept": "account_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "vendor_account",
+      "concept": "account_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "ImageId",
+      "concept": "image_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "image_id",
+      "concept": "image_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "snapshot",
+      "concept": "image_id",
+      "note": "Despite the name, this CIM alias carries the AMI id (ImageId) on this sourcetype, not an EBS snapshot id (snap-...).",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "VpcId",
+      "concept": "vpc_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.VpcId",
+      "concept": "vpc_id",
+      "note": "Per network interface; in practice the same VPC as the instance's own VpcId.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "vpc_id",
+      "concept": "vpc_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "virtual_network_id",
+      "concept": "vpc_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "SubnetId",
+      "concept": "subnet_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.SubnetId",
+      "concept": "subnet_id",
+      "note": "Per network interface.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "subnet_id",
+      "concept": "subnet_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "virtual_subnet_id",
+      "concept": "subnet_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "Region",
+      "concept": "region",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Set by the modular input from the region it polled, the second segment of source."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "Placement.AvailabilityZone",
+      "concept": "availability_zone",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "State.Name",
+      "concept": "instance_state_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "status",
+      "concept": "instance_state_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "power_state",
+      "concept": "instance_state_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "State.Code",
+      "concept": "instance_state_code",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "LaunchTime",
+      "concept": "launch_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "time",
+      "concept": "launch_time",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "UsageOperationUpdateTime",
+      "concept": "usage_operation_update_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "BlockDeviceMappings{}.Ebs.AttachTime",
+      "concept": "attachment_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.Attachment.AttachTime",
+      "concept": "attachment_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names.",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_InstanceNetworkInterfaceAttachment.html",
+          "title": "Amazon EC2 API Reference: InstanceNetworkInterfaceAttachment",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "Architecture",
+      "concept": "architecture",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "VirtualizationType",
+      "concept": "virtualization_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "Hypervisor",
+      "concept": "hypervisor",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "hypervisor_name",
+      "concept": "hypervisor",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "InstanceType",
+      "concept": "instance_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "vm_size",
+      "concept": "instance_type",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "PlatformDetails",
+      "concept": "platform_details",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "UsageOperation",
+      "concept": "usage_operation",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "RootDeviceType",
+      "concept": "root_device_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "CpuOptions.CoreCount",
+      "concept": "cpu_core_count",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "cpu_cores",
+      "concept": "vcpu_count_cim",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "MetadataOptions.HttpTokens",
+      "concept": "metadata_http_tokens",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "PrivateIpAddress",
+      "concept": "private_ip_address",
+      "note": "AWS's own published CLI example writes this as 10-0-0-157 (dashes, not dots); this pack does not claim it as a validated IP shape.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.PrivateIpAddress",
+      "concept": "private_ip_address",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.PrivateIpAddresses{}.PrivateIpAddress",
+      "concept": "private_ip_address",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "PublicIpAddress",
+      "concept": "public_ip_address",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.Association.PublicIp",
+      "concept": "public_ip_address",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.PrivateIpAddresses{}.Association.PublicIp",
+      "concept": "public_ip_address",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "ip",
+      "concept": "public_ip_address",
+      "note": "Multivalue: combines this instance's public and private addresses into one field rather than only the public one.",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.OwnerId",
+      "concept": "network_interface_owner_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.Association.IpOwnerId",
+      "concept": "elastic_ip_owner_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.PrivateIpAddresses{}.Association.IpOwnerId",
+      "concept": "elastic_ip_owner_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "BlockDeviceMappings{}.Ebs.VolumeId",
+      "concept": "ebs_volume_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "BlockDeviceMappings{}.Ebs.Status",
+      "concept": "attachment_status",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.Attachment.Status",
+      "concept": "attachment_status",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names.",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_InstanceNetworkInterfaceAttachment.html",
+          "title": "Amazon EC2 API Reference: InstanceNetworkInterfaceAttachment",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.Status",
+      "concept": "network_interface_status",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "PrivateDnsName",
+      "concept": "private_dns_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.PrivateDnsName",
+      "concept": "private_dns_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.PrivateIpAddresses{}.PrivateDnsName",
+      "concept": "private_dns_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "PublicDnsName",
+      "concept": "public_dns_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.Association.PublicDnsName",
+      "concept": "public_dns_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.PrivateIpAddresses{}.Association.PublicDnsName",
+      "concept": "public_dns_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "dns",
+      "concept": "public_dns_name",
+      "note": "Multivalue: combines this instance's public and private DNS names into one field rather than only the public one.",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A Splunk_TA_aws CIM alias (eventtypes.conf/tags.conf field alias) over the same JSON, mapped for the Inventory data model."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "SecurityGroups{}.GroupId",
+      "concept": "security_group_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "NetworkInterfaces{}.Groups{}.GroupId",
+      "concept": "security_group_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "IamInstanceProfile.Arn",
+      "concept": "iam_instance_profile_arn",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:metadata",
+      "column": "Placement.Tenancy",
+      "concept": "tenancy",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for AWS indexes the metadata modular input's JSON output with INDEXED_EXTRACTIONS = json, which flattens nested objects to dotted field names and arrays to repeating {}.field names."
+      }
+    }
+  ],
+  "hazards": {
+    "time_basis": {
+      "text": "The Splunk Add-on for AWS stamps aws:metadata events with wall-clock collection time (props.conf has no TIME_PREFIX/DATETIME_CONFIG, so Splunk falls back to current time); _time is when the poll ran, never a value from the record. LaunchTime, the Ebs/Attachment AttachTime fields and UsageOperationUpdateTime are the instance's own timestamps and must be read explicitly, never assumed to equal _time."
+    },
+    "owner_id_ambiguous": {
+      "text": "Several fields named OwnerId or IpOwnerId appear on one record with different referents: the top-level OwnerId (copied from the Reservation) is the account that owns the instance; NetworkInterfaces{}.OwnerId is the account that created that network interface; NetworkInterfaces{}.Association.IpOwnerId is the owner of the associated Elastic IP and is often the literal string amazon rather than an account id, when AWS owns the address."
+    },
+    "source_only_fields": {
+      "text": "AccountId and Region (top-level, capitalised) are not part of the DescribeInstances Instance object; the modular input adds them from its own source_assign = '{account_id}:{region}:{api}' pattern. Do not expect them on a raw ec2:describe-instances API response outside Splunk."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

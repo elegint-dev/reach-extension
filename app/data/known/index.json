@@ -1,0 +1,82 @@
+{
+ "format": "reach-known-index",
+ "version": 1,
+ "generated_at": "2026-09-20T18:50:50.738Z",
+ "budget_gz_bytes": 1048576,
+ "total_gz_bytes": 325661,
+ "bundled_gz_bytes": 325661,
+ "all_measured_fit": true,
+ "bundle_overflow": false,
+ "entries": [
+  {
+   "file": "macos.json",
+   "platform": "macos",
+   "kind": "projection",
+   "builds": [
+    "25F71",
+    "25G83",
+    "26A5416b"
+   ],
+   "row_count": 3743,
+   "signing_id_count": 3350,
+   "source_rows": 10234,
+   "dropped_duplicate_rows": 173,
+   "bytes": 763279,
+   "gz_bytes": 86083,
+   "source": "25F71: tahoe-vanilla-265 enumeration 2026-09-20; 25G83: tahoe-base tart VM enumeration 2026-09-18; 26A5416b: Manageds-Virtual-Machine enumeration 2026-09-19",
+   "bundled": true
+  },
+  {
+   "file": "linux-amazonlinux-2023.json",
+   "platform": "linux",
+   "distro": "amazonlinux",
+   "release": "2023",
+   "kind": "projection",
+   "row_count": 915,
+   "dropped_duplicate_path_rows": 0,
+   "bytes": 172191,
+   "gz_bytes": 60345,
+   "source": "amazonlinux 2023 amd64 container enumeration 2026-09-18",
+   "bundled": true
+  },
+  {
+   "file": "linux-rhel-9.json",
+   "platform": "linux",
+   "distro": "rhel",
+   "release": "9",
+   "kind": "projection",
+   "row_count": 667,
+   "dropped_duplicate_path_rows": 0,
+   "bytes": 124695,
+   "gz_bytes": 44183,
+   "source": "rhel 9 amd64 container enumeration 2026-09-18",
+   "bundled": true
+  },
+  {
+   "file": "linux-ubuntu-22.04.json",
+   "platform": "linux",
+   "distro": "ubuntu",
+   "release": "22.04",
+   "kind": "projection",
+   "row_count": 988,
+   "dropped_duplicate_path_rows": 0,
+   "bytes": 183837,
+   "gz_bytes": 66037,
+   "source": "ubuntu 22.04 amd64 container enumeration 2026-09-18",
+   "bundled": true
+  },
+  {
+   "file": "linux-ubuntu-24.04.json",
+   "platform": "linux",
+   "distro": "ubuntu",
+   "release": "24.04",
+   "kind": "projection",
+   "row_count": 1025,
+   "dropped_duplicate_path_rows": 0,
+   "bytes": 192078,
+   "gz_bytes": 69013,
+   "source": "ubuntu 24.04 amd64 container enumeration 2026-09-18",
+   "bundled": true
+  }
+ ]
+}

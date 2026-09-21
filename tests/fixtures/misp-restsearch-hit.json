@@ -1,0 +1,22 @@
+{
+  "response": {
+    "Attribute": [
+      {
+        "id": "9001",
+        "event_id": "45",
+        "category": "Network activity",
+        "type": "ip-dst",
+        "value": "203.0.113.9",
+        "Tag": [{ "name": "tlp:amber" }, { "name": "malware:emotet" }]
+      },
+      {
+        "id": "9002",
+        "event_id": "46",
+        "category": "Payload delivery",
+        "type": "ip-dst",
+        "value": "203.0.113.9",
+        "Tag": [{ "name": "malware:emotet" }]
+      }
+    ]
+  }
+}

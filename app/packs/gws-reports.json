@@ -1,0 +1,3323 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "gws-reports",
+  "name": "Google Workspace Reports API (further applications)",
+  "pack_version": "0.1.0",
+  "description": "Google Workspace Reports API activity for the 13 applications the gws pack does not bind (saml, token, context_aware_access, access_transparency, mobile, chrome, groups_enterprise, rules, calendar, chat, data_studio, gcp, gemini_in_workspace_apps): who did what, in which application, from where. Only gws:reports:data_studio has a captured sample; the rest carry only the Reports API envelope every application shares.",
+  "source": "Google Workspace Admin SDK Reports API, activities resource and the per-application event appendices; the Splunk Add-on for Google Workspace's own preprocessing and props stanzas, read from the installed add-on and cross-checked one sourcetype at a time. Only gws:reports:data_studio carries a captured sample; the other twelve applications are documented from the reference alone.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "gws_reports_apps",
+    "label": "Google Workspace Reports API (further applications)",
+    "description": "Thirteen further Reports API applications beyond the gws pack's login, admin and drive: one record per event, actor and id nested, event.parameters an array.",
+    "tags": [
+      "identity",
+      "gws",
+      "saas"
+    ],
+    "discriminator": "application_name"
+  },
+  "concepts": {
+    "event_time": {
+      "label": "Event time",
+      "type": "event_time",
+      "description": "When the activity happened, id.time on the Activity item: UTC, ISO 8601 with milliseconds. The TA's props.conf reads _time from it; ingestion lags behind it.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_basis"
+      ]
+    },
+    "actor_email": {
+      "label": "Actor email",
+      "type": "principal",
+      "description": "The email of the user or admin the activity item is about (actor.email).",
+      "hazards": [
+        "names_not_stable",
+        "id_name_is_not_an_id"
+      ]
+    },
+    "actor_profile_id": {
+      "label": "Actor profile id",
+      "type": "user_id",
+      "description": "A stable, opaque id for the actor's Workspace profile (actor.profileId); survives an email rename."
+    },
+    "actor_caller_type": {
+      "label": "Actor caller type",
+      "type": "enum",
+      "description": "What kind of entity performed the action (actor.callerType), for example USER."
+    },
+    "source_ip": {
+      "label": "Source IP address",
+      "type": "source_ip",
+      "description": "The address the request behind this activity came from (ipAddress).",
+      "hazards": [
+        "ip_shared"
+      ]
+    },
+    "application_name": {
+      "label": "Application name",
+      "type": "record_type",
+      "description": "Which Reports API application the item belongs to (id.applicationName); one of a fixed set of values the activities.list reference names."
+    },
+    "customer_id": {
+      "label": "Customer id",
+      "type": "account_id",
+      "description": "The Workspace customer the item belongs to (id.customerId)."
+    },
+    "unique_qualifier": {
+      "label": "Unique qualifier",
+      "type": "event_id",
+      "description": "The item's own id (id.uniqueQualifier), unique only when paired with id.time and id.applicationName.",
+      "hazards": [
+        "qualifier_scope"
+      ]
+    },
+    "owner_domain": {
+      "label": "Owner domain",
+      "type": "domain",
+      "description": "The primary domain of the Workspace account the item belongs to, when the API sets it (ownerDomain)."
+    },
+    "event_type": {
+      "label": "Event type",
+      "type": "record_type",
+      "description": "The category an item's event falls into within its application (events[].type)."
+    },
+    "event_name": {
+      "label": "Event name",
+      "type": "enum",
+      "description": "The specific event within its type (events[].name); each application's own appendix page names its own event catalog, not reproduced here."
+    },
+    "event_parameters": {
+      "label": "Event parameters",
+      "type": "raw_object",
+      "description": "The event's own name/value detail, an array of {name, value|boolValue|intValue|multiValue} (events[].parameters)."
+    },
+    "etag": {
+      "label": "Etag",
+      "type": "identifier",
+      "description": "The item's own etag, as the Reports API returns it (etag)."
+    },
+    "kind": {
+      "label": "Resource kind",
+      "type": "record_type",
+      "description": "A fixed resource-type string the API sets on every item, admin#reports#activity (kind)."
+    },
+    "asset_id": {
+      "label": "Asset id",
+      "type": "identifier",
+      "description": "The Data Studio asset's own id (object_id, asset_id)."
+    },
+    "asset_name": {
+      "label": "Asset name",
+      "type": "text",
+      "description": "The asset's display name (object, asset_name)."
+    },
+    "asset_type": {
+      "label": "Asset type",
+      "type": "record_type",
+      "description": "What kind of Data Studio asset this is, for example DATA_SOURCE (object_category, asset_type)."
+    },
+    "owner_principal": {
+      "label": "Owner",
+      "type": "principal",
+      "description": "The asset's owner, by email; the TA writes the same value onto four aliases (owner, owner_email, owner_id, owner_mail) so none of the four is a stable numeric id despite the _id name.",
+      "hazards": [
+        "names_not_stable",
+        "id_name_is_not_an_id"
+      ]
+    },
+    "visibility": {
+      "label": "Visibility",
+      "type": "enum",
+      "description": "Who can access the asset, for example PRIVATE (visibility)."
+    },
+    "asset_extra_attrs": {
+      "label": "Extra attributes",
+      "type": "raw_object",
+      "description": "Event parameters the TA has no field of their own for, joined as KEY:VALUE (object_attrs)."
+    },
+    "product_label": {
+      "label": "Product label",
+      "type": "text",
+      "description": "A fixed product name the TA writes onto every event, Google Data Studio (dvc, vendor_product)."
+    },
+    "change_action": {
+      "label": "Change action",
+      "type": "enum",
+      "description": "The change's own verb, in two forms the TA writes side by side: the raw event name (signature) and a lower-case, past-tense normalisation (action)."
+    },
+    "counterpart_principal": {
+      "label": "Counterpart principal",
+      "type": "principal",
+      "description": "A second identity a change names besides the actor, when the change involves one (src_user, src_user_name, src_user_type).",
+      "notes": "Null on the one captured CREATE event; src_user, src_user_name and src_user_type are present in the observed schema. Google's own appendix documents a TARGET_USER_EMAIL parameter and a CHANGE_USER_ACCESS event naming a second identity a sharing change involves, which is what these columns are expected to carry when populated.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "parent_asset": {
+      "label": "Parent asset",
+      "type": "identifier",
+      "description": "The id of a containing asset, when the changed asset is nested (parent_object, parent_object_category, parent_object_id).",
+      "notes": "Null on the one captured CREATE event; parent_object, parent_object_category and parent_object_id are present in the observed schema. parent_object is not a Splunk Change data model field; Google's own appendix documents a PARENT_WORKSPACE_ID parameter and a PARENT_WORKSPACE_CHANGE event, which is what these columns are expected to carry when populated."
+    },
+    "change_outcome": {
+      "label": "Change outcome",
+      "type": "enum",
+      "description": "Outcome and change-kind detail the Change data model reserves fields for (change_type, command, result, result_id, status).",
+      "notes": "Populated as null on the one captured CREATE event. change_type, command, result, result_id and status are documented fields of Splunk's own Change data model (All_Changes dataset); the TA writes the same field names, present in the observed schema, empty on this event."
+    }
+  },
+  "containers": {
+    "gws:reports:saml": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Sign-in events at a third-party service using Workspace as the SAML identity provider.",
+      "note": "No sample event exists for this application in this pack's dev Splunk or in any vendor- or Splunk-published source (no vendor- or Splunk-published sample was found for it); only the Reports API fields common to every application are bound."
+    },
+    "gws:reports:token": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "OAuth token grants and revocations for third-party apps connected to a Workspace account.",
+      "note": "No sample event exists for this application in this pack's dev Splunk or in any vendor- or Splunk-published source (no vendor- or Splunk-published sample was found for it); only the Reports API fields common to every application are bound."
+    },
+    "gws:reports:context_aware_access": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Requests an Access Context Manager rule denied.",
+      "note": "No sample event exists for this application in this pack's dev Splunk or in any vendor- or Splunk-published source (no vendor- or Splunk-published sample was found for it); only the Reports API fields common to every application are bound."
+    },
+    "gws:reports:access_transparency": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Google staff actions on customer content, logged for the Access Transparency add-on.",
+      "note": "No sample event exists for this application in this pack's dev Splunk or in any vendor- or Splunk-published source (no vendor- or Splunk-published sample was found for it); only the Reports API fields common to every application are bound."
+    },
+    "gws:reports:mobile": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Managed mobile device compliance, policy and risk-signal changes (Device Audit).",
+      "note": "No sample event exists for this application in this pack's dev Splunk or in any vendor- or Splunk-published source (no vendor- or Splunk-published sample was found for it); only the Reports API fields common to every application are bound."
+    },
+    "gws:reports:chrome": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Chrome browser and Chrome OS device events.",
+      "note": "No sample event exists for this application in this pack's dev Splunk or in any vendor- or Splunk-published source (no vendor- or Splunk-published sample was found for it); only the Reports API fields common to every application are bound."
+    },
+    "gws:reports:groups_enterprise": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Enterprise Groups for Business membership and settings changes.",
+      "note": "No sample event exists for this application in this pack's dev Splunk or in any vendor- or Splunk-published source (no vendor- or Splunk-published sample was found for it); only the Reports API fields common to every application are bound."
+    },
+    "gws:reports:rules": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Admin console security investigation and alert-center rule activity.",
+      "note": "No sample event exists for this application in this pack's dev Splunk or in any vendor- or Splunk-published source (no vendor- or Splunk-published sample was found for it); only the Reports API fields common to every application are bound."
+    },
+    "gws:reports:calendar": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Calendar sharing and settings changes.",
+      "note": "No sample event exists for this application in this pack's dev Splunk or in any vendor- or Splunk-published source (no vendor- or Splunk-published sample was found for it); only the Reports API fields common to every application are bound."
+    },
+    "gws:reports:chat": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Google Chat room and message moderation events.",
+      "note": "No sample event exists for this application in this pack's dev Splunk or in any vendor- or Splunk-published source (no vendor- or Splunk-published sample was found for it); only the Reports API fields common to every application are bound."
+    },
+    "gws:reports:data_studio": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Looker Studio (Data Studio) asset creation, ownership and visibility changes."
+    },
+    "gws:reports:gcp": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Google Cloud Platform activity billed to a Workspace-linked Cloud organization.",
+      "note": "No sample event exists for this application in this pack's dev Splunk or in any vendor- or Splunk-published source (no vendor- or Splunk-published sample was found for it); only the Reports API fields common to every application are bound."
+    },
+    "gws:reports:gemini_in_workspace_apps": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Gemini use inside Workspace apps (Docs, Gmail, and the rest).",
+      "note": "No sample event exists for this application in this pack's dev Splunk or in any vendor- or Splunk-published source (no vendor- or Splunk-published sample was found for it); only the Reports API fields common to every application are bound."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "gws:reports:saml",
+      "column": "id.time",
+      "concept": "event_time",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:saml",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:saml",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:saml",
+      "column": "actor.callerType",
+      "concept": "actor_caller_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:saml",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:saml",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list",
+          "title": "Method: activities.list",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:saml",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:saml",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:saml",
+      "column": "ownerDomain",
+      "concept": "owner_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:saml",
+      "column": "event.type",
+      "concept": "event_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:saml",
+      "column": "event.name",
+      "concept": "event_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:saml",
+      "column": "etag",
+      "concept": "etag",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:saml",
+      "column": "kind",
+      "concept": "kind",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:token",
+      "column": "id.time",
+      "concept": "event_time",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:token",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:token",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:token",
+      "column": "actor.callerType",
+      "concept": "actor_caller_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:token",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:token",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list",
+          "title": "Method: activities.list",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:token",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:token",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:token",
+      "column": "ownerDomain",
+      "concept": "owner_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:token",
+      "column": "event.type",
+      "concept": "event_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:token",
+      "column": "event.name",
+      "concept": "event_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:token",
+      "column": "etag",
+      "concept": "etag",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:token",
+      "column": "kind",
+      "concept": "kind",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:context_aware_access",
+      "column": "id.time",
+      "concept": "event_time",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:context_aware_access",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:context_aware_access",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:context_aware_access",
+      "column": "actor.callerType",
+      "concept": "actor_caller_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:context_aware_access",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:context_aware_access",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list",
+          "title": "Method: activities.list",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:context_aware_access",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:context_aware_access",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:context_aware_access",
+      "column": "ownerDomain",
+      "concept": "owner_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:context_aware_access",
+      "column": "event.type",
+      "concept": "event_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:context_aware_access",
+      "column": "event.name",
+      "concept": "event_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:context_aware_access",
+      "column": "etag",
+      "concept": "etag",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:context_aware_access",
+      "column": "kind",
+      "concept": "kind",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:access_transparency",
+      "column": "id.time",
+      "concept": "event_time",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:access_transparency",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:access_transparency",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:access_transparency",
+      "column": "actor.callerType",
+      "concept": "actor_caller_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:access_transparency",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:access_transparency",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list",
+          "title": "Method: activities.list",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:access_transparency",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:access_transparency",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:access_transparency",
+      "column": "ownerDomain",
+      "concept": "owner_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:access_transparency",
+      "column": "event.type",
+      "concept": "event_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:access_transparency",
+      "column": "event.name",
+      "concept": "event_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:access_transparency",
+      "column": "etag",
+      "concept": "etag",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:access_transparency",
+      "column": "kind",
+      "concept": "kind",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:mobile",
+      "column": "id.time",
+      "concept": "event_time",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:mobile",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:mobile",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:mobile",
+      "column": "actor.callerType",
+      "concept": "actor_caller_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:mobile",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:mobile",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list",
+          "title": "Method: activities.list",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:mobile",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:mobile",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:mobile",
+      "column": "ownerDomain",
+      "concept": "owner_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:mobile",
+      "column": "event.type",
+      "concept": "event_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:mobile",
+      "column": "event.name",
+      "concept": "event_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:mobile",
+      "column": "etag",
+      "concept": "etag",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:mobile",
+      "column": "kind",
+      "concept": "kind",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chrome",
+      "column": "id.time",
+      "concept": "event_time",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chrome",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chrome",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chrome",
+      "column": "actor.callerType",
+      "concept": "actor_caller_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chrome",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chrome",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list",
+          "title": "Method: activities.list",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chrome",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chrome",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chrome",
+      "column": "ownerDomain",
+      "concept": "owner_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chrome",
+      "column": "event.type",
+      "concept": "event_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chrome",
+      "column": "event.name",
+      "concept": "event_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chrome",
+      "column": "etag",
+      "concept": "etag",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chrome",
+      "column": "kind",
+      "concept": "kind",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:groups_enterprise",
+      "column": "id.time",
+      "concept": "event_time",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:groups_enterprise",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:groups_enterprise",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:groups_enterprise",
+      "column": "actor.callerType",
+      "concept": "actor_caller_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:groups_enterprise",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:groups_enterprise",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list",
+          "title": "Method: activities.list",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:groups_enterprise",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:groups_enterprise",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:groups_enterprise",
+      "column": "ownerDomain",
+      "concept": "owner_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:groups_enterprise",
+      "column": "event.type",
+      "concept": "event_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:groups_enterprise",
+      "column": "event.name",
+      "concept": "event_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:groups_enterprise",
+      "column": "etag",
+      "concept": "etag",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:groups_enterprise",
+      "column": "kind",
+      "concept": "kind",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:rules",
+      "column": "id.time",
+      "concept": "event_time",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:rules",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:rules",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:rules",
+      "column": "actor.callerType",
+      "concept": "actor_caller_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:rules",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:rules",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list",
+          "title": "Method: activities.list",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:rules",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:rules",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:rules",
+      "column": "ownerDomain",
+      "concept": "owner_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:rules",
+      "column": "event.type",
+      "concept": "event_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:rules",
+      "column": "event.name",
+      "concept": "event_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:rules",
+      "column": "etag",
+      "concept": "etag",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:rules",
+      "column": "kind",
+      "concept": "kind",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:calendar",
+      "column": "id.time",
+      "concept": "event_time",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:calendar",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:calendar",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:calendar",
+      "column": "actor.callerType",
+      "concept": "actor_caller_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:calendar",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:calendar",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list",
+          "title": "Method: activities.list",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:calendar",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:calendar",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:calendar",
+      "column": "ownerDomain",
+      "concept": "owner_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:calendar",
+      "column": "event.type",
+      "concept": "event_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:calendar",
+      "column": "event.name",
+      "concept": "event_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:calendar",
+      "column": "etag",
+      "concept": "etag",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:calendar",
+      "column": "kind",
+      "concept": "kind",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chat",
+      "column": "id.time",
+      "concept": "event_time",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chat",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chat",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chat",
+      "column": "actor.callerType",
+      "concept": "actor_caller_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chat",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chat",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list",
+          "title": "Method: activities.list",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chat",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chat",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chat",
+      "column": "ownerDomain",
+      "concept": "owner_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chat",
+      "column": "event.type",
+      "concept": "event_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chat",
+      "column": "event.name",
+      "concept": "event_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chat",
+      "column": "etag",
+      "concept": "etag",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:chat",
+      "column": "kind",
+      "concept": "kind",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "id.time",
+      "concept": "event_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "actor.callerType",
+      "concept": "actor_caller_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "event.type",
+      "concept": "event_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "event.name",
+      "concept": "event_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "etag",
+      "concept": "etag",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "kind",
+      "concept": "kind",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "action",
+      "concept": "change_action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "app",
+      "concept": "application_name",
+      "note": "Null on the captured event; by CIM convention this would carry the producing application's name, the same value as id.applicationName.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "asset_id",
+      "concept": "asset_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "asset_name",
+      "concept": "asset_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "asset_type",
+      "concept": "asset_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "change_type",
+      "concept": "change_outcome",
+      "note": "Null on the captured event.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "command",
+      "concept": "change_outcome",
+      "note": "Null on the captured event.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "dest",
+      "concept": "customer_id",
+      "note": "Observed equal to id.customerId on the captured event.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "dest_name",
+      "concept": "customer_id",
+      "note": "Observed equal to id.customerId on the captured event.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "dvc",
+      "concept": "product_label",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "email",
+      "concept": "actor_email",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "object",
+      "concept": "asset_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "object_attrs",
+      "concept": "asset_extra_attrs",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "object_category",
+      "concept": "asset_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "object_id",
+      "concept": "asset_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "owner",
+      "concept": "owner_principal",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "owner_email",
+      "concept": "owner_principal",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "owner_id",
+      "concept": "owner_principal",
+      "note": "Carries the actor's email on the captured event, not a numeric id despite the name.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "owner_mail",
+      "concept": "owner_principal",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "parent_object",
+      "concept": "parent_asset",
+      "note": "Null on the captured event.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "parent_object_category",
+      "concept": "parent_asset",
+      "note": "Null on the captured event.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "parent_object_id",
+      "concept": "parent_asset",
+      "note": "Null on the captured event.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "result",
+      "concept": "change_outcome",
+      "note": "Null on the captured event.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "result_id",
+      "concept": "change_outcome",
+      "note": "Null on the captured event.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "signature",
+      "concept": "change_action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "src",
+      "concept": "source_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "src_user",
+      "concept": "counterpart_principal",
+      "note": "Null on the captured event.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "src_user_name",
+      "concept": "counterpart_principal",
+      "note": "Null on the captured event.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "src_user_type",
+      "concept": "counterpart_principal",
+      "note": "Null on the captured event.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "status",
+      "concept": "change_outcome",
+      "note": "Null on the captured event.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "user",
+      "concept": "actor_email",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "user_email",
+      "concept": "actor_email",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "user_id",
+      "concept": "actor_email",
+      "note": "Carries the actor's email on the captured event, not actor.profileId despite the name.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "user_name",
+      "concept": "actor_email",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "user_type",
+      "concept": "actor_caller_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "vendor_account",
+      "concept": "customer_id",
+      "note": "Observed equal to id.customerId on the captured event.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "vendor_product",
+      "concept": "product_label",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "visibility",
+      "concept": "visibility",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "event.parameters{}.name",
+      "concept": "event_parameters",
+      "note": "The flattened parameters array's own name column.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:data_studio",
+      "column": "event.parameters{}.value",
+      "concept": "event_parameters",
+      "note": "The flattened parameters array's own value column.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gcp",
+      "column": "id.time",
+      "concept": "event_time",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gcp",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gcp",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gcp",
+      "column": "actor.callerType",
+      "concept": "actor_caller_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gcp",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gcp",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list",
+          "title": "Method: activities.list",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gcp",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gcp",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gcp",
+      "column": "ownerDomain",
+      "concept": "owner_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gcp",
+      "column": "event.type",
+      "concept": "event_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gcp",
+      "column": "event.name",
+      "concept": "event_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gcp",
+      "column": "etag",
+      "concept": "etag",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gcp",
+      "column": "kind",
+      "concept": "kind",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gemini_in_workspace_apps",
+      "column": "id.time",
+      "concept": "event_time",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gemini_in_workspace_apps",
+      "column": "actor.email",
+      "concept": "actor_email",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gemini_in_workspace_apps",
+      "column": "actor.profileId",
+      "concept": "actor_profile_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gemini_in_workspace_apps",
+      "column": "actor.callerType",
+      "concept": "actor_caller_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gemini_in_workspace_apps",
+      "column": "ipAddress",
+      "concept": "source_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gemini_in_workspace_apps",
+      "column": "id.applicationName",
+      "concept": "application_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list",
+          "title": "Method: activities.list",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gemini_in_workspace_apps",
+      "column": "id.customerId",
+      "concept": "customer_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gemini_in_workspace_apps",
+      "column": "id.uniqueQualifier",
+      "concept": "unique_qualifier",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gemini_in_workspace_apps",
+      "column": "ownerDomain",
+      "concept": "owner_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gemini_in_workspace_apps",
+      "column": "event.type",
+      "concept": "event_type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gemini_in_workspace_apps",
+      "column": "event.name",
+      "concept": "event_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gemini_in_workspace_apps",
+      "column": "etag",
+      "concept": "etag",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:reports:gemini_in_workspace_apps",
+      "column": "kind",
+      "concept": "kind",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column naming follows the flattening bin/gws_preprocess.py:split_events() applies to every Reports API application (id first, one event per output line), the same shape observed on gws:reports:data_studio; not yet directly observed for this application.",
+        "cite": {
+          "url": "https://developers.google.com/workspace/admin/reports/v1/reference/activities",
+          "title": "Admin SDK Reports API: activities resource",
+          "read_on": "2026-09-19"
+        }
+      }
+    }
+  ],
+  "hazards": {
+    "ip_shared": {
+      "text": "A NAT gateway, VPN exit or shared proxy can put many people behind one address; a match is a lead, not a link."
+    },
+    "names_not_stable": {
+      "text": "An actor or owner is identified by email; a rename or alias change moves the identifier, not the person."
+    },
+    "time_basis": {
+      "text": "id.time is when Google recorded the activity; Splunk's index time, set on ingest, can lag well behind it."
+    },
+    "qualifier_scope": {
+      "text": "id.uniqueQualifier repeats across applications and across days; it is only unique paired with id.time and id.applicationName."
+    },
+    "id_name_is_not_an_id": {
+      "text": "user_id, owner_id, owner_mail and user_name carry the actor's email, not a stable id, on the captured event; actor.profileId is the real stable id, and asset_id/object_id/parent_object_id are GUIDs naming a different thing again."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

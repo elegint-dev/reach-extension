@@ -1,0 +1,238 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "aws-cloudwatch-events",
+  "name": "AWS CloudWatch events via Firehose",
+  "pack_version": "0.1.0",
+  "description": "AWS CloudWatch and EventBridge events as the Splunk Add-on for AWS delivers them over Kinesis Data Firehose (sourcetype aws:firehose:cloudwatchevents): the EventBridge envelope (who generated the event, when, where) wrapped around a detail object whose shape depends on the event's own detail-type. Sampled here on an EC2 instance state change.",
+  "source": "Amazon EventBridge Events Reference (event envelope metadata); Amazon EC2 instance state-change event reference; Splunk Add-on for AWS Firehose sourcetypes page and the aws:firehose:cloudwatchevents props stanza (KV_MODE=json), checked against a captured event.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "aws_cloudwatch_events",
+    "label": "AWS CloudWatch events",
+    "description": "EventBridge events routed to Splunk through a Kinesis Firehose delivery stream: one record per envelope, the id, detail-type, source, account, time, region and any resource ARNs the generating service chose to include, plus a detail object whose fields depend on detail-type.",
+    "tags": [
+      "aws",
+      "cloud",
+      "cloudwatch",
+      "eventbridge"
+    ],
+    "discriminator": "event_type"
+  },
+  "concepts": {
+    "event_id": {
+      "label": "Event id",
+      "type": "event_id",
+      "description": "A unique identifier EventBridge generates for the event; trace one event through rules to its targets by it."
+    },
+    "event_type": {
+      "label": "Detail type",
+      "type": "record_type",
+      "description": "The event's name; combined with source it decides which fields appear in detail. This family's sample and live field check cover one value, EC2 Instance State-change Notification.",
+      "hazards": [
+        "detail_shape_varies"
+      ]
+    },
+    "event_source": {
+      "label": "Event source",
+      "type": "event_source",
+      "description": "The AWS service that generated the event, for example aws.ec2. Every AWS-originated event's source begins with aws.",
+      "hazards": [
+        "source_field_collision"
+      ]
+    },
+    "account_id": {
+      "label": "Account id",
+      "type": "account_id",
+      "description": "The 12-digit AWS account id the event belongs to."
+    },
+    "event_time": {
+      "label": "Event time",
+      "type": "event_time",
+      "description": "The event's own timestamp, set by the service that generated it; can be before the time it was received if the service reports a span's start.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ]
+    },
+    "region": {
+      "label": "Region",
+      "type": "region",
+      "description": "The AWS Region the event originated in."
+    },
+    "resource_arns": {
+      "label": "Resources",
+      "type": "resource_id",
+      "description": "ARNs of the resources the event is about; whether any appear, and how many, is up to the service that generated the event.",
+      "hazards": [
+        "resources_optional"
+      ]
+    },
+    "instance_id": {
+      "label": "Instance id",
+      "type": "resource_id",
+      "description": "The EC2 instance whose lifecycle state changed, as its bare instance id (not an ARN)."
+    },
+    "instance_state": {
+      "label": "Instance state",
+      "type": "enum",
+      "description": "The EC2 instance's new lifecycle state after the change this event reports."
+    }
+  },
+  "containers": {
+    "aws:firehose:cloudwatchevents": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "The Splunk Add-on for AWS's Firehose sourcetype for CloudWatch/EventBridge events: data from CloudWatch, delivered as the raw EventBridge envelope with no TRANSFORMS applied, so detail keeps its full nested shape.",
+      "tags": [
+        "aws",
+        "cloudwatch",
+        "eventbridge"
+      ],
+      "note": "detail is a nested object; KV_MODE=json flattens it to dotted field names (detail.instance-id, detail.state for the EC2 record type this pack samples).",
+      "hazards": [
+        "detail_shape_varies"
+      ]
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "aws:firehose:cloudwatchevents",
+      "column": "id",
+      "concept": "event_id",
+      "basis": "confirmed",
+      "basis_ref": "the live Splunk field check (splunk.fields)",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json on the aws:firehose:cloudwatchevents stanza extracts the event's top-level JSON keys as search-time fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:firehose:cloudwatchevents",
+      "column": "detail-type",
+      "concept": "event_type",
+      "basis": "confirmed",
+      "basis_ref": "the live Splunk field check (splunk.fields)",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json on the aws:firehose:cloudwatchevents stanza extracts the event's top-level JSON keys as search-time fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:firehose:cloudwatchevents",
+      "column": "source",
+      "concept": "event_source",
+      "note": "See the source_field_collision hazard: this field was not returned by the live field check for the one event tested.",
+      "basis": "asserted",
+      "basis_ref": "present in the vendor sample (AWS EC2 User Guide, 'State change events for Amazon EC2 instances', https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-instance-state-changes.html); absent from the live field check's splunk.fields list",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json on the aws:firehose:cloudwatchevents stanza extracts the event's top-level JSON keys as search-time fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:firehose:cloudwatchevents",
+      "column": "account",
+      "concept": "account_id",
+      "basis": "confirmed",
+      "basis_ref": "the live Splunk field check (splunk.fields)",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json on the aws:firehose:cloudwatchevents stanza extracts the event's top-level JSON keys as search-time fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:firehose:cloudwatchevents",
+      "column": "time",
+      "concept": "event_time",
+      "basis": "confirmed",
+      "basis_ref": "the live Splunk field check (splunk.fields); the vendor sample's time_field (AWS EC2 User Guide, 'State change events for Amazon EC2 instances', https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-instance-state-changes.html)",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json on the aws:firehose:cloudwatchevents stanza extracts the event's top-level JSON keys as search-time fields; TIME_PREFIX/TIME_FORMAT on the same stanza also set _time from this field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:firehose:cloudwatchevents",
+      "column": "region",
+      "concept": "region",
+      "basis": "confirmed",
+      "basis_ref": "the live Splunk field check (splunk.fields)",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json on the aws:firehose:cloudwatchevents stanza extracts the event's top-level JSON keys as search-time fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:firehose:cloudwatchevents",
+      "column": "resources{}",
+      "concept": "resource_arns",
+      "basis": "confirmed",
+      "basis_ref": "the live Splunk field check (splunk.fields)",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json extracts the resources JSON array as a multivalue field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:firehose:cloudwatchevents",
+      "column": "detail.instance-id",
+      "concept": "instance_id",
+      "basis": "confirmed",
+      "basis_ref": "the live Splunk field check (splunk.fields)",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json flattens the nested detail object to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:firehose:cloudwatchevents",
+      "column": "detail.state",
+      "concept": "instance_state",
+      "basis": "confirmed",
+      "basis_ref": "the live Splunk field check (splunk.fields)",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json flattens the nested detail object to dotted field names."
+      }
+    }
+  ],
+  "hazards": {
+    "detail_shape_varies": {
+      "level": "note",
+      "text": "detail-type and source together decide detail's shape; only the EC2 instance state-change shape (detail.instance-id, detail.state) is covered here. The same sourcetype can also carry CloudTrail events embedded in CloudWatch events, per the TA's own sourcetype description."
+    },
+    "source_field_collision": {
+      "level": "caution",
+      "text": "The live Splunk field check behind this pack (the splunk.fields list) did not return a distinct source field for the one sample tested, though the raw event carries one. Unconfirmed whether Splunk's own reserved source metadata field is masking it or the gap is a sampling artifact of testing one event; if the field is missing for you too, read it from _raw."
+    },
+    "resources_optional": {
+      "level": "note",
+      "text": "Whether resources carries anything, and how much, is up to the service that generated the event; AWS API calls delivered via CloudTrail carry no resource ARNs at all."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

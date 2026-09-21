@@ -1,0 +1,1645 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "cisco-asa",
+  "name": "Cisco ASA syslog",
+  "pack_version": "0.1.0",
+  "description": "Cisco ASA's LINA syslog: CLI command and configuration-change auditing, connection build/teardown, local-database user management and discarded-request events, normalized by the Splunk Add-on for Cisco ASA's cisco:asa stanza. One feed for the cisco:asa sourcetype.",
+  "source": "Splunk Add-on for Cisco ASA (Splunk_TA_cisco-asa) cisco:asa props.conf, transforms.conf and lookups, read from a live instance; Cisco Secure Firewall ASA Series Syslog Messages guide; Splunk Common Information Model Network Traffic, Intrusion Detection and Change data models.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "cisco_asa_syslog",
+    "label": "Cisco ASA Syslog",
+    "description": "Cisco ASA's LINA-engine syslog: one line per %ASA-<level>-<id> event, normalized by the Splunk Add-on for Cisco ASA. This pack documents the eleven message ids the sampled attack_data actually carries: CLI auditing, connection build/teardown, local-database user management and a discarded request.",
+    "tags": [
+      "firewall",
+      "network",
+      "cisco"
+    ],
+    "discriminator": "message_id"
+  },
+  "concepts": {
+    "message_id": {
+      "label": "Message id",
+      "type": "record_type",
+      "description": "The numeric id in the %ASA-<level>-<id> token, for example 302013; picks which other fields the line carries."
+    },
+    "log_level": {
+      "label": "Syslog level",
+      "type": "enum",
+      "description": "The syslog priority (0 to 7) in the %ASA-<level>-<id> token; a transport-layer severity, not Cisco's own event severity."
+    },
+    "severity_level": {
+      "label": "Syslog level name",
+      "type": "enum",
+      "description": "The RFC 5424 name of the syslog priority (emergencies, alert, critical ... debugging), looked up from log_level. Despite the name it grades the syslog transport priority, not the event.",
+      "hazards": [
+        "severity_namespace"
+      ]
+    },
+    "level_description": {
+      "label": "Syslog level meaning",
+      "type": "text",
+      "description": "A one-line gloss of the syslog priority (for example Informational messages only), looked up from log_level. On this sourcetype the description field holds this, not a summary of the event.",
+      "hazards": [
+        "severity_namespace"
+      ]
+    },
+    "vendor_severity": {
+      "label": "Vendor severity",
+      "type": "enum",
+      "description": "Cisco's own severity word (for example Informational, Attack) looked up from signature_id.",
+      "hazards": [
+        "severity_namespace"
+      ]
+    },
+    "severity": {
+      "label": "Severity",
+      "type": "enum",
+      "description": "The CIM-normalized severity word: a literal for four message ids (106016, 106017, 400032, 110003, 405001, 212011), else filled from the same signature_id lookup that sets vendor_severity.",
+      "hazards": [
+        "severity_namespace"
+      ]
+    },
+    "action": {
+      "label": "Action",
+      "type": "outcome",
+      "description": "The CIM-normalized verb for what ASA did (allowed, blocked, teardown, executed, ...), from a lookup keyed on the raw action token or on message_id."
+    },
+    "vendor_action": {
+      "label": "Vendor action",
+      "type": "enum",
+      "description": "Cisco's own action verb before CIM normalization (built, denied, discarded, executed, ...), lower-cased; a literal (blocked, flow) for two message-id groups."
+    },
+    "category": {
+      "label": "Signature category",
+      "type": "enum",
+      "description": "The vendor category of a matched signature; a literal for three message-id groups (DOS, Spoofing, Attempted Information Leak), else passed through."
+    },
+    "signature": {
+      "label": "Signature name",
+      "type": "text",
+      "description": "The name of the intrusion or condition the event reports; a literal for a set of message ids, else the extracted signature."
+    },
+    "signature_id": {
+      "label": "Signature id",
+      "type": "identifier",
+      "description": "The unique id of the signature or event code; the key the vendor_severity/severity lookup matches on. Equal to message_id itself on four message ids."
+    },
+    "ids_type": {
+      "label": "IDS type",
+      "type": "enum",
+      "description": "Which kind of detector raised the event. A fixed literal (network) on every cisco:asa record."
+    },
+    "status": {
+      "label": "Change status",
+      "type": "outcome",
+      "description": "Whether a configuration or account change succeeded; success is a literal for a fixed set of message ids, otherwise passed through."
+    },
+    "result": {
+      "label": "Result",
+      "type": "text",
+      "description": "The vendor-specific detail of a change's outcome; the literal command text for message id 111009, otherwise the extracted result phrase."
+    },
+    "reason": {
+      "label": "Termination reason",
+      "type": "text",
+      "description": "Why a connection was torn down, for example the TCP flag that ended it; carried on the 302014/302016 teardown messages."
+    },
+    "teardown_initiator": {
+      "label": "Teardown initiator",
+      "type": "text",
+      "description": "Which side of the connection sent the packet that tore it down; carried on the 302014 teardown message. The syslog guide names the field without enumerating its values, so no values table is written for it."
+    },
+    "session_id": {
+      "label": "Session id",
+      "type": "session_id",
+      "description": "Ties together the records of one session."
+    },
+    "direction": {
+      "label": "Direction",
+      "type": "enum",
+      "description": "Which way the packet travelled (inbound, outbound); egress is normalized to outbound."
+    },
+    "transport": {
+      "label": "Transport",
+      "type": "enum",
+      "description": "The OSI layer 4 protocol of the traffic (icmp, tcp, udp), lower-cased.",
+      "hazards": [
+        "protocol_layers"
+      ]
+    },
+    "protocol": {
+      "label": "Network protocol",
+      "type": "enum",
+      "description": "The OSI layer 3 protocol; on this sourcetype it collapses to ip whenever transport is tcp or udp (or message id 338301), and to icmp for icmp traffic. Not the same axis as transport.",
+      "hazards": [
+        "protocol_layers"
+      ]
+    },
+    "protocol_version": {
+      "label": "Protocol version",
+      "type": "enum",
+      "description": "The IP version of the traffic, from a lookup keyed on protocol and communication_protocol.",
+      "hazards": [
+        "protocol_layers"
+      ]
+    },
+    "communication_protocol": {
+      "label": "Address family",
+      "type": "enum",
+      "description": "ipv4 or ipv6, worked out by pattern-matching whichever of src_ip, dest_ip, src or dest is populated. A TA-internal helper, not a named CIM or Cisco field.",
+      "hazards": [
+        "protocol_layers"
+      ]
+    },
+    "bytes": {
+      "label": "Bytes",
+      "type": "count",
+      "description": "Total bytes handled; the literal bytes field if present, else bytes_in plus bytes_out."
+    },
+    "packets": {
+      "label": "Packets",
+      "type": "count",
+      "description": "Total packets handled; the literal packets field if present, else packets_in plus packets_out."
+    },
+    "duration": {
+      "label": "Duration",
+      "type": "count",
+      "description": "Connection or session lifetime in seconds, computed from the day/hour/minute/second components the extraction pulls out of the human-readable duration string."
+    },
+    "duration_component": {
+      "label": "Duration component",
+      "type": "count",
+      "description": "One unit (day, hour, minute or second) of the connection lifetime string; four columns that only make sense summed together as duration."
+    },
+    "dvc": {
+      "label": "Reporting device",
+      "type": "hostname",
+      "description": "The device that logged the event; aliased from Splunk's own host field, not read from the message text."
+    },
+    "original_device_ip": {
+      "label": "Original device address",
+      "type": "identifier",
+      "description": "The IP address of the device that generated the event, for the five 430001-430007 message ids where ASA reports on another device's behalf; distinct from src_ip/dest_ip, which are traffic endpoints."
+    },
+    "original_device_time": {
+      "label": "Original device time",
+      "type": "event_time",
+      "description": "The generating device's own timestamp string, kept separate from _time. Falls back to strftime(_time) for the same 430001-430007 message ids when the device did not supply its own.",
+      "hazards": [
+        "time_no_year"
+      ]
+    },
+    "dest": {
+      "label": "Destination",
+      "type": "hostname",
+      "description": "The remote host of the traffic; an IP address or hostname depending on message id, with a fallback chain across dest, dest_ip, dest_host and assigned_ipv4."
+    },
+    "dest_ip": {
+      "label": "Destination IP",
+      "type": "dest_ip",
+      "description": "The IP address of the destination."
+    },
+    "dest_host": {
+      "label": "Destination hostname",
+      "type": "hostname",
+      "description": "The destination's hostname, populated only for the message ids that report on a named host rather than a bare address. Not a Network Traffic CIM field; the TA's own convention pairing with dest."
+    },
+    "dest_interface": {
+      "label": "Destination interface",
+      "type": "identifier",
+      "description": "The interface listening remotely or receiving packets locally."
+    },
+    "dest_port": {
+      "label": "Destination port",
+      "type": "identifier",
+      "description": "The destination port of the traffic; forced to 0 for icmp. On the 710002/710003/710005/710006 discarded-request messages it comes from the raw service token rather than its own capture."
+    },
+    "dest_public_port": {
+      "label": "Destination public port",
+      "type": "identifier",
+      "description": "The destination port on the public (outside/untranslated) leg of a NAT, alongside dest_port and dest_translated_port. Not a Network Traffic CIM field; forced to 0 for icmp like the other port fields.",
+      "hazards": [
+        "nat_ports"
+      ]
+    },
+    "dest_translated_ip": {
+      "label": "Destination translated IP",
+      "type": "source_ip",
+      "description": "The NATed IPv4 or IPv6 address a packet has been sent to.",
+      "hazards": [
+        "nat_ports"
+      ]
+    },
+    "dest_translated_port": {
+      "label": "Destination translated port",
+      "type": "identifier",
+      "description": "The NATed port a packet has been sent to; forced to 0 for icmp.",
+      "hazards": [
+        "nat_ports"
+      ]
+    },
+    "dest_translated_host": {
+      "label": "Destination translated hostname",
+      "type": "hostname",
+      "description": "The hostname form of dest_translated_ip, when ASA names rather than addresses the mapped destination. Not a Network Traffic CIM field."
+    },
+    "dest_user": {
+      "label": "Destination user",
+      "type": "user_name",
+      "description": "The user identity associated with the destination side of the flow, for example identity-based firewall mapping. Not a Network Traffic CIM field; the TA's directional pairing of user.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "dest_nt_domain": {
+      "label": "Destination NT domain",
+      "type": "domain",
+      "description": "The Windows/AD domain qualifying dest_user, on messages that report an AD-authenticated destination identity."
+    },
+    "src": {
+      "label": "Source",
+      "type": "hostname",
+      "description": "The client requesting the connection; an IP address or hostname depending on message id."
+    },
+    "src_ip": {
+      "label": "Source IP",
+      "type": "source_ip",
+      "description": "The IP address of the source."
+    },
+    "src_host": {
+      "label": "Source hostname",
+      "type": "hostname",
+      "description": "The source's hostname, populated only for message ids that report on a named host. Not a Network Traffic CIM field."
+    },
+    "src_interface": {
+      "label": "Source interface",
+      "type": "identifier",
+      "description": "The interface listening locally or sending packets remotely."
+    },
+    "src_port": {
+      "label": "Source port",
+      "type": "identifier",
+      "description": "The source port of the traffic; forced to 0 for icmp."
+    },
+    "src_public_port": {
+      "label": "Source public port",
+      "type": "identifier",
+      "description": "The source port on the public leg of a NAT, alongside src_port and src_translated_port. Not a Network Traffic CIM field.",
+      "hazards": [
+        "nat_ports"
+      ]
+    },
+    "src_translated_ip": {
+      "label": "Source translated IP",
+      "type": "source_ip",
+      "description": "The NATed IPv4 or IPv6 address a packet has been sent from.",
+      "hazards": [
+        "nat_ports"
+      ]
+    },
+    "src_translated_port": {
+      "label": "Source translated port",
+      "type": "identifier",
+      "description": "The NATed port a packet has been sent from; forced to 0 for icmp.",
+      "hazards": [
+        "nat_ports"
+      ]
+    },
+    "src_translated_host": {
+      "label": "Source translated hostname",
+      "type": "hostname",
+      "description": "The hostname form of src_translated_ip. Not a Network Traffic CIM field."
+    },
+    "src_user": {
+      "label": "Source user",
+      "type": "user_name",
+      "description": "The user identity associated with the source side of the flow. Not a Network Traffic CIM field; the TA's directional pairing of user.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "src_nt_domain": {
+      "label": "Source NT domain",
+      "type": "domain",
+      "description": "The Windows/AD domain qualifying src_user."
+    },
+    "user": {
+      "label": "User",
+      "type": "user_name",
+      "description": "The user tied to the event: src_user or dest_user for a fixed set of message ids and directions, else the extracted user (an admin CLI username on the change/session messages this pack sampled).",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "ip_address": {
+      "label": "Assigned IP (alias source)",
+      "type": "source_ip",
+      "description": "The underlying field the IP column aliases from; seen on the same address-assignment message ids as assigned_ip. Its own extraction was not independently observed, only the alias."
+    },
+    "assigned_ip": {
+      "label": "Assigned IP",
+      "type": "source_ip",
+      "description": "The IPv4 or IPv6 address ASA assigned to a client, for example over VPN or DHCP relay."
+    },
+    "group": {
+      "label": "Group",
+      "type": "identifier",
+      "description": "A AAA or VPN group policy name, aliased from the raw Group field."
+    },
+    "rule": {
+      "label": "Rule",
+      "type": "identifier",
+      "description": "The rule or access-list that decided the action taken."
+    },
+    "acl": {
+      "label": "ACL",
+      "type": "identifier",
+      "description": "The access-list or rule id, same value as rule."
+    },
+    "app": {
+      "label": "Application protocol",
+      "type": "identifier",
+      "description": "The application protocol of the traffic; a literal (VPN, ASA, WebVPN, Firewall, SNMP) for six message-id groups, else the extracted app."
+    },
+    "vendor": {
+      "label": "Vendor",
+      "type": "text",
+      "description": "A fixed literal, Cisco, on every record."
+    },
+    "product": {
+      "label": "Product",
+      "type": "text",
+      "description": "A fixed literal, ASA, on every record."
+    },
+    "vendor_product": {
+      "label": "Vendor product",
+      "type": "text",
+      "description": "The vendor and product of the device generating the event; a fixed literal, Cisco ASA."
+    },
+    "vendor_class": {
+      "label": "Vendor class",
+      "type": "enum",
+      "description": "A message-id-keyed classification Cisco's own lookup adds. The lookup's mechanism was confirmed live; its value table was not sampled, so no values are written here."
+    },
+    "vendor_definition": {
+      "label": "Vendor definition",
+      "type": "text",
+      "description": "A message-id-keyed free-text definition from the same lookup as vendor_class. Not sampled; no values table."
+    },
+    "change_type": {
+      "label": "Change type",
+      "type": "enum",
+      "description": "The category of a configuration or account change, such as filesystem or AAA, from Cisco's own change-analysis lookup keyed by message_id."
+    },
+    "change_class": {
+      "label": "Change class",
+      "type": "enum",
+      "description": "A coarse change classifier from the same change-analysis lookup, keyed by message_id."
+    },
+    "change_description": {
+      "label": "Change description",
+      "type": "text",
+      "description": "A short, message-id-specific description of what changed, from the same change-analysis lookup."
+    },
+    "command": {
+      "label": "Command",
+      "type": "command_line",
+      "description": "The command that initiated a change; parent_process_name for message id 111010 (ASA labels the executed command as the parent process), otherwise the extracted command."
+    },
+    "object": {
+      "label": "Object",
+      "type": "text",
+      "description": "The name of the object a change affected; a per-message-id literal (src, command, user, \"user account\", process_name) for six message ids, else the extracted object or object_id."
+    },
+    "object_id": {
+      "label": "Object id",
+      "type": "identifier",
+      "description": "The affected object's own id, such as a user account name; a literal for two message-id groups, else coalesce(object_id, object)."
+    },
+    "object_attrs": {
+      "label": "Object attributes",
+      "type": "text",
+      "description": "The attributes and values a change touched, for example username, user privilege, encrypted password; a literal for three message-id groups (502101/502102, 502103, 505009), else the extracted object_attrs."
+    },
+    "object_category": {
+      "label": "Object category",
+      "type": "enum",
+      "description": "A generic class for the changed object (filesystem, command, configuration, user), a literal for four message ids, else the extracted object_category."
+    },
+    "object_path": {
+      "label": "Object path",
+      "type": "text",
+      "description": "Where the changed object lives; the fixed word local (the on-box user database) on the 502101/502102 local-database messages this pack sampled."
+    },
+    "object_type": {
+      "label": "Object type",
+      "type": "enum",
+      "description": "Which kind of thing object names (object, user, policy, context or module), from the same change-analysis lookup as change_class, keyed by message_id."
+    },
+    "type": {
+      "label": "Event type",
+      "type": "enum",
+      "description": "A coarse classifier (unknown, event, alert) for three message ids, else whatever type the extraction already set."
+    },
+    "ssl_is_valid": {
+      "label": "SSL validity",
+      "type": "flag",
+      "description": "Whether an SSL/TLS check passed; failed and validated are normalized to false/true, other raw values pass through unchanged."
+    },
+    "privilege_level": {
+      "label": "Privilege level",
+      "type": "identifier",
+      "description": "The exec privilege level (0 to 15) a user account was created or deleted with, on the 502101/502102 local-database messages."
+    },
+    "old_privilege_level": {
+      "label": "Old privilege level",
+      "type": "identifier",
+      "description": "The privilege level a user held before a 502103 privilege-level-change event."
+    },
+    "new_privilege_level": {
+      "label": "New privilege level",
+      "type": "identifier",
+      "description": "The privilege level a user was changed to, on a 502103 privilege-level-change event."
+    },
+    "encrypted_password": {
+      "label": "Encrypted password",
+      "type": "text",
+      "description": "The Encpass token on the 502101/502102 local-database messages. ASA itself always writes this as a fixed string of asterisks; it is never the real hash.",
+      "hazards": [
+        "password_masked"
+      ]
+    },
+    "process_name": {
+      "label": "Process name",
+      "type": "text",
+      "description": "The application or process name in the message text; \"N/A\" on the 111010 configuration-change sample this pack read, since command-line CLI sessions do not name an application."
+    },
+    "parent_process_name": {
+      "label": "Parent process name",
+      "type": "command_line",
+      "description": "The quoted command text at the end of a 111010 configuration-change message; ASA's own label calls this the process's parent, but the EVAL for command reads it as the command that was run."
+    },
+    "zone": {
+      "label": "Local-host zone",
+      "type": "identifier",
+      "description": "The security-context or interface name a local-host session belonged to, on the 609001/609002 built/teardown-local-host messages. A different capture than src_interface/dest_interface, which name traffic-flow interfaces rather than a host's own zone."
+    }
+  },
+  "containers": {
+    "cisco:asa": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Cisco ASA's LINA-engine syslog as the Splunk Add-on for Cisco ASA (Splunk_TA_cisco-asa, installed on the dev instance) indexes it: one line per %ASA-<level>-<id> event, CIM field aliases, EVAL-calculated fields and five Cisco-shipped lookups keyed on message_id, signature_id or log_level.",
+      "note": "attack_data_cisco_asa_generic_cisco_asa_generic_logs, the sample this pack read (splunk/attack_data datasets/cisco_asa/generic and arcane_door), carries eleven distinct message ids: CLI command/config-change auditing (111008, 111009, 111010), an account lockout (113006), TCP connection build/teardown (302013, 302014), local-database user management (502101, 502102, 502103), a local-host teardown (609002) and a discarded TCP request (710005). The other ~190 message ids the REPORT stanza extracts were not exemplified in this sample and are not documented here."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "message_id",
+      "concept": "message_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "REPORT-cisco_asa_field_extractions (cisco_asa_log_level_message_id) pulls this from the %ASA-<level>-<id> token; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "Cisco_ASA_message_id",
+      "concept": "message_id",
+      "alias_of": "message_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-Cisco_ASA_message_id: message_id AS Cisco_ASA_message_id; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "log_level",
+      "concept": "log_level",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Pulled by the same REPORT stanza as message_id; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "severity_level",
+      "concept": "severity_level",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "LOOKUP-cisco_asa_syslog_severity_lookup: cisco_asa_syslog_severity_lookup.csv keyed on log_level, outputs severity_level and description; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "description",
+      "concept": "level_description",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "Same cisco_asa_syslog_severity_lookup.csv row as severity_level, keyed on log_level; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "vendor_severity",
+      "concept": "vendor_severity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "LOOKUP-cisco_asa_severity_lookup: cisco_asa_severity_lookup_600.csv keyed on signature_id, outputs vendor_severity and severity; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "severity",
+      "concept": "severity",
+      "basis": "validated",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "EVAL-severity sets a literal for message ids 106016/106017/400032/110003 (informational), 405001 (low) and 212011 (high); every other record's severity comes from the same signature_id lookup as vendor_severity; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "action",
+      "concept": "action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "LOOKUP-cisco_asa_action_lookup_1/2: cisco_asa_action_lookup_600.csv matches the lower-cased raw action (laction) or, failing that, message_id, outputs action; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "Cisco_ASA_action",
+      "concept": "action",
+      "alias_of": "action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "Same cisco_asa_action_lookup_600.csv row as action, output a second time as Cisco_ASA_action; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "laction",
+      "concept": "action",
+      "alias_of": "action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-laction: lower(action); the field the action lookup matches its vendor_action column against; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "vendor_action",
+      "concept": "vendor_action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-vendor_action: a literal (blocked for message ids 313005/338002, flow for 419002/419003/400013/500003), else coalesce(lower(vendor_action), lower(action)); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "Cisco_ASA_vendor_action",
+      "concept": "vendor_action",
+      "alias_of": "vendor_action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-Cisco_ASA_vendor_action: coalesce(lower(vendor_action), lower(action)); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "category",
+      "concept": "category",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-category: a literal (DOS for message ids 400032/106017, Spoofing for 106016, Attempted Information Leak for 430001), else the extracted category; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "signature",
+      "concept": "signature",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-signature sets literal vendor text for a set of message ids (for example 106016 Spoof Attack, 106017 Land Attack, 722051/713228 IP assigned), else passes the extracted signature through; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "signature_id",
+      "concept": "signature_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-signature_id: message_id itself for message ids 405001/110003/106023/725003, else the extracted signature_id; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "ids_type",
+      "concept": "ids_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-ids_type: the fixed literal network; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "status",
+      "concept": "status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-status: the literal success for a fixed list of message ids including 111001/111004/111009/111010/502101/502102/502103/771002, else the extracted status; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "result",
+      "concept": "result",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-result: the command text for message id 111009, else the extracted result phrase (the REGEX-captured lead sentence on the 502101/502102/502103 messages this pack sampled); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "reason",
+      "concept": "reason",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction on the 302014/302016 teardown messages; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19",
+        "cite": {
+          "url": "https://www.cisco.com/c/en/us/td/docs/security/asa/syslog/asa-syslog/syslog-messages-302003-to-342008.html",
+          "title": "Cisco Secure Firewall ASA Series Syslog Messages: Syslog Messages 302003 to 342008",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "teardown_initiator",
+      "concept": "teardown_initiator",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction on the 302014 teardown message; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19",
+        "cite": {
+          "url": "https://www.cisco.com/c/en/us/td/docs/security/asa/syslog/asa-syslog/syslog-messages-302003-to-342008.html",
+          "title": "Cisco Secure Firewall ASA Series Syslog Messages: Syslog Messages 302003 to 342008",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "session_id",
+      "concept": "session_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "direction",
+      "concept": "direction",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-direction: egress is rewritten to outbound, else lower(direction); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "transport",
+      "concept": "transport",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-transport: lower(transport); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "protocol",
+      "concept": "protocol",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-protocol: ip when message id is 338301 or transport is tcp/udp, icmp when transport is icmp, else the extracted protocol; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "protocol_version",
+      "concept": "protocol_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "LOOKUP-cisco_asa_protocol_version: cisco_asa_protocol_version.csv keyed on protocol and communication_protocol, outputs protocol_version; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "communication_protocol",
+      "concept": "communication_protocol",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-communication_protocol pattern-matches coalesce(src_ip,dest_ip,src,dest) for a colon (ipv6) or dotted-quad (ipv4); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "bytes",
+      "concept": "bytes",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-bytes: the extracted bytes if present, else bytes_in plus bytes_out; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "packets",
+      "concept": "packets",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-packets: the extracted packets if present, else packets_in plus packets_out; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "duration",
+      "concept": "duration",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-duration: coalesce(duration_day,0)*86400 + duration_hour*3600 + duration_minute*60 + duration_second; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "duration_day",
+      "concept": "duration_component",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction of one unit of the duration string; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "duration_hour",
+      "concept": "duration_component",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction of one unit of the duration string; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "duration_minute",
+      "concept": "duration_component",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction of one unit of the duration string; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "duration_second",
+      "concept": "duration_component",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction of one unit of the duration string; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "dvc",
+      "concept": "dvc",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-dvc: host as dvc; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "original_device_ip",
+      "concept": "original_device_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-original_device_ip: the extracted value if present, else host for message ids 430001/430002/430003/430004/430007; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "original_device_time",
+      "concept": "original_device_time",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-original_device_time: the extracted value if present, else strftime(_time) for message ids 430001/430002/430003/430004/430007; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "dest",
+      "concept": "dest",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-dest: host for a long list of message ids including 111001/111004/111009/111010/502101-502103, else coalesce(dest, dest_ip, dest_host, assigned_ipv4); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "dest_ip",
+      "concept": "dest_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-dest_ip: host for a fixed set of message ids when it looks like an address, else coalesce(dest_ip, assigned_ipv4); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "dest_host",
+      "concept": "dest_host",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-dest_host: host for the same fixed set of message ids when it does not look like an address, else the extracted dest_host; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "dest_interface",
+      "concept": "dest_interface",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "dest_zone",
+      "concept": "dest_interface",
+      "alias_of": "dest_interface",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-dest_zone: dest_interface AS dest_zone; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "dest_port",
+      "concept": "dest_port",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-dest_port: 0 for icmp, else coalesce(dest_port, service); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "dest_public_port",
+      "concept": "dest_public_port",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-dest_public_port: 0 for icmp, else the extracted value; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "dest_translated_ip",
+      "concept": "dest_translated_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction on NAT-carrying messages; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "dest_translated_port",
+      "concept": "dest_translated_port",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-dest_translated_port: 0 for icmp, else the extracted value; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "dest_translated_host",
+      "concept": "dest_translated_host",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "dest_user",
+      "concept": "dest_user",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-user reads dest_user for outbound 302020/302021/106023 records; dest_user is otherwise its own per-message-id extraction; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "dest_nt_domain",
+      "concept": "dest_nt_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "src",
+      "concept": "src",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-src: host for message id 212011, else coalesce(src, src_ip, src_host); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "src_ip",
+      "concept": "src_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-src_ip: host for message ids 609001/609002 when it looks like an address, else coalesce(src_ip, assigned_ipv4); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "src_host",
+      "concept": "src_host",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "src_interface",
+      "concept": "src_interface",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "src_zone",
+      "concept": "src_interface",
+      "alias_of": "src_interface",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-src_zone: src_interface AS src_zone; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "src_port",
+      "concept": "src_port",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-src_port: 0 for icmp, else the extracted src_port; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "src_public_port",
+      "concept": "src_public_port",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-src_public_port: 0 for icmp, else the extracted value; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "src_translated_ip",
+      "concept": "src_translated_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction on NAT-carrying messages; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "src_translated_port",
+      "concept": "src_translated_port",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-src_translated_port: 0 for icmp, else the extracted value; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "src_translated_host",
+      "concept": "src_translated_host",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "src_user",
+      "concept": "src_user",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-user reads src_user for inbound 302020/302021 records and for message id 113015; src_user is otherwise its own per-message-id extraction; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "src_nt_domain",
+      "concept": "src_nt_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "user",
+      "concept": "user",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-user: src_user or dest_user for a fixed set of message ids and directions, else the extracted user; observed as the CLI username on the 111008/111009/111010/502101-502103 messages this pack sampled; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "Cisco_ASA_user",
+      "concept": "user",
+      "alias_of": "user",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-Cisco_ASA_user: user AS Cisco_ASA_user; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "Username",
+      "concept": "user",
+      "alias_of": "user",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-Cisco_ASA_user: user AS Username; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "IP",
+      "concept": "ip_address",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-IP: ip_address AS IP; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "assigned_ip",
+      "concept": "assigned_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-assigned_ip: coalesce(assigned_ipv4, assigned_ipv6); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "group",
+      "concept": "group",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-group: Group AS group; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "rule",
+      "concept": "rule",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-rule: coalesce(rule, rule_id); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "rule_name",
+      "concept": "rule",
+      "alias_of": "rule",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-rule_name: rule AS rule_name; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "acl",
+      "concept": "acl",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-acl: coalesce(rule, rule_id); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "app",
+      "concept": "app",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-app: a literal (VPN, ASA, WebVPN, Firewall or SNMP) for six message-id groups, else the extracted app; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "vendor",
+      "concept": "vendor",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-vendor: the fixed literal Cisco; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "product",
+      "concept": "product",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-product: the fixed literal ASA; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "vendor_product",
+      "concept": "vendor_product",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-vendor_product: the fixed literal Cisco ASA; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "vendor_class",
+      "concept": "vendor_class",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "LOOKUP-cisco_asa_vendor_class_lookup: cisco_asa_vendor_class_lookup.csv keyed on message_id, outputs vendor_class; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "vendor_definition",
+      "concept": "vendor_definition",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "Same cisco_asa_vendor_class_lookup.csv row as vendor_class; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "change_type",
+      "concept": "change_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "LOOKUP-cisco_asa_change_analysis_lookup: cisco_asa_change_analysis_lookup.csv keyed on message_id, outputs change_type; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "change_class",
+      "concept": "change_class",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "Same cisco_asa_change_analysis_lookup.csv row as change_type, when present; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "change_description",
+      "concept": "change_description",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "Same cisco_asa_change_analysis_lookup.csv row as change_type; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "command",
+      "concept": "command",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-command: parent_process_name for message id 111010, else the extracted command; observed as the CLI command text on the 111008/111009/111010 messages this pack sampled; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "object",
+      "concept": "object",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-object: src for message id 111004, command for 111009, user for 713228, the literal \"user account\" for 502101/502102/502103, process_name for 111010, else coalesce(object, object_id); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "object_id",
+      "concept": "object_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-object_id: user for message id 713228, the literal \"user account\" for 502101/502102, else coalesce(object_id, object); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "object_attrs",
+      "concept": "object_attrs",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-object_attrs: a three-item literal list for message ids 502101/502102, the literal \"user privilege\" for 502103, \"version\" for 505009, else the extracted object_attrs, lower-cased; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "object_category",
+      "concept": "object_category",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-object_category: \"filesystem\" for message id 111010, \"command\" for 111009, \"configuration\" for 771002, else the extracted object_category, lower-cased; observed as \"user\" (REGEX-captured, not the EVAL literal) on the 502101/502102/502103 messages this pack sampled; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "object_path",
+      "concept": "object_path",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Named capture in the 502101/502102 REGEX (the fixed word local before \"dbase\"); read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19",
+        "cite": {
+          "url": "https://www.cisco.com/c/en/us/td/docs/security/asa/syslog/asa-syslog/syslog-messages-500000-to-520025.html",
+          "title": "Cisco Secure Firewall ASA Series Syslog Messages: Syslog Messages 500001 to 520025",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "object_type",
+      "concept": "object_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "LOOKUP-cisco_asa_change_analysis_lookup: cisco_asa_change_analysis_lookup.csv keyed on message_id, outputs object_type; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "type",
+      "concept": "type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-type: \"unknown\" for message id 110003, \"event\" for 405001, \"alert\" for 212011, else the extracted type; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "ssl_is_valid",
+      "concept": "ssl_is_valid",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-ssl_is_valid: failed maps to false, validated maps to true, else passed through; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "privilege_level",
+      "concept": "privilege_level",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Named capture Priv in the 502101/502102 REGEX; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19",
+        "cite": {
+          "url": "https://www.cisco.com/c/en/us/td/docs/security/asa/syslog/asa-syslog/syslog-messages-500000-to-520025.html",
+          "title": "Cisco Secure Firewall ASA Series Syslog Messages: Syslog Messages 500001 to 520025",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "old_privilege_level",
+      "concept": "old_privilege_level",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Named capture From in the 502103 REGEX; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19",
+        "cite": {
+          "url": "https://www.cisco.com/c/en/us/td/docs/security/asa/syslog/asa-syslog/syslog-messages-500000-to-520025.html",
+          "title": "Cisco Secure Firewall ASA Series Syslog Messages: Syslog Messages 500001 to 520025",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "new_privilege_level",
+      "concept": "new_privilege_level",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Named capture To in the 502103 REGEX; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19",
+        "cite": {
+          "url": "https://www.cisco.com/c/en/us/td/docs/security/asa/syslog/asa-syslog/syslog-messages-500000-to-520025.html",
+          "title": "Cisco Secure Firewall ASA Series Syslog Messages: Syslog Messages 500001 to 520025",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "encrypted_password",
+      "concept": "encrypted_password",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Named capture Encpass in the 502101/502102 REGEX; ASA itself always writes this as a masked string, so the capture is never a real credential; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19",
+        "cite": {
+          "url": "https://www.cisco.com/c/en/us/td/docs/security/asa/syslog/asa-syslog/syslog-messages-500000-to-520025.html",
+          "title": "Cisco Secure Firewall ASA Series Syslog Messages: Syslog Messages 500001 to 520025",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "process_name",
+      "concept": "process_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Named capture process_name in the 111010 REGEX; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "parent_process_name",
+      "concept": "parent_process_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Named capture parent_process_name in the 111010 REGEX, the quoted command text the EVAL for command reads back out; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "zone",
+      "concept": "zone",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Named capture zone in the 609001/609002 REGEX; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19",
+        "cite": {
+          "url": "https://www.cisco.com/c/en/us/td/docs/security/asa/syslog/asa-syslog/syslog-messages-602101-to-622102.html",
+          "title": "Cisco Secure Firewall ASA Series Syslog Messages: Syslog Messages 602101 to 622102",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:asa",
+      "column": "service",
+      "concept": "dest_port",
+      "alias_of": "dest_port",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Named capture service in the 710002/710003/710005/710006 REGEX, coalesced into dest_port by EVAL-dest_port; read live from Splunk_TA_cisco-asa's cisco:asa stanza (props.conf/transforms.conf/lookups) on the dev Splunk instance, 2026-09-19",
+        "cite": {
+          "url": "https://www.cisco.com/c/en/us/td/docs/security/asa/syslog/asa-syslog/syslog-messages-701001-to-714011.html",
+          "title": "Cisco Secure Firewall ASA Series Syslog Messages: Syslog Messages 701001 to 714011",
+          "read_on": "2026-09-19"
+        }
+      }
+    }
+  ],
+  "hazards": {
+    "time_no_year": {
+      "level": "note",
+      "text": "TIME_FORMAT on cisco:asa is %b %d %H:%M:%S, which has no %Y, yet the message text does carry a year (for example Nov 18 2025) and the samples this pack read show _time picking that year up correctly; treat this as unconfirmed for any event where indexing lags far enough that Splunk's own default-year fallback could disagree with the text."
+    },
+    "severity_namespace": {
+      "level": "caution",
+      "text": "log_level, severity_level, vendor_severity, severity and description look like restatements of one fact but come from two different lookups keyed on two different fields (log_level, and signature_id); severity_level and description grade the syslog transport priority, not the event Cisco detected."
+    },
+    "protocol_layers": {
+      "level": "caution",
+      "text": "transport, protocol, protocol_version and communication_protocol all sound like the wire protocol. transport is layer 4 (tcp, udp, icmp); protocol collapses to ip or icmp on this sourcetype, not a transport name; protocol_version and communication_protocol both mean IP version, from a lookup and a pattern match respectively."
+    },
+    "nat_ports": {
+      "level": "caution",
+      "text": "src_port, src_public_port and src_translated_port (and the dest equivalents) can each hold a different port for one NATed flow; filtering on the wrong one silently returns nothing."
+    },
+    "ids_look_alike": {
+      "level": "note",
+      "text": "message_id, signature_id, session_id and object_id are four unrelated identifier spaces on this sourcetype; a bare number is not evidence of which one it is."
+    },
+    "names_not_stable": {
+      "level": "note",
+      "text": "user, src_user and dest_user are whatever name ASA's own auth source supplied; the same person can appear under different strings across a domain rename or a different auth backend."
+    },
+    "password_masked": {
+      "level": "note",
+      "text": "encrypted_password is always the literal ***** in the 502101/502102 message text ASA itself writes; it never carries a real hash, so it is only useful to confirm that a password field was touched, not what the password was."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

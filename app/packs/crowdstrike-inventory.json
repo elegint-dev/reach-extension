@@ -1,0 +1,1778 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "crowdstrike-inventory",
+  "name": "CrowdStrike Falcon host, application and user inventory",
+  "pack_version": "0.1.0",
+  "description": "CrowdStrike Falcon Data Replicator inventory extracts: one host, application, network-asset or user row at a time, not event telemetry. Five Splunk sourcetypes (aidmaster, appinfo, managedassets, notmanaged, userinfo) and the one Sentinel table the same feed lands in for four of the five record types.",
+  "source": "Splunk_TA_CrowdStrike_FDR props, transforms and saved searches as installed, and the Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector's Data Collection Rule (Azure/Azure-Sentinel repository), both read against the same underlying FDR S3 feed.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "crowdstrike_fdr_inventory",
+    "label": "CrowdStrike Falcon Data Replicator inventory",
+    "description": "Periodic host, application, network-asset and user inventory dumps CrowdStrike writes to a customer S3 bucket alongside its event telemetry.",
+    "tags": [
+      "crowdstrike",
+      "inventory",
+      "endpoint"
+    ]
+  },
+  "concepts": {
+    "host_id": {
+      "label": "Host id (aid)",
+      "type": "host_id",
+      "description": "CrowdStrike's own identifier for the sensor and the host it runs on. Stable across renames; the join key back to every other FDR record for the host.",
+      "hazards": [
+        "aid_vs_cid"
+      ]
+    },
+    "tenant_id": {
+      "label": "Customer id (cid)",
+      "type": "account_id",
+      "description": "The CrowdStrike customer (tenant) id the record belongs to.",
+      "hazards": [
+        "aid_vs_cid"
+      ]
+    },
+    "hostname": {
+      "label": "Host name",
+      "type": "hostname",
+      "description": "The host's own name as the Falcon sensor reports it."
+    },
+    "host_domain": {
+      "label": "Host domain",
+      "type": "domain",
+      "description": "The Active Directory domain the host is joined to."
+    },
+    "host_ou": {
+      "label": "Host organizational unit",
+      "type": "identifier",
+      "description": "The Active Directory organizational unit path the host's computer object sits in."
+    },
+    "site_name": {
+      "label": "CrowdStrike site name",
+      "type": "identifier",
+      "description": "CrowdStrike's site name for the host, drawn from the host's Active Directory site membership."
+    },
+    "host_city": {
+      "label": "Host city",
+      "type": "text",
+      "description": "The city the host was last located in, as CrowdStrike derives it. A geolocation CrowdStrike computed, not a value the host reports about itself."
+    },
+    "host_country": {
+      "label": "Host country",
+      "type": "text",
+      "description": "The country the host was last located in, as CrowdStrike derives it."
+    },
+    "host_continent": {
+      "label": "Host continent",
+      "type": "text",
+      "description": "The continent the host was last located in, as CrowdStrike derives it."
+    },
+    "host_product_name": {
+      "label": "System product name",
+      "type": "text",
+      "description": "The host's system product or model name, from the host's own hardware or BIOS identification."
+    },
+    "sensor_version": {
+      "label": "Sensor version",
+      "type": "version",
+      "description": "The Falcon sensor's own version string.",
+      "hazards": [
+        "version_fields_differ"
+      ]
+    },
+    "os_version": {
+      "label": "OS version",
+      "type": "version",
+      "description": "The host operating system's version string.",
+      "hazards": [
+        "version_fields_differ"
+      ]
+    },
+    "record_time": {
+      "label": "Record time",
+      "type": "event_time",
+      "description": "The inventory row's own timestamp: when CrowdStrike generated this row (raw key Time on aidmaster, _time on the other four sourcetypes).",
+      "notes": "The Splunk Add-on for CrowdStrike FDR's props.conf names this key with TIME_PREFIX for every sourcetype in this family (Time on aidmaster at %s.%7N precision, _time elsewhere at %s.%3N); no vendor page states its meaning directly, so this is inferred from the add-on's own indexing configuration.",
+      "hazards": [
+        "time_fields_differ"
+      ]
+    },
+    "first_seen_time": {
+      "label": "First seen",
+      "type": "event_time",
+      "description": "When CrowdStrike first saw this host.",
+      "hazards": [
+        "time_fields_differ"
+      ]
+    },
+    "ingest_time": {
+      "label": "Local ingest time",
+      "type": "event_time",
+      "description": "When the receiving platform's own pipeline processed the record locally (event_ingest_time on Splunk, TimeGenerated on Sentinel); not a time CrowdStrike reported.",
+      "notes": "Splunk: added by the add-on's TRANSFORMS-crowdstrike_ta_event_ingest_time, not a raw FDR key. Sentinel: the connector's Data Collection Rule sets TimeGenerated = now() in its transformKql, confirmed directly in DCR.json; the sentinel-dcr cite backs that half, so this stays inferred rather than documented because the Splunk half of the same concept has no citable vendor page.",
+      "hazards": [
+        "time_fields_differ"
+      ]
+    },
+    "os_platform": {
+      "label": "OS platform",
+      "type": "enum",
+      "description": "A short platform code CrowdStrike's sensor assigns to the host (for example a fixed word for Windows, macOS or Linux). This pack has not independently confirmed the full set of literal values."
+    },
+    "host_ip4": {
+      "label": "Host local IPv4",
+      "type": "source_ip",
+      "description": "The host's own local IPv4 address as last reported.",
+      "hazards": [
+        "mac_ip_pairs"
+      ]
+    },
+    "host_mac": {
+      "label": "Host MAC address",
+      "type": "identifier",
+      "description": "The MAC address of the host's primary network interface.",
+      "hazards": [
+        "mac_ip_pairs"
+      ]
+    },
+    "gateway_ip": {
+      "label": "Gateway IPv4",
+      "type": "source_ip",
+      "description": "The IPv4 address of the host's default network gateway.",
+      "hazards": [
+        "mac_ip_pairs"
+      ]
+    },
+    "gateway_mac": {
+      "label": "Gateway MAC address",
+      "type": "identifier",
+      "description": "The MAC address of the host's default network gateway.",
+      "hazards": [
+        "mac_ip_pairs"
+      ]
+    },
+    "file_hash": {
+      "label": "File SHA-256",
+      "type": "file_hash",
+      "description": "The SHA-256 digest of the executable file this inventory row describes."
+    },
+    "file_company": {
+      "label": "File company name",
+      "type": "text",
+      "description": "The company name embedded in the file's own version resource."
+    },
+    "file_description": {
+      "label": "File description",
+      "type": "text",
+      "description": "The file description embedded in the file's own version resource.",
+      "notes": "Confirmed as a raw appinfo key by the add-on's own savedsearches.conf tstats aggregation (crowdstrike_ta_build_appinfo_resolution_table); not present in the Sentinel connector's secondary-data schema, so no vendor page names it."
+    },
+    "file_name": {
+      "label": "File name",
+      "type": "file_name",
+      "description": "The file's base name."
+    },
+    "file_version": {
+      "label": "File version",
+      "type": "version",
+      "description": "The file's own version string, from its version resource.",
+      "hazards": [
+        "version_fields_differ"
+      ]
+    },
+    "product_name": {
+      "label": "Product name",
+      "type": "text",
+      "description": "The product name the file's version resource declares it belongs to."
+    },
+    "product_version": {
+      "label": "Product version",
+      "type": "version",
+      "description": "The product version the file's version resource declares.",
+      "hazards": [
+        "version_fields_differ"
+      ]
+    },
+    "detection_count": {
+      "label": "Detection count",
+      "type": "count",
+      "description": "How many times CrowdStrike's detection engine has flagged this file hash."
+    },
+    "external_ip": {
+      "label": "External IP",
+      "type": "source_ip",
+      "description": "The device's externally visible IP address, as CrowdStrike's network discovery observed it."
+    },
+    "install_time": {
+      "label": "Install time",
+      "type": "event_time",
+      "description": "When the software or agent this row describes was installed.",
+      "hazards": [
+        "time_fields_differ"
+      ]
+    },
+    "software_type": {
+      "label": "Software type",
+      "type": "enum",
+      "description": "A short CrowdStrike-assigned category for the kind of software this row describes. This pack has not confirmed the full set of literal values."
+    },
+    "software_category": {
+      "label": "Software category",
+      "type": "enum",
+      "description": "A further CrowdStrike-assigned category for the software. This pack has not confirmed the full set of literal values."
+    },
+    "first_discovered_time": {
+      "label": "First discovered",
+      "type": "event_time",
+      "description": "When CrowdStrike's network discovery first saw this unmanaged device.",
+      "hazards": [
+        "time_fields_differ"
+      ]
+    },
+    "last_discovered_by": {
+      "label": "Last discovered by",
+      "type": "identifier",
+      "description": "An identifier for the sensor host that most recently discovered this unmanaged device on the network.",
+      "hazards": [
+        "discoverer_not_the_device"
+      ]
+    },
+    "discoverer_count": {
+      "label": "Discoverer count",
+      "type": "count",
+      "description": "How many CrowdStrike sensors have discovered this unmanaged device.",
+      "hazards": [
+        "discoverer_not_the_device"
+      ]
+    },
+    "discoverer_agent_id": {
+      "label": "Discoverer agent id",
+      "type": "host_id",
+      "description": "The agent id (aid) of the sensor host that discovered this unmanaged device.",
+      "hazards": [
+        "discoverer_not_the_device",
+        "aid_vs_cid"
+      ]
+    },
+    "discoverer_device_type": {
+      "label": "Discoverer device type",
+      "type": "enum",
+      "description": "CrowdStrike's classification of the discovering sensor's device type. This pack has not confirmed the full set of literal values.",
+      "hazards": [
+        "discoverer_not_the_device"
+      ]
+    },
+    "local_ip_count": {
+      "label": "Local IP count",
+      "type": "count",
+      "description": "How many local IPv4 addresses CrowdStrike has observed for this unmanaged device."
+    },
+    "subnet": {
+      "label": "Subnet",
+      "type": "text",
+      "description": "The network subnet CrowdStrike placed this unmanaged device on."
+    },
+    "agent_ip": {
+      "label": "Agent IP (aip)",
+      "type": "source_ip",
+      "description": "An IP address CrowdStrike's cloud recorded for the reporting agent. Named in both Sentinel FDR streams and named (as aip) in third-party FDR fixtures this pack rejected as samples; no vendor page defines how it differs from the host's own local address, so treat the two as distinct until confirmed otherwise."
+    },
+    "user_sid": {
+      "label": "User SID",
+      "type": "user_id",
+      "description": "A Windows security identifier (SID) for the user account.",
+      "notes": "The add-on's savedsearches.conf (crowdstrike_ta_build_userinfo_resolution_table) tstats-aggregates and renames a raw UserSid_readable key to UserSid; the rename proves the raw key's name. Not present in either Sentinel FDR stream, so no vendor page names it."
+    },
+    "account_type": {
+      "label": "Account type",
+      "type": "enum",
+      "description": "CrowdStrike's classification of the account, for example local versus domain. The specific literal values are not confirmed here.",
+      "notes": "Confirmed as a raw userinfo key by the add-on's own collections.conf fields_list and savedsearches.conf tstats; no vendor page names it."
+    },
+    "last_logon_host": {
+      "label": "Last logon host",
+      "type": "hostname",
+      "description": "The name of the host this user most recently logged on to, as this inventory row's own host reported it.",
+      "notes": "Confirmed as a raw userinfo key the same way as account_type; no vendor page names it."
+    },
+    "local_admin_access": {
+      "label": "Local admin access",
+      "type": "flag",
+      "description": "Whether the user holds local administrator rights on the reporting host.",
+      "notes": "Confirmed as a raw userinfo key the same way as account_type; no vendor page names it."
+    },
+    "logon_info": {
+      "label": "Logon info",
+      "type": "text",
+      "description": "A free-text description of the logon this row summarizes.",
+      "notes": "Confirmed as a raw userinfo key the same way as account_type; no vendor page names it."
+    },
+    "logon_time": {
+      "label": "Logon time",
+      "type": "event_time",
+      "description": "The timestamp of the logon this row summarizes.",
+      "notes": "Confirmed as a raw userinfo key the same way as account_type; not present in the Sentinel secondary-data stream (a same-named LogonTime exists only in the connector's separate primary sensor-event stream), so no vendor page names this inventory-row field.",
+      "hazards": [
+        "time_fields_differ"
+      ]
+    },
+    "logon_type": {
+      "label": "Logon type",
+      "type": "enum",
+      "description": "CrowdStrike's classification of the logon, for example interactive versus network. The specific literal values are not confirmed here.",
+      "notes": "Confirmed as a raw userinfo key the same way as account_type; a same-named LogonType exists only in the connector's separate primary sensor-event stream, not this inventory row."
+    },
+    "password_last_set_time": {
+      "label": "Password last set",
+      "type": "event_time",
+      "description": "When the account's password was last set.",
+      "notes": "Confirmed as a raw userinfo key the same way as account_type; a same-named PasswordLastSet exists only in the connector's separate primary sensor-event stream, not this inventory row.",
+      "hazards": [
+        "time_fields_differ"
+      ]
+    },
+    "user_name_domain": {
+      "label": "User (account name)",
+      "type": "user_name",
+      "description": "The account name this row summarizes, as the host reports it (raw key User, distinct from UserName).",
+      "notes": "Confirmed as a raw userinfo key the same way as account_type; no vendor page names it."
+    },
+    "user_is_admin": {
+      "label": "User is admin",
+      "type": "flag",
+      "description": "Whether CrowdStrike flags this account as an administrator.",
+      "notes": "Confirmed as a raw userinfo key the same way as account_type; a same-named UserIsAdmin exists only in the connector's separate primary sensor-event stream, not this inventory row."
+    },
+    "user_logon_flags": {
+      "label": "User logon flags",
+      "type": "bitmask",
+      "description": "A bitmask of logon-related flags CrowdStrike's sensor recorded for the account (raw key UserLogonFlags_decimal).",
+      "notes": "Confirmed as a raw userinfo key the same way as account_type; a same-named but differently-suffixed UserLogonFlags exists only in the connector's separate primary sensor-event stream."
+    },
+    "user_display_name": {
+      "label": "User display name",
+      "type": "user_name",
+      "description": "The account's display name (raw key UserName, distinct from User).",
+      "notes": "Confirmed as a raw userinfo key the same way as account_type; no vendor page names it."
+    },
+    "months_since_reset": {
+      "label": "Months since reset",
+      "type": "count",
+      "description": "How many months have elapsed since the account's password was last reset.",
+      "notes": "Confirmed as a raw userinfo key the same way as account_type; no vendor page names it."
+    }
+  },
+  "containers": {
+    "crowdstrike:inventory:aidmaster": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "One row per host the Falcon sensor has run on: identity (aid, cid), name, domain, OU, CrowdStrike site, OS and sensor version, and CrowdStrike's own geolocation for the host. The join from an aid seen elsewhere in Falcon data back to a host name.",
+      "note": "Splunk_TA_CrowdStrike_FDR indexes the raw FDR NDJSON object verbatim (INDEXED_EXTRACTIONS=json, KV_MODE=none, no FIELDALIAS renaming); every field below is a raw top-level JSON key."
+    },
+    "crowdstrike:inventory:appinfo": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "One row per file hash the Falcon sensor inventoried on a host: the file's name, version, publisher and CrowdStrike's own detection count for that hash.",
+      "note": "Same verbatim raw-JSON indexing as aidmaster; collection is off by default (collect_inventory_appinfo=0 in inputs.conf)."
+    },
+    "crowdstrike:inventory:managedassets": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "One row per host's own reported network configuration: its local IPv4 address and MAC, and its default gateway's IP and MAC.",
+      "note": "Same verbatim raw-JSON indexing as aidmaster."
+    },
+    "crowdstrike:inventory:notmanaged": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "One row per device on the network CrowdStrike's sensors detected that is not itself running a Falcon sensor: when and how many sensors discovered it, and which sensor host most recently did.",
+      "note": "Same verbatim raw-JSON indexing as aidmaster; collection is off by default (collect_inventory_notmanaged=0 in inputs.conf). The Splunk add-on's own config confirms only the record's time key here; the discovery-specific fields below are carried over from the Sentinel connector's schema for this record type (see each binding's note).",
+      "hazards": [
+        "discoverer_not_the_device"
+      ]
+    },
+    "crowdstrike:inventory:userinfo": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "One row per local or domain user account a Falcon sensor observed: the account's SID, name, admin status, local admin access and logon history.",
+      "note": "Same verbatim raw-JSON indexing as aidmaster. The add-on's own savedsearches.conf renames the raw UserSid_readable and UserLogonFlags_decimal keys on output; this pack binds the raw names."
+    },
+    "CrowdStrike_Secondary_Data_CL": {
+      "platform": "sentinel",
+      "kind": "vendor",
+      "description": "The Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector's merged inventory table: aidmaster, appinfo, managedassets and notmanaged rows land in one shape via the connector's Custom-CrowdStrikeSecondary stream. A row carries only the columns its own record type populates.",
+      "note": "userinfo is not carried by this connector: its raw fields (UserSid, LogonTime, LogonType, UserIsAdmin, PasswordLastSet) appear only in the connector's separate primary CrowdStrike_User_Events_CL sensor-event table, under the Custom-CrowdstrikeStream, not in this inventory table.",
+      "hazards": [
+        "no_record_type_column"
+      ]
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "AgentVersion",
+      "concept": "sensor_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "City",
+      "concept": "host_city",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "ComputerName",
+      "concept": "hostname",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "Continent",
+      "concept": "host_continent",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "Country",
+      "concept": "host_country",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "FirstSeen",
+      "concept": "first_seen_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "LocalAddressIP4",
+      "concept": "host_ip4",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "MAC",
+      "concept": "host_mac",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "MachineDomain",
+      "concept": "host_domain",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "OU",
+      "concept": "host_ou",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "SiteName",
+      "concept": "site_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "SystemProductName",
+      "concept": "host_product_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "Time",
+      "concept": "record_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "Version",
+      "concept": "os_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "aid",
+      "concept": "host_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "cid",
+      "concept": "tenant_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "event_ingest_time",
+      "concept": "ingest_time",
+      "note": "Added by the add-on's TRANSFORMS-crowdstrike_ta_event_ingest_time, not part of CrowdStrike's own record.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:aidmaster",
+      "column": "event_platform",
+      "concept": "os_platform",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:appinfo",
+      "column": "_time",
+      "concept": "record_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:appinfo",
+      "column": "SHA256HashData",
+      "concept": "file_hash",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:appinfo",
+      "column": "CompanyName",
+      "concept": "file_company",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:appinfo",
+      "column": "FileDescription",
+      "concept": "file_description",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:appinfo",
+      "column": "FileName",
+      "concept": "file_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:appinfo",
+      "column": "FileVersion",
+      "concept": "file_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:appinfo",
+      "column": "ProductName",
+      "concept": "product_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:appinfo",
+      "column": "ProductVersion",
+      "concept": "product_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:appinfo",
+      "column": "detectionCount",
+      "concept": "detection_count",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:managedassets",
+      "column": "_time",
+      "concept": "record_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:managedassets",
+      "column": "aid",
+      "concept": "host_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:managedassets",
+      "column": "GatewayIP",
+      "concept": "gateway_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:managedassets",
+      "column": "GatewayMAC",
+      "concept": "gateway_mac",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:managedassets",
+      "column": "LocalAddressIP4",
+      "concept": "host_ip4",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:managedassets",
+      "column": "MAC",
+      "concept": "host_mac",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:notmanaged",
+      "column": "_time",
+      "concept": "record_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:notmanaged",
+      "column": "FirstDiscoveredDate",
+      "concept": "first_discovered_time",
+      "note": "Not independently confirmed in the Splunk add-on's own config for notmanaged; carried over from the Sentinel connector's schema for the same raw FDR record type, which the add-on also ingests verbatim (INDEXED_EXTRACTIONS=json, no field renaming).",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:notmanaged",
+      "column": "LastDiscoveredBy",
+      "concept": "last_discovered_by",
+      "note": "Same basis as FirstDiscoveredDate on this container.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:notmanaged",
+      "column": "discovererCount",
+      "concept": "discoverer_count",
+      "note": "Same basis as FirstDiscoveredDate on this container.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:notmanaged",
+      "column": "discoverer_aid",
+      "concept": "discoverer_agent_id",
+      "note": "Same basis as FirstDiscoveredDate on this container.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:notmanaged",
+      "column": "discoverer_devicetype",
+      "concept": "discoverer_device_type",
+      "note": "Same basis as FirstDiscoveredDate on this container.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:notmanaged",
+      "column": "localipCount",
+      "concept": "local_ip_count",
+      "note": "Same basis as FirstDiscoveredDate on this container.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:notmanaged",
+      "column": "subnet",
+      "concept": "subnet",
+      "note": "Same basis as FirstDiscoveredDate on this container.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "_time",
+      "concept": "record_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "UserSid_readable",
+      "concept": "user_sid",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "AccountType",
+      "concept": "account_type",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "LastLoggedOnHost",
+      "concept": "last_logon_host",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "LocalAdminAccess",
+      "concept": "local_admin_access",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "LogonInfo",
+      "concept": "logon_info",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "LogonTime",
+      "concept": "logon_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "LogonType",
+      "concept": "logon_type",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "PasswordLastSet",
+      "concept": "password_last_set_time",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "User",
+      "concept": "user_name_domain",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "UserIsAdmin",
+      "concept": "user_is_admin",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "UserLogonFlags_decimal",
+      "concept": "user_logon_flags",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "UserName",
+      "concept": "user_display_name",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "event_platform",
+      "concept": "os_platform",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:inventory:userinfo",
+      "column": "monthsincereset",
+      "concept": "months_since_reset",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "aid",
+      "concept": "host_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "cid",
+      "concept": "tenant_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "aip",
+      "concept": "agent_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "event_platform",
+      "concept": "os_platform",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "ComputerName",
+      "concept": "hostname",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "hostname",
+      "concept": "hostname",
+      "note": "A second, lower-case column with the same meaning; the connector's merged table carries both spellings across its source record types.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "MachineDomain",
+      "concept": "host_domain",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "OU",
+      "concept": "host_ou",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "SiteName",
+      "concept": "site_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "City",
+      "concept": "host_city",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "Country",
+      "concept": "host_country",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "Continent",
+      "concept": "host_continent",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "SystemProductName",
+      "concept": "host_product_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "AgentVersion",
+      "concept": "sensor_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "Version",
+      "concept": "os_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "FirstSeen",
+      "concept": "first_seen_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "TimeGenerated",
+      "concept": "ingest_time",
+      "note": "The connector's Data Collection Rule sets TimeGenerated = now() in its transformKql: the time Sentinel processed the row, not a CrowdStrike timestamp.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "CompanyName",
+      "concept": "file_company",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "FileName",
+      "concept": "file_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "FileVersion",
+      "concept": "file_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "ProductName",
+      "concept": "product_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "ProductVersion",
+      "concept": "product_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "SHA256HashData",
+      "concept": "file_hash",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "detectionCount",
+      "concept": "detection_count",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "externalIP",
+      "concept": "external_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "installationTimestamp",
+      "concept": "install_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "SoftwareType",
+      "concept": "software_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "Category",
+      "concept": "software_category",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "GatewayIP",
+      "concept": "gateway_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "GatewayMAC",
+      "concept": "gateway_mac",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "LocalAddressIP4",
+      "concept": "host_ip4",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "MAC",
+      "concept": "host_mac",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "FirstDiscoveredDate",
+      "concept": "first_discovered_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "LastDiscoveredBy",
+      "concept": "last_discovered_by",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "discovererCount",
+      "concept": "discoverer_count",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "discoverer_aid",
+      "concept": "discoverer_agent_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "discoverer_devicetype",
+      "concept": "discoverer_device_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "localipCount",
+      "concept": "local_ip_count",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "CrowdStrike_Secondary_Data_CL",
+      "column": "subnet",
+      "concept": "subnet",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "connector",
+        "cite": {
+          "url": "https://raw.githubusercontent.com/Azure/Azure-Sentinel/master/Solutions/CrowdStrike%20Falcon%20Endpoint%20Protection/Data%20Connectors/CrowdStrikeS3FDR_ccp/DCR.json",
+          "title": "Microsoft Sentinel CrowdStrike Falcon Data Replicator (S3 FDR) connector: Data Collection Rule stream and table definitions",
+          "read_on": "2026-09-19"
+        }
+      }
+    }
+  ],
+  "hazards": {
+    "aid_vs_cid": {
+      "text": "aid (the host's agent id) and cid (the CrowdStrike customer id) are both hexadecimal strings; only the field name tells them apart, not the shape of the value."
+    },
+    "time_fields_differ": {
+      "text": "This family carries several independent timestamps: the record's own time (Time on aidmaster, _time elsewhere, at different fractional-second precision), FirstSeen, LogonTime, PasswordLastSet and install/discovery times are all distinct moments, and the platform's own ingest time (event_ingest_time on Splunk, TimeGenerated on Sentinel) is when the pipeline processed the row locally, not a time CrowdStrike reported."
+    },
+    "version_fields_differ": {
+      "text": "AgentVersion (the sensor), Version (the host OS), FileVersion and ProductVersion (the inventoried file) are four independent version strings; do not conflate them."
+    },
+    "mac_ip_pairs": {
+      "text": "MAC and LocalAddressIP4 describe the host's own network interface; GatewayMAC and GatewayIP describe its default gateway, a different device."
+    },
+    "discoverer_not_the_device": {
+      "text": "On a notmanaged row, the discoverer fields identify the managed sensor host that found the unmanaged device on the network, not the unmanaged device itself."
+    },
+    "no_record_type_column": {
+      "text": "The Sentinel CrowdStrike_Secondary_Data_CL table merges aidmaster, appinfo, managedassets and notmanaged rows into one shape with no column marking which record type a given row is; tell them apart by which columns are populated."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

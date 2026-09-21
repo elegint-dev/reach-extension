@@ -1,0 +1,5357 @@
+{
+ "format": "reach-known-linux",
+ "version": 1,
+ "platform": "linux",
+ "distro": "rhel",
+ "release": "9",
+ "generated_at": "2026-09-20T18:50:50.718Z",
+ "source": "rhel 9 amd64 container enumeration 2026-09-18",
+ "row_count": 667,
+ "dropped_duplicate_path_rows": 0,
+ "columns": [
+  "path",
+  "sha256",
+  "package",
+  "description",
+  "systemd_unit",
+  "installed_by_default"
+ ],
+ "rows": [
+  [
+   "/usr/bin/[",
+   "25bfc0bc898113682cd0977ddd21b1fa2db9e46af40c25900d3b8ab965b57dd0",
+   "coreutils;coreutils-single",
+   "bash built-in commands, see bash(1)",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/arch",
+   "0525511f84b2dc0b4e0714cb1802670657e5f94b76d27695830fed454c811c01",
+   "coreutils;coreutils-single",
+   "print machine hardware name (same as uname -m)",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/arping",
+   "9655ee031f7369bd6743e3d2708ab7b75e4defb2c148964b96f80e37726176ab",
+   "iputils",
+   "send ARP REQUEST to a neighbour host",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/attr",
+   "dd57022c790d98ca644b9d4042fd6753bccfb718b348efdf0e1d21d246f76c9c",
+   "attr",
+   "extended attributes on XFS filesystem objects",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/b2sum",
+   "6dc9bd82488fe4008e0c9889db9816baf2caed159788de96a1ac243427a87976",
+   "coreutils;coreutils-single",
+   "compute and check BLAKE2 message digest",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/base32",
+   "b31c3afa9444253fdefb5d062c9e56439f0ea69967cefdbb82d4fd8c01d87997",
+   "coreutils;coreutils-single",
+   "base32 encode/decode data and print to standard output",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/base64",
+   "082e550d7536ad63a007b1962554cdf7d19a45f4814e89aa5797e4fba676faaf",
+   "coreutils;coreutils-single",
+   "base64 encode/decode data and print to standard output",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/basename",
+   "cda546a4a5c0b4944c765509c9e765dde4eb2983d2b84b1a59cd51ed2a335c56",
+   "coreutils;coreutils-single",
+   "strip directory and suffix from filenames",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/basenc",
+   "bf1d0d7ad36c737e15a66854deb4497e749af5eeaaed191d9e1891b6f2369db7",
+   "coreutils;coreutils-single",
+   "Encode/decode data and print to standard output",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/bash",
+   "97995faa249e5706dd0b0373c9da547709bf7349755d5fc8e52f97a4bd04feaf",
+   "bash",
+   "GNU Bourne-Again SHell",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/busctl",
+   "931c9f8e83e665c679bf4571f10fa854adea8ac9b88e2ac84eba93062aa28575",
+   "systemd",
+   "Introspect the bus",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/cal",
+   "0b83b31f33a5fde9116308d50574b6b7e256812897ab53dd938eb0cfe1d04a2c",
+   "util-linux",
+   "display a calendar",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/cat",
+   "79605ec71edc0ee6bc83026d66ce5fb95254326776205465744f59f72ae89367",
+   "coreutils;coreutils-single",
+   "concatenate files and print on the standard output",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/catman",
+   "e89a9cab6e9e12e7b89af7c56df128bcb885967c2fd7bc64c5ed5681aa911e6d",
+   "man-db",
+   "create or update the pre-formatted manual pages",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/chacl",
+   "d5ae93f0d94ba46734267fa54bb9d529bc545f8ca4bc01cd034e7e6010db7973",
+   "acl",
+   "change the access control list of a file or directory",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/chage",
+   "82c61c430f52564ae0228eb1baedbbb3662ac16f9d8d6c1e577f67d30fb7303e",
+   "shadow-utils",
+   "change user password expiry information",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/chcon",
+   "463cb7de7cd837d1bd555f105cc325c64dffb86db67776161b50124c8575ee93",
+   "coreutils;coreutils-single",
+   "change file SELinux security context",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/chgrp",
+   "3887b0a3ae200f5cfe17322de3003ba3f1dd66d2f03e7cb54fdba54b82dfe041",
+   "coreutils;coreutils-single",
+   "change group ownership",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/chmem",
+   "7a4a9aaae6f2b439b4dd789f9213358cce1363d080460bc90a261ca502367167",
+   "util-linux",
+   "configure memory",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/chmod",
+   "8fe95a525a65b4db8a1ce667c579977fe85fdd108f5b0f6f037d207291aefb42",
+   "coreutils;coreutils-single",
+   "change file mode bits",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/choom",
+   "28efcf4343ae0e125c5edd33958f63c2e89937f461873cb372284dda6c04397e",
+   "util-linux",
+   "display and adjust OOM-killer score.",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/chown",
+   "72f8998ffe8a9ebec5a47340422ced6fd53d0510a669eaeb687db83ea641d247",
+   "coreutils;coreutils-single",
+   "change file owner and group",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/chrt",
+   "a585d58b68474dd41fd3596c3283225e9be6aa1330d9a6f1095a0fc04349591e",
+   "util-linux-core",
+   "manipulate the real-time attributes of a process",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/chvt",
+   "b69c769e0ed52be19b0d7b0c078d32a00b7073696f2e1793521089a5e693f83f",
+   "kbd",
+   "change foreground virtual terminal",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/cksum",
+   "aa3474f45b6994f76ac1b9668d9f8635bde153370f07ad0dee85dc3269a3bdfb",
+   "coreutils;coreutils-single",
+   "checksum and count the bytes in a file",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/clear",
+   "f0792b6a495e10fe1be425ecb8570c53ac90613b604f966d4762059504228abe",
+   "ncurses",
+   "clear the terminal screen",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/clockdiff",
+   "82760c64a8609674f798bbbdecf131afcda7e1923bca50a863ae7bce2e1c0137",
+   "iputils",
+   "measure clock difference between hosts",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/cmp",
+   "fd41c12309316e067474797e2e2297e230717a120e08be97ca468be5440e1741",
+   "diffutils",
+   "OpenSSL application commands",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/col",
+   "245822fbbafb12865416d463d5892e2303a5fc6c81a874a595f6b377b6e47326",
+   "util-linux",
+   "filter reverse line feeds from input",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/colcrt",
+   "6bf234a8aedcd1485f89cc8561bb4c2ffa35963d21819a51380db04daeeda9d1",
+   "util-linux",
+   "filter nroff output for CRT previewing",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/colrm",
+   "01452641c8b82cdb4208c4c3d5eec229b6728680dce137bf6cd3cd2807efeb8c",
+   "util-linux",
+   "remove columns from a file",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/column",
+   "ea4bc9cfda334e2489408d717372c08ff26cd6b942814002a7882e02fdda6822",
+   "util-linux",
+   "columnate lists",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/comm",
+   "97d5b8560039e1e5c6ce424176ff6ddd24de48e4f9920cd99cde090afc94f9d0",
+   "coreutils;coreutils-single",
+   "compare two sorted files line by line",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/consolehelper",
+   "d6ee0188798cc48938f6ed996fa96ffa43c768f94abb2e524125b4639bbb9a2f",
+   "usermode",
+   "A wrapper that helps console users run system programs",
+   "",
+   false
+  ],
+  [
+   "/usr/bin/coreutils",
+   "f0795ddec1d9b05ff310d8f02dd5bfb55c3509f4ee8463e32c5aad8a7299ee9e",
+   "coreutils-single",
+   "coreutils multicall binary",
+   "",
+   false
+  ],
+  [
+   "/usr/bin/cp",
+   "6698a9bafe1a3a52eced59b85850b6448342088eea5bb6c61bb7cdcab10b58d9",
+   "coreutils;coreutils-single",
+   "copy files and directories",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/cpio",
+   "9078b97b5097c040a74ea729029d175ecae97e61060561fcffe27bfdb133676a",
+   "cpio",
+   "copy files to and from archives",
+   "",
+   false
+  ],
+  [
+   "/usr/bin/cronnext",
+   "1d93002d6b71671ac4df3c82f06f0f4c1aabd52a4e368904a0c19ef983172d51",
+   "cronie",
+   "time of next job cron will execute",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/crontab",
+   "b7670d18e9d84c50659b24bf9389c22367b3a856cea01f9a75d89c9ed02a5c93",
+   "cronie",
+   "maintains crontab files for individual users",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/csplit",
+   "46a968badd74427d23ee678d55b730dc91407d9ede071d24818c2f7edfbdcc72",
+   "coreutils;coreutils-single",
+   "split a file into sections determined by context lines",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/curl",
+   "20caf5c2b813733b68de01bb05d74f8cef96c9be28f1c00c16a41440c9d1953e",
+   "curl;curl-minimal",
+   "transfer a URL",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/cut",
+   "fec6cebd30fa27c7c20f002e9af45f78b5eb857ec7a3a3135020ca7bb88648a8",
+   "coreutils;coreutils-single",
+   "remove sections from each line of files",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/cvtsudoers",
+   "d2b42b33a32741ce6ca758f6fb3468f55a6e1cfac7afa2a523e1eb473d646823",
+   "sudo",
+   "convert between sudoers file formats",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/cyrusbdb2current",
+   "1fbdbf8d6354ee8477b04f1d5f7b13af20c704c55e55b59d88ee3e3cfbc02c90",
+   "cyrus-sasl-lib",
+   "Shared libraries needed by applications which use Cyrus SASL",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/date",
+   "e1d3edeb5fe2704bbab157826bc556c057f57490d43cfce31cd2ba16e4df02c0",
+   "coreutils;coreutils-single",
+   "print or set the system date and time",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/dbus-broker",
+   "552c2724bdbd733735f369469fd63666ba377cda0816324d1d9ee6841f7d2e54",
+   "dbus-broker",
+   "D-Bus message broker",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/dbus-broker-launch",
+   "92e95f043aa9498a7f9660f24849e9546f83b921a92331c1a0229e0746b096e7",
+   "dbus-broker",
+   "Launcher for D-Bus Message Brokers",
+   "dbus-broker.service",
+   true
+  ],
+  [
+   "/usr/bin/dd",
+   "acf24ccbb25cff8da392e80327bc74722322ecff16442ace2c397137d8d03656",
+   "coreutils;coreutils-single",
+   "convert and copy a file",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/deallocvt",
+   "c06b969e657a1b1d13e5ec5ffdc741d30fb3d9ce15403cc2610dd861f1551723",
+   "kbd",
+   "deallocate unused virtual consoles",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/df",
+   "196d28bde4ac18c7ae436f9743e78e491b32b853e3d1b542ecbdbaf8cbe4ebf9",
+   "coreutils;coreutils-single",
+   "report file system disk space usage",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/diff",
+   "e7c3d87c94da76f9dcca7b78454b9dd52cede61923abf748640db3e0cba3ea4a",
+   "diffutils",
+   "(unknown subject)",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/diff3",
+   "3857ef4b86ccd3938917bd151ed6d8ce25018ce393e90c071f324d60afc18049",
+   "diffutils",
+   "(unknown subject)",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/dir",
+   "8e8eee449a78b88ab36b718d9b51c4204b0158be9128e2d5efe128bfc3dc6e76",
+   "coreutils;coreutils-single",
+   "list directory contents",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/dircolors",
+   "7c02168c096a9e3e6f5d62f07544da103dbf125a60d43b5a814e947deefcdaef",
+   "coreutils;coreutils-single",
+   "color setup for ls",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/dirmngr",
+   "3dbf67c4b95630a468c37600b37b9d81c13cc8a1c793df106f34a4dabd40898a",
+   "gnupg2",
+   "GnuPG's network access daemon",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/dirmngr-client",
+   "81e48bfc7d837628247c388ec81afb68f29980349b1aedbac6dd43721d6279ff",
+   "gnupg2",
+   "Tool to access the Dirmngr services",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/dirname",
+   "a0b134a031a1c066f42f19a5f8704d330b99f446d915ae938d13a6eb9612bdcc",
+   "coreutils;coreutils-single",
+   "strip last component from file name",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/dmesg",
+   "4b7a5ff5f4bd9066165059bbebb6330450aae43eaf823b7fe52d82e764a3c3cf",
+   "util-linux-core",
+   "print or control the kernel ring buffer",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/du",
+   "24d594f145101720df0b79e5a41218ad3b0a6bde79de21196e2c9d049d2c865a",
+   "coreutils;coreutils-single",
+   "estimate file space usage",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/dumpkeys",
+   "0e43cf90306aefc40e409f1276a362ce0874b6f13b8cf5c56e60e98aae2ec07e",
+   "kbd",
+   "dump keyboard translation tables",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/echo",
+   "fa5da202b8cf67fffb63f56773795585a0a9013cbca400950bf70e25c81aa732",
+   "coreutils;coreutils-single",
+   "display a line of text",
+   "selinux-check-proper-disable.service",
+   true
+  ],
+  [
+   "/usr/bin/eject",
+   "d7d585ba72f851fbec6afe1f25fcb8e667d532fdcad1138448511b1d5a293ba5",
+   "util-linux",
+   "eject removable media",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/env",
+   "f605a2cdeb5af4323ef75ea1d7fa6656d7f17257b63f0971469c8e850715f5a8",
+   "coreutils;coreutils-single",
+   "run a program in a modified environment",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/eqn",
+   "a70e70177b0bc0ece3a20a72c8084a8ec154f48e47cc6eb15bbe34348e00c907",
+   "groff-base",
+   "format equations for troff or MathML",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/evmctl",
+   "2794408ede4981c5275ed4976e8968704ef38b341860d0520ed5d832f7cb57cd",
+   "ima-evm-utils",
+   "IMA/EVM signing utility",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/expand",
+   "71ebf071558618b765d952c2643b1c068ee8c8fd467b3c1486a802d3587b2ae8",
+   "coreutils;coreutils-single",
+   "convert tabs to spaces",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/expr",
+   "61dc7a186d9a4ca75cb1e6b49106b099a2f926d19e18b56b1851841f270d475e",
+   "coreutils;coreutils-single",
+   "evaluate expressions",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/factor",
+   "c3eebe27d8000acc7bb2378597e4d8bdc85e48f4ac39c23509b96278e5558d73",
+   "coreutils;coreutils-single",
+   "factor numbers",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/fallocate",
+   "abe22159c4ee92bc72a7c1c9910f3cd31a3d6ff0b5676d6fca60bacb181e0362",
+   "util-linux",
+   "preallocate or deallocate space to a file",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/false",
+   "9f3ccc7f9ebd2eb82c7e83b80c7123d591c481af41970f3dc4ef943aeb0effc4",
+   "coreutils;coreutils-single",
+   "do nothing, unsuccessfully",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/fgconsole",
+   "6ab423a8625a73dbbc0a13331153ca81fe76f5dfeb68b0ef5e4de333d4bd52a7",
+   "kbd",
+   "print the number of the active VT.",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/fincore",
+   "1008c211d66708fa6d3af38437ec07e5d6675bd50fb6a0b4820844b9d8a2a02e",
+   "util-linux",
+   "count pages of file contents in core",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/find",
+   "a12f7a245a3366f9a79e6780a71c769716452dbedf6d0b1d5d854743ff3eb902",
+   "findutils",
+   "search for files in a directory hierarchy",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/findmnt",
+   "a18c581f1829b98f0eae6aa25488537ae81624f88792d8c50ebb2cce4d55ea8e",
+   "util-linux-core",
+   "find a filesystem",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/flock",
+   "511f6b25c51e2dbb40d42847888878c6b1f91273e30f3641dee92b29d870b628",
+   "util-linux-core",
+   "manage locks from shell scripts",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/fmt",
+   "eec1e2a33adc924b0d404aaff128a0564c3267b015adbe39c2579db5b08c8a63",
+   "coreutils;coreutils-single",
+   "simple optimal text formatter",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/fold",
+   "bb63e6e66d0a3cbf7986cc1179fb057a618994d1fc35340a8c82e288393fcbae",
+   "coreutils;coreutils-single",
+   "wrap each input line to fit in specified width",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/free",
+   "897c6beaefdf2547af49df27b865d8f21772cfc8e0a875cad8d2393b20727517",
+   "procps-ng",
+   "Display amount of free and used memory in the system",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/g13",
+   "7632e6368ebd7d445a54a6f88fbef7bb7aaf904a51f0b994c94db4620d4c9671",
+   "gnupg2",
+   "Utility for secure communication and data storage",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gapplication",
+   "161a13f51bc1a6bb0365d585224afbde98a4678bde40688f0a478f1c6eca5875",
+   "glib2",
+   "D-Bus application launcher",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gawk",
+   "b374177d6c91dad7eafe4d89ecfc414aa8e2bafb06b1f94d6f6d1d41dfad10ff",
+   "gawk",
+   "pattern scanning and processing language",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gdbserver",
+   "1a2fc5327069c165615ee737e87ab33153b19f619fff8fc4efaca746ac5f49c2",
+   "gdb-gdbserver",
+   "Remote Server for the GNU Debugger",
+   "",
+   false
+  ],
+  [
+   "/usr/bin/gdbus",
+   "1737a7f57c0f0d35f78034c9c6e0cca8811cf9eec9a04b99cb2425b9b3f7319e",
+   "glib2",
+   "Tool for working with D-Bus objects",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gencat",
+   "5d7f081c2d23da612b0163a71a1afce440cdeed4b6854dc64ddb044306aa3228",
+   "glibc-common",
+   "Common binaries and locale data for glibc",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/getconf",
+   "a854a3890436fc3df43af477718ebc05359ca1f07194f38c16d0d49a5c51731c",
+   "glibc-common",
+   "Common binaries and locale data for glibc",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/getent",
+   "1884627f5473c3bd8d40ba7ded2760c1a6f6588762a4c189e3da84bdc7ae4390",
+   "glibc-common",
+   "Common binaries and locale data for glibc",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/getfacl",
+   "708c8bfd533f44340da4260221658c03d917d578f87cb5822bb45a9d429bf855",
+   "acl",
+   "get file access control lists",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/getfattr",
+   "79f5efcbd7b7c802fb661c11056a7d5cf8a24c79658162581b79c0c91d55231a",
+   "attr",
+   "get extended attributes of filesystem objects",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/getkeycodes",
+   "2589f5eec9209bc9b57b0f8cf779f30826c14499f24870df67139a26e74009d8",
+   "kbd",
+   "print kernel scancode-to-keycode mapping table",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/getopt",
+   "4cebe680147427bdd5db2b25eafa0e5a8ad59854b1662580d02d27854629db41",
+   "util-linux",
+   "parse command options (enhanced)",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gio",
+   "dd9f78e96e17d960278f91618f3a5f82b30030082ff59207fa87a251b9b617c4",
+   "glib2",
+   "GIO commandline tool",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gio-querymodules-64",
+   "b15ce24bfcbcad70f936a7dd9fa57129171d20dc18ea8d5032934ff9fde630e7",
+   "glib2",
+   "A library of handy utility functions",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/glib-compile-schemas",
+   "08c09dc070081185c0d097eda4d1281adbde7b1a84ca98f9202f5790964445f6",
+   "glib2",
+   "GSettings schema compiler",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gpasswd",
+   "914710209f5dd368e10c8adac127761cb917355a2f8251432498b90a80879a02",
+   "shadow-utils",
+   "administer /etc/group and /etc/gshadow",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gpg",
+   "336612b70056b39232b9ce00b653acc7c43b9878a08e2d53940f3c7c3583c780",
+   "gnupg2",
+   "OpenPGP encryption and signing tool",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gpg-agent",
+   "7a428e2b1f085da29574173120d1af77cad836baeb3ca3790031bc0d8b319d87",
+   "gnupg2",
+   "Secret key management for GnuPG",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gpg-card",
+   "6c2618065510fbeea1f80ed61de4f7e214167a55a4b63ebea0b1a5dab2c59d22",
+   "gnupg2",
+   "Administrate Smart Cards",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gpg-connect-agent",
+   "a5963dc513a156f4614df1bd7909580fe64893e73aa46b54295b118ad3000bb4",
+   "gnupg2",
+   "Communicate with a running agent",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gpg-error",
+   "5804e22c791634c44d17cb8cd342e7951bed5397eeb809f7f15b2674830529c4",
+   "libgpg-error",
+   "Library for error values used by GnuPG components",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gpg-wks-client",
+   "6268ca2029a9226294267d76bef0a2fa61b62e79a0a967223e637bc9d5fd7775",
+   "gnupg2",
+   "Client for the Web Key Service",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gpg-wks-server",
+   "7c8cd5b33d7d9309fb1386a45eecb6c207f70f8b5c821c1056277c844961af30",
+   "gnupg2",
+   "Server providing the Web Key Service",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gpgconf",
+   "3788169e55eb7b8a8579043fb1f5f5b113d23ef5257fa178977402aaac3a351f",
+   "gnupg2",
+   "Modify .gnupg home directories",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gpgme-json",
+   "70b4e73c0e5da91aa071f364f45893229ae1153d3a25ed01720843d941388063",
+   "gpgme",
+   "GnuPG Made Easy - high level crypto API",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gpgparsemail",
+   "c008e292cae6b5f011189746d3b046f1a7d9515d64a5bf779035cd2d6077a5ff",
+   "gnupg2",
+   "Parse a mail message into an annotated format",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gpgsplit",
+   "f2dcb09f3c7ce598b6454a1e649f1e941dcd30c797fa14d23c44e7823ba4a085",
+   "gnupg2",
+   "Utility for secure communication and data storage",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gpgtar",
+   "3846e2be7b04ce4363a0b3e32cb7dccbcbe8360ad3b5fa968759280cd8e9c315",
+   "gnupg2",
+   "Encrypt or sign files into an archive",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gpgv",
+   "75c0031137190679caf20fedae63224339df695654d4cb02e3b48a8dcafccad1",
+   "gnupg2",
+   "Verify OpenPGP signatures",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/grep",
+   "b9ae1630da770fa343c346c97f081ba6a4350f569f27205dc37a8953715564fb",
+   "grep",
+   "print lines that match patterns",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/groff",
+   "1c539fc3f9dc70393e6078ce92fc80725a82d24415245e8f839dc4d885468938",
+   "groff-base",
+   "front-end for the groff document formatting system",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/grops",
+   "d731e41841344e787b0c1d451c7e6f48370c082eda764ae96a27941c853fe33f",
+   "groff-base",
+   "PostScript driver for groff",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/grotty",
+   "937fbd83c367f6549282422e56d128605607b5cddc7ef775c84b81274a6edb3a",
+   "groff-base",
+   "groff driver for typewriter-like devices",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/groups",
+   "bba62d1eeb52e83601e04acca8cc8724624dfac9baf9cacc47ac9cc87fc53457",
+   "coreutils;coreutils-single",
+   "print the groups a user is in",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gsettings",
+   "ed6aedd8d5ae41eb077502a306aefee17b8df99de8bb24ce8b3e9fcf90d52def",
+   "glib2",
+   "GSettings configuration tool",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/gzip",
+   "c926ca931976f73015f5177cbd9d0e1ed121a8ad668be9419b1b44e557fb4d70",
+   "gzip",
+   "compress or expand files",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/hardlink",
+   "f66464310af2c29e1bf57e1a8bb8c47c6b64538013694892f6d351e6ace5b014",
+   "util-linux-core",
+   "link multiple copies of a file",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/head",
+   "cde3e43aceaef31d7caf42ca10a0b402d83396403d4bf6e377b348ee3850d66c",
+   "coreutils;coreutils-single",
+   "output the first part of files",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/hexdump",
+   "f9e55542b74af45f90f3217c1c023616df6fb7cea1c6228607db6d9e8a024093",
+   "util-linux",
+   "display file contents in hexadecimal, decimal, octal, ...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/hostid",
+   "4f12721dfafb02bf6f5e06699d66bf3935d4dea52484703e858cc9b10747c3c0",
+   "coreutils;coreutils-single",
+   "print the numeric identifier for the current host",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/hostname",
+   "ff75ee3834fc0708ba9df5d01d611046e5a87f3ea637bf5e5e95f6e05932b35b",
+   "hostname",
+   "show or set the system's host name",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/hostnamectl",
+   "1218b7bb6664a224d633535ead958750cb97f5fb8d286d9af3ea6f3804f1f4d0",
+   "systemd",
+   "Control the system hostname",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/iconv",
+   "8a477b0168f38b1ad85d0ac6fd3a02d613c68d1e5102653b1dd2a845da0817f6",
+   "glibc-common",
+   "Common binaries and locale data for glibc",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/id",
+   "d9f0d501f3909b9076e2aac47a87a8304c0577046d14e39f7b6cccae595f9efe",
+   "coreutils;coreutils-single",
+   "print real and effective user and group IDs",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/infocmp",
+   "beb72ddb06bc1ec8e903388e093a2ad52165e468558afeb6bbb0f906339d743c",
+   "ncurses",
+   "compare or print out terminfo descriptions",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/install",
+   "41910f096bd8bb2b8ad3bac146799d3da89eb1190d812f51cc38e2b9eb95ed1f",
+   "coreutils;coreutils-single",
+   "copy files and set attributes",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ionice",
+   "55a3ffb7b3d4ce72b9ec810dd63d2a9b5cb5345523126e9c718d9f092938e508",
+   "util-linux-core",
+   "set or get process I/O scheduling class and priority",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ipcmk",
+   "d79a84665d3c2f80dbdb532aeed5b6f8926c5ef0f81d4c862bc322252df2dc25",
+   "util-linux-core",
+   "make various IPC resources",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ipcrm",
+   "94041644bffb128734fbf2e58cf9ac032fb57d3f065ae8cce94dfbbba42bc041",
+   "util-linux-core",
+   "remove certain IPC resources",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ipcs",
+   "17018b6025af5d2a55acc7b8049b76e3f26074e32a6a90fba4f8316f6171ac4b",
+   "util-linux-core",
+   "show information on IPC facilities",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/irqtop",
+   "f8d78e55b98443ab4c22f35741ca49710056f13100c62e37e69f2311bb3d5cb7",
+   "util-linux",
+   "utility to display kernel interrupt information",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/isosize",
+   "5bb103b83eb5e425c37eca3d50c8af19656825ed7a263128e067ea465e71d916",
+   "util-linux",
+   "output the length of an iso9660 filesystem",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/join",
+   "2d4d4083ed836db76bf506fa8778819e349a868c6f615748a84469802193d9c6",
+   "coreutils;coreutils-single",
+   "join lines of two files on a common field",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/journalctl",
+   "2663fcd2f9e98a94eee5245d7e2cf9788f5c5b99c2177b2d9341d09754569a17",
+   "systemd",
+   "Query the systemd journal",
+   "systemd-journal-catalog-update.service;systemd-journal-flush.service",
+   true
+  ],
+  [
+   "/usr/bin/kbd_mode",
+   "80ded63ac7d962ca620b62a3b96fc8a5bd446e80c08a5fd14065bfb4a5e7e08c",
+   "kbd",
+   "report or set the keyboard mode",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/kbdinfo",
+   "80acaa7434356ab8a89f8ef9f21a4f35d41ffad402ab2dd4953f823173cdb2c7",
+   "kbd",
+   "read information about keyboard state",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/kbdrate",
+   "33704d15c9c1676f620429a051c90954b86948dd3975ad70da944cade7d87e7f",
+   "kbd",
+   "reset the keyboard repeat rate and delay time",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/keyctl",
+   "a6aae0f5e3046877dfea88aed911246b0b5ef9a31f2f839eb667dcbbb75f3b04",
+   "keyutils",
+   "key management facility control",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/kill",
+   "133e952dc92d1f049744d470f63253fb3828f3a65c5b43c38d1bb1fa1e0778e4",
+   "util-linux-core",
+   "terminate a process",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/killall",
+   "805e32251545efc7e17783ae828de6e80930355f9abf288f79794c0b47d3e979",
+   "psmisc",
+   "kill processes by name",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/last",
+   "6abe01acae06c449887a72fe8ec3dfb945b6b6c80821d95247e7128790182692",
+   "util-linux",
+   "show a listing of last logged in users",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/lastlog",
+   "a43b763f21a72eb8cf742f8611ced5a913c2f8e95938d4ac0d23f88ddaaa8757",
+   "shadow-utils",
+   "reports the most recent login of all users or of a giv...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/lchfn",
+   "f4a1c39dd27077b4e5ef2e2b3380ce9c2014a200aa42a1a42d0d23b3e340d4e2",
+   "libuser",
+   "Change finger information",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/lchsh",
+   "ed9cd0159363cd40089a08327b7e5705e7aa89e9baf125e03a6b23c26c238b93",
+   "libuser",
+   "Change login shell",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/less",
+   "75a27e03d6ab4074b35da8605023449501e0da9ba908f625d9052d2197214647",
+   "less",
+   "opposite of more",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/lessecho",
+   "b2ad7014fb050b550f756319c40ee27b6afcc86037d9420b8899cccb4c40492f",
+   "less",
+   "expand metacharacters",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/lesskey",
+   "25b17b027ac208790872e876d69f4306040a5d8de30b8ec5564762d555480876",
+   "less",
+   "specify key bindings for less",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/lexgrog",
+   "f2049e6006d1cacbf26dadf7291eb8de7729b29f47025ed1446feebe10f89016",
+   "man-db",
+   "parse header information in man pages",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/link",
+   "25bdf44c4b535f156e6fb14e8c8ff87859153a89fe70646c44ca64d752c5b925",
+   "coreutils;coreutils-single",
+   "call the link function to create a link to a file",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ln",
+   "556bd0447c6c87fb8653a71eadc57d8d59b447c73f6f5810921a68d5d7635578",
+   "coreutils;coreutils-single",
+   "make links between files",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/loadkeys",
+   "f1c96ed5d995c9f3530a68033dd9dcdd5173064ff8def444bb43e32e841a5dc6",
+   "kbd",
+   "load keyboard translation tables",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/loadunimap",
+   "a2ff2985b06979d68ea8f05f9455864eb0a90b8badc575bd167c3fd2e4ee2a17",
+   "kbd",
+   "load the kernel unicode-to-font mapping table",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/locale",
+   "3f2a6010aae55b990e4ebda36e2280d41aaad5c2bddc35c905b3512efaec8207",
+   "glibc-common",
+   "Common binaries and locale data for glibc",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/localectl",
+   "eb1bc94371326b9186609e52dd4e91e0ecf10e18f5628a5fe9f0d9db40f4ebaa",
+   "systemd",
+   "Control the system locale and keyboard layout settings",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/localedef",
+   "783110700994ff537eb67dc62f83344e5b6d29c00f6f6f87d6305244c2d782b3",
+   "glibc-common",
+   "Common binaries and locale data for glibc",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/logger",
+   "291135d9163559b2ac9d8860ae106d912288ceb4c2e22de084ff297aa9285925",
+   "util-linux-core",
+   "enter messages into the system log",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/login",
+   "a3490e71d714997a363a5eee5c2bfda17193236c3e37ce08f98e44488a22245f",
+   "util-linux",
+   "begin session on the system",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/loginctl",
+   "64e8cfd923c82e67ecc40ab5cc4d873fba75ec1460ea6f3d069cf4cf5c66280b",
+   "systemd",
+   "Control the systemd login manager",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/logname",
+   "cb419e2f87e96dbb943808cbb0bae9c50b42413e8cf847b53ffed19b2c89eebe",
+   "coreutils;coreutils-single",
+   "print user's login name",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/look",
+   "cb304bd5ecb893c88321387a7717eb774028345392c63f299c58b5a022aa27f1",
+   "util-linux",
+   "display lines beginning with a given string",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ls",
+   "86d43a5e35c1571677367b53507e88927bf90e5030df39f701a2e99fac492598",
+   "coreutils;coreutils-single",
+   "list directory contents",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/lsblk",
+   "2e21a3c88c1b851e314f81941275be695d44460e6b5e7a9fdf3eee764af640fb",
+   "util-linux",
+   "list block devices",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/lscpu",
+   "e82a3fc1782e0f89e4c58ec03818a21d99fb4b4c2c2a07ae68705903e9f3e4c3",
+   "util-linux",
+   "display information about the CPU architecture",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/lsipc",
+   "41a6ee812b8899b59f3b9b4087970a5a2b87098f673acfc3a917ad7649ba49ef",
+   "util-linux",
+   "show information on IPC facilities currently employed ...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/lsirq",
+   "2731c01c3c2995a249e11052af4190097e301e146d6eba9cd43d91083330b241",
+   "util-linux",
+   "utility to display kernel interrupt information",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/lslocks",
+   "5f2a33c69a1c9eaeabc3135da7fec53c134fed483fd57ac03267a590262efd32",
+   "util-linux",
+   "list local system locks",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/lslogins",
+   "a9eeacb26b267ac76e9ccba906a5f127dd19896ffd415395ca3e78e9fe51417e",
+   "util-linux",
+   "display information about known users in the system",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/lsmem",
+   "6a223bc38a6879e8aaf986dac76e662a1cd3820c040daf7fbb8ea6bd76e00901",
+   "util-linux",
+   "list the ranges of available memory with their online ...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/lsns",
+   "949dab90e77b5328e96aea4d249b74e22ab79fabf406b09f9712af382984288f",
+   "util-linux",
+   "list namespaces",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/man-recode",
+   "fdaea3729ae85a7fbd8b6b147b0f104b6ab168933d3bf07262b538b1fdfb0912",
+   "man-db",
+   "convert manual pages to another encoding",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/man.man-db",
+   "39c017feb1ef867137b86879404a440fe31bdbca547a57a8d02e07d755d2be41",
+   "man-db",
+   "an interface to the system reference manuals",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/mandb",
+   "7fc88a85245125b61d9d042b76840bb3327dede1dfe132e0fb111950310fe58b",
+   "man-db",
+   "create or update the manual page index caches",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/manpath",
+   "b3d9f0bd8bf355886fa749f96a2b5ee370ac940f82273dbcfe0774e5e2d67a4f",
+   "man-db",
+   "determine search path for manual pages",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/mapscrn",
+   "35578bdc42a705bdc47bfe13203a90a990a3e06760d267266d86c72e9cbdd186",
+   "kbd",
+   "load screen output mapping table",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/mcookie",
+   "e8f10b1ca9bde89f8218b76aeea159c5e672f9e1c8cb3a50006899bcacc0d2c6",
+   "util-linux",
+   "generate magic cookies for xauth",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/md5sum",
+   "8d7b5b3934f224f9b69c2612a4974c09fe57079fe88604385790952e26fc1197",
+   "coreutils;coreutils-single",
+   "compute and check MD5 message digest",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/mesg",
+   "983af81647baef1c9f0671dc37072b07174b60e9c9a0c1639d2a51e0bda44e2d",
+   "util-linux",
+   "display (or do not display) messages from other users",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/mkdir",
+   "7b4803d00e58c66efc7a4b46ce46621d9a749d8b4a5713e45ac4562828aa8097",
+   "coreutils;coreutils-single",
+   "make directories",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/mkfifo",
+   "540ffce2ee5e5ad42c2c3e141d250a45b240b9e8d67747483564763e20636e8b",
+   "coreutils;coreutils-single",
+   "make FIFOs (named pipes)",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/mknod",
+   "1adccbd21807f98be8624b4d91099c2cda852c6a709b0a71882a84b1f2002991",
+   "coreutils;coreutils-single",
+   "make block or character special files",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/mktemp",
+   "5f8ee55fc1f8b05a8bbfa86a1cbb3ea35670706b3c626654863808ad08a2ca43",
+   "coreutils;coreutils-single",
+   "create a temporary file or directory",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/modulemd-validator",
+   "b9f45047a342934d5aee3d2d068d5c158328200069855057af25f5e582c57e2e",
+   "libmodulemd",
+   "manual page for modulemd-validator 2.13.0",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/more",
+   "c1aabfcd9092ff7ba24b0b6e71d635df2ab158604ade1ebd9e7c0ebc6023f1cc",
+   "util-linux-core",
+   "file perusal filter for crt viewing",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/mount",
+   "224fd8b8526a7ae878b59edf59eb613cb495dc5ad1e6482a3f3f84d4c41050c1",
+   "util-linux-core",
+   "mount a filesystem",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/mountpoint",
+   "16e61d75bab5cba636a8d772db5fdb29e02116fa21d9a853b7f00b125dfa9ad2",
+   "util-linux-core",
+   "see if a directory or file is a mountpoint",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/mv",
+   "0e10eac71fed185ee3e6360d3b555045738d919dee223a31d033cfc77848d7cc",
+   "coreutils;coreutils-single",
+   "move (rename) files",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/namei",
+   "85d02eded48904294dc576684806484ac7d5004489258ffdcda18f17b226f994",
+   "util-linux",
+   "follow a pathname until a terminal point is found",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/newgidmap",
+   "9e55c97c34393f618b9cd8181c320f2e3f483b127e197663c37dc9865e2fea7d",
+   "shadow-utils",
+   "set the gid mapping of a user namespace",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/newgrp",
+   "fbe87df2ccab8f4545117d4dce482cdb1135c05dde6e0428c4ceefb69c76e287",
+   "shadow-utils",
+   "log in to a new group",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/newuidmap",
+   "f43094297d3a02a05beeed1e1d9e77324a34aa50cf2bbc333b34eb1ba49b6b7e",
+   "shadow-utils",
+   "set the uid mapping of a user namespace",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/nice",
+   "d258da599074f2965aa993456aac16c32b0b24ae35234fbba717cf2043a16ba3",
+   "coreutils;coreutils-single",
+   "run a program with modified scheduling priority",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/nl",
+   "36076f2e2b9a7e26a1d710cc26ba70cdba7a15ebeb5e1292f23c0407ec7a7ffc",
+   "coreutils;coreutils-single",
+   "number lines of files",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/nohup",
+   "429ac0cb95a5a91d9c38a8106e6cabfa29107b55785bd5811b8eabdbe7509c44",
+   "coreutils;coreutils-single",
+   "run a command immune to hangups, with output to a non-tty",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/nproc",
+   "33af53eadabe49949e488bb52606d7557ee00da61c3fb685473a58d868e54894",
+   "coreutils;coreutils-single",
+   "print the number of processing units available",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/nsenter",
+   "745616765c683039edae6c442ac8f316beaf6fa1332155a3c18d58d7772af4de",
+   "util-linux-core",
+   "run program in different namespaces",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/numfmt",
+   "51415499461e875626e918f5f33460de757811843c0a40a28996afc76adb93a3",
+   "coreutils;coreutils-single",
+   "Convert numbers from/to human-readable strings",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/od",
+   "ffcc0199840377dba2374b8cf71cf3a5c62a1f7f45cbde73f82a63c2846551a5",
+   "coreutils;coreutils-single",
+   "dump files in octal and other formats",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/openssl",
+   "53948366b862855d8a6e3b078c8a6e62b0099765e4abc1f98e38d88895413576",
+   "openssl",
+   "OpenSSL command line program",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/openvt",
+   "9892b2e5118d6873f9064551369153359363caa164db8c2b936ccfe59c7155ac",
+   "kbd",
+   "start a program on a new virtual terminal (VT).",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/p11-kit",
+   "681bf1295ac17e024ac37067bc556a24b5a2eb5e001c2e4a6a4c99faf7f24a2a",
+   "p11-kit",
+   "Tool for operating on configured PKCS#11 modules",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/passwd",
+   "38d9090d76602f3c6517854345f96da584031183aa273aacaa9126134d43db67",
+   "passwd",
+   "OpenSSL application commands",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/paste",
+   "978528611b1b2e2c895d8217571d3a2a2ecfc2d4db41a6cd730907afa77b5714",
+   "coreutils;coreutils-single",
+   "merge lines of files",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pathchk",
+   "91e0390a07121c0a3a07c85b842b5e6e01d8772fa4cce18caa5a3e15e629c483",
+   "coreutils;coreutils-single",
+   "check whether file names are valid or portable",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/peekfd",
+   "81972c185543cb8aafbf9f83fba9d53311f8c785ded3ff36ed1cb36de0f24eae",
+   "psmisc",
+   "peek at file descriptors of running processes",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pgrep",
+   "0d2f4077790ebece27186e15c6a356e2aa6ef9eb03bde74ea2479bcb015c00ce",
+   "procps-ng",
+   "look up, signal, or wait for processes based on name a...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pic",
+   "d6b86c7e52572eaa365e77921417d4eb0091ae83dcef513d1da23af4db6bf62f",
+   "groff-base",
+   "compile pictures for troff or TeX",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pidof",
+   "f4a190cbc7e0521c6a1a8a4e8ad3938b56c4d919a6216c8940624b1dfe790166",
+   "procps-ng",
+   "find the process ID of a running program",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pidwait",
+   "d4b1e9f52ffbbc3b827fef2080614a3b57184a0997bd9fa4e7d68d985b3aec3f",
+   "procps-ng",
+   "look up, signal, or wait for processes based on name a...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ping",
+   "bb24aa87955df8a023a4a6ce7373d50340d56dcb87f6cc6ef68c228d4b5d4976",
+   "iputils",
+   "send ICMP ECHO_REQUEST to network hosts",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pinky",
+   "787224f0f99b3246098bcee16f36e30863a4e754c21f4ea8fa81b920ed1c431f",
+   "coreutils;coreutils-single",
+   "lightweight finger",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pkill",
+   "48c7a367fbbfe397fb84c4cf1f980e196ccf713a0f3f82e5343fa77ece0800c9",
+   "procps-ng",
+   "look up, signal, or wait for processes based on name a...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pldd",
+   "3c563613b13c83a13ea29684f1ab87109b473d3dcc040102ef5a8330034f8f23",
+   "glibc-common",
+   "Common binaries and locale data for glibc",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pmap",
+   "d2bd4ffe26f3ebecc48cd08fafb52ed3531d6d0bac17fd5a7cc1c82219ccf09c",
+   "procps-ng",
+   "report memory map of a process",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/post-grohtml",
+   "893be021f06e87703b7877dd6109de261d25bbaf87b2c704893c1b937e72f212",
+   "groff-base",
+   "Parts of the groff formatting system required to display manual pages",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pr",
+   "457a15eeb2e4e142f465bdc9dc24fa4d330e1d6343ee92076aab6d5c126b1935",
+   "coreutils;coreutils-single",
+   "convert text files for printing",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pre-grohtml",
+   "77bc9e9005549a5510cb98ce6e6d50f33be0ef086c5e8aebafc794ef6031b8c2",
+   "groff-base",
+   "Parts of the groff formatting system required to display manual pages",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/preconv",
+   "d393730c83e7a026290d47f3aebf17399bfb0a6219213d766609dad6446b43ff",
+   "groff-base",
+   "convert encoding of input files to something GNU troff...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/printenv",
+   "dcc8d788052e9b0603f9970ddaa50855115d3a3158cf1f2a204962cfc27079bb",
+   "coreutils;coreutils-single",
+   "print all or part of environment",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/printf",
+   "150ec48b7dcbcd69d97be4cd4ec1f055e7a58282a5eaa46830298cbf52c2f0df",
+   "coreutils;coreutils-single",
+   "format and print data",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/prlimit",
+   "65638022fe5095a9569b11baf31872b4a63485d93ce1ace31f9ea2344406f1b5",
+   "util-linux",
+   "get and set process resource limits",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/prtstat",
+   "959d11538bd3ab83b31d893bcf13d3ca4b7c289d2a31349cd3bcb01474b1063b",
+   "psmisc",
+   "print statistics of a process",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ps",
+   "31a009bba20bbbd8e2f5275e3d386f0453ec7cb987e3cc94e4ee1a563b3e51d5",
+   "procps-ng",
+   "report a snapshot of the current processes.",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/psfxtable",
+   "d3ddddea8eb34529a90aa5ced68548798db51ad2a2321e03d196481d230cad62",
+   "kbd",
+   "handle Unicode character tables for console fonts",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pslog",
+   "806d2ec4c6bcc29b3dc75c33c1a92761fb78f300618870c3ab1ca31e6e825129",
+   "psmisc",
+   "report current logs path of a process",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pstree",
+   "78062ce9365902a30f88b87d6e1fdbfce5be2b4db75e8435ed43b74a113c6f0d",
+   "psmisc",
+   "display a tree of processes",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ptx",
+   "1dc354a0b575e610ead3b926d46bb340abe46d749da8e8e67c3dd4dd89d270ce",
+   "coreutils;coreutils-single",
+   "produce a permuted index of file contents",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pwd",
+   "e2cbe3f0adc961067ff276d05c67d73b6ded4f9eab82a69f93b90e4f50238bd4",
+   "coreutils;coreutils-single",
+   "print name of current/working directory",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pwdx",
+   "a0457057376c40c900a0580a1d9031f61e82f0b01f48feef7ef216a99acc5143",
+   "procps-ng",
+   "report current working directory of a process",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pwmake",
+   "1deb3c9bca3e90f42149b25955cdfbd45cad8c526b62e8ebb4b5201ae96f2ee7",
+   "libpwquality",
+   "simple tool for generating random relatively easily pr...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/pwscore",
+   "e97533da8946f49bea535a74bfd0e97f9d6ce13fa27a056dec8bd9a5266bd398",
+   "libpwquality",
+   "simple configurable tool for checking quality of a pas...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/python3.9",
+   "a1aa080e7511a0e356bfb826ad81bb1d0ae8be94c8334836730d88593c43723a",
+   "python3",
+   "an interpreted, interactive, object-oriented programmi...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/readlink",
+   "d53c83634ad7a717952db2c441d3b53747af149c2bc895a3e031a2638d2f73a8",
+   "coreutils;coreutils-single",
+   "print resolved symbolic links or canonical file names",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/realpath",
+   "a88badfaf3a1cd7c4f06fea6cc5fff489079832f356a9b547a57908cf682a3d2",
+   "coreutils;coreutils-single",
+   "print the resolved path",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/rename",
+   "24564a9ef5d2f37886d5ca4982a468c6aab0600d9c608b7995d58a03e79c972e",
+   "util-linux",
+   "rename files",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/renice",
+   "80cf7c9fc7f64dbe511939617d243873f96307308c5ac7fd340e61fd6ed0e687",
+   "util-linux-core",
+   "alter priority of running processes",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/resizecons",
+   "465b7216d5940c58b3bb621f78cd6cf44f3e3b6cb874c63f2d8298c7156c97f6",
+   "kbd",
+   "change kernel idea of the console size",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/rev",
+   "7fa65962fd9a378778f20a00463a00db37aed9ee6cc76781851ccc33dd5037a4",
+   "util-linux",
+   "reverse lines characterwise",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/rhsmcertd",
+   "c04fb6072abfebb0083fb1509fb702c486bad95172719c9449f30c7d459774b2",
+   "subscription-manager",
+   "Periodically scans and updates the entitlement certifi...",
+   "rhsmcertd.service",
+   false
+  ],
+  [
+   "/usr/bin/rm",
+   "c8301489d8109c4c7476411498c3ca01124369823da12968aa24a1a7933dac6e",
+   "coreutils;coreutils-single",
+   "remove files or directories",
+   "dnf-system-upgrade-cleanup.service;system-update-cleanup.service",
+   true
+  ],
+  [
+   "/usr/bin/rmdir",
+   "6221e470f4b85c9b4db60534aec318a02539f10178df302376c28d274eb71b6d",
+   "coreutils;coreutils-single",
+   "remove empty directories",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/rpm",
+   "4153ba40ce4cbbe142248737a1438016d504ec50d00a186d9a0958e482de0826",
+   "rpm",
+   "RPM Package Manager",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/rpm2archive",
+   "d647e1dc1ec6514550b0fc16d158d9e4fbaae6c1768fa62cdd01c35f9b0ef8cd",
+   "rpm",
+   "Create tar archive from RPM Package Manager (RPM) pack...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/rpm2cpio",
+   "f5dae7f6521f0424cab1e91de4a238d7c657e87c9e909cb7ce0ca63f0ca86831",
+   "rpm",
+   "Extract cpio archive from RPM Package Manager (RPM) pa...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/rpmdb",
+   "adcf23b5bbd99869954181f09d65c15d3734fce0314ef508f81cf70996180549",
+   "rpm",
+   "RPM Database Tool",
+   "rpmdb-rebuild.service",
+   true
+  ],
+  [
+   "/usr/bin/rpmkeys",
+   "f84d4a7e8cca1894f2e5fcdded12bba0012986a8f92e0591793dfc84354335c5",
+   "rpm",
+   "RPM Keyring",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/runcon",
+   "26a371f69a5d83029d51035abceaed10fa19c1e2c97d34af386080353e118f26",
+   "coreutils;coreutils-single",
+   "run command with specified SELinux security context",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/scp",
+   "2a0d12e76607389a0e7e4b6e15e01c9c40ee6c4bc1b405a7ec190b3c35b64e02",
+   "openssh-clients",
+   "OpenSSH secure file copy",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/script",
+   "e4ba92c2c2f8647831728f07a9760a267482088e29225633fd0e28fb91c74809",
+   "util-linux",
+   "make typescript of terminal session",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/scriptlive",
+   "d6d4e46f506f0883ce23bcd9471927de809afe150ef2fdb004e1f3737cb8938f",
+   "util-linux",
+   "re-run session typescripts, using timing information",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/scriptreplay",
+   "1f36e291926d510c1633b5c83a5ba2c4c83b6c04f433abd925d470c3b58da537",
+   "util-linux",
+   "play back typescripts, using timing information",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sdiff",
+   "72547d3b8a545f12d2bac2247634fb5f59475bbca8ca425c325eab3822353eab",
+   "diffutils",
+   "(unknown subject)",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/secon",
+   "85bc3f3fca1dcb794d124f1115340515ede7d1f1be86bfaee0cd19ce589d091f",
+   "policycoreutils",
+   "See an SELinux context, from a file, program or user i...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sed",
+   "52540df3c1c2c81061d1bf2daf35b09fcbdb17d7119643999b8b1e67ca84718f",
+   "sed",
+   "stream editor for filtering and transforming text",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/semodule_expand",
+   "963ce00f9e779b070de416d9f5b8616c7803235420d62476a082bc8eb4af5c54",
+   "policycoreutils",
+   "Expand a SELinux policy module package.",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/semodule_link",
+   "af35934b33eddb57042130f17e24a77cb7238c0bc08b2103484ec3c27ad2b556",
+   "policycoreutils",
+   "Link SELinux policy module packages together",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/semodule_package",
+   "8122a5807b27ebddf439eb68c5a6e5c687848f3bff97d4e0fd4cc9ca80ad0a3a",
+   "policycoreutils",
+   "Create a SELinux policy module package.",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/semodule_unpackage",
+   "ed89d68c32ba6c917f9956ea362a1518acfee6ccc83d3e3d53f50be63a790a58",
+   "policycoreutils",
+   "Extract policy module and file context file from an ...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/seq",
+   "2875772c9b98b21fa117df034de77e8a07f41f0b33d5be63c14576b5fa3449d3",
+   "coreutils;coreutils-single",
+   "print a sequence of numbers",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sestatus",
+   "51293213a35a7529865d6d1609eeb22f3ded29940b42ffb8c17377c393072c4a",
+   "policycoreutils",
+   "SELinux status tool",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/setarch",
+   "fc5319593c6140fc672ce13756823af2febeb0f0df7a3a5482b94e18ed02df7e",
+   "util-linux",
+   "change reported architecture in new program environmen...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/setfacl",
+   "1e8bf3d3a4c191c2ddb0e68a09b86079792612d9de2990a84f077f741c997106",
+   "acl",
+   "set file access control lists",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/setfattr",
+   "0d3e0e8f37d5ab83deb7cadecc7d2bed8dd1f905971937366be89825e318f2ad",
+   "attr",
+   "set extended attributes of filesystem objects",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/setfont",
+   "41c8ec4c422a2133342b81e4d5ecf00a38657d4e6f5901d9470de00c53333315",
+   "kbd",
+   "load EGA/VGA console screen font",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/setkeycodes",
+   "90e2b43ad12764b27d99b4803c0ef45e155fbbd44a4de08e064026a5b7b2e5d3",
+   "kbd",
+   "load kernel scancode-to-keycode mapping table entries",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/setleds",
+   "211db4bf2ea6960ca585e5a107f2fe343c2da76cbe4950e8e3b97fdbdf798907",
+   "kbd",
+   "set the keyboard leds",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/setmetamode",
+   "a4a09c3f2d2ff8def0f7ce1c04db3f5aaf7ef4346e1a967966efa2dfacb33900",
+   "kbd",
+   "define the keyboard meta key handling",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/setpriv",
+   "05e85fd11f068e3fab5d751fa4c6fedb25f13e6296d8bf51379a7eb0ee509d05",
+   "util-linux",
+   "run a program with different Linux privilege settings",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/setsid",
+   "adedbf35188e1c1ce048d824d4aac681611a8939fdbbb6813c12d82191ddcacf",
+   "util-linux-core",
+   "run a program in a new session",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/setterm",
+   "e1ea2c314ffc3191bb16cb41a52e107a002741ab8184eb7a48d0d2a7881616c2",
+   "util-linux",
+   "set terminal attributes",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/setvtrgb",
+   "e11f58c7f68c3376e88aba0ba94245a0e6dfcf89ed007d79ecaec91c3f1f6726",
+   "kbd",
+   "set the virtual terminal RGB colors",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sftp",
+   "6ce93179bd1ae21fc8a2798c89aefdaaf34eda6fe5fe7a23ff32e6141072b8a9",
+   "openssh-clients",
+   "OpenSSH secure file transfer",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_bg_ctl",
+   "5fecf9a398a7921f63131a45199300ec7c2776e2432c233f130136691daf020a",
+   "sg3_utils",
+   "send SCSI BACKGROUND CONTROL command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_compare_and_write",
+   "10b8fb4f4ec3b3005a35fa6866d66db083fb578d91b0ab7bb05291aab0b8cab1",
+   "sg3_utils",
+   "send the SCSI COMPARE AND WRITE command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_copy_results",
+   "ec9b12437978dcd4c9297eab0b016d55a626cf0103f2312630515eff433a2359",
+   "sg3_utils",
+   "send SCSI RECEIVE COPY RESULTS command (XCOPY related)",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_dd",
+   "d74609acd2eebd7b4409151e71c6f610784c386843b146e2b0ad28fdb6238be9",
+   "sg3_utils",
+   "copy data to and from files and devices, especially SC...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_decode_sense",
+   "ebe6cae7c833741b34881668cb304d5523b9d680cab1eafd642bbb8edda1d1f3",
+   "sg3_utils",
+   "decode SCSI sense and related data",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_emc_trespass",
+   "9e878b79b6ef91768d0ea2ac2b8c4b979d79453f8173c0603e8e8af2a72e1324",
+   "sg3_utils",
+   "change ownership of SCSI LUN from another Service-Proc...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_format",
+   "e0b51b7f0e4b454e71e6d95cbb0838aaa267bdf123c49441012cdec768e1eb54",
+   "sg3_utils",
+   "format, format with preset, resize SCSI disk; format tape",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_get_config",
+   "f22de8c5e9da8817a7626aaa949162422434c15d9f2b7b43b1bbea40e283750f",
+   "sg3_utils",
+   "send SCSI GET CONFIGURATION command (MMC-4 +)",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_get_elem_status",
+   "dae2ec5668698b082fbc03f38de1236750a5b93b016231b75c651477b9b02663",
+   "sg3_utils",
+   "send SCSI GET PHYSICAL ELEMENT STATUS command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_get_lba_status",
+   "f20ce71f1f10ddfdb3a5f3ee64f7a7d6ab1df882f7dd9fd5da74040f1fda0e7e",
+   "sg3_utils",
+   "send SCSI GET LBA STATUS(16 or 32) command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_ident",
+   "10dd048159265b335d1faa6beea6663f201f0a792fca276a52b4eea132eb9237",
+   "sg3_utils",
+   "send SCSI REPORT/SET IDENTIFYING INFORMATION command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_inq",
+   "84ad390e6693f8195a0155ef8b6a293fe2a2945c378ebf72e3af65ce6246b766",
+   "sg3_utils",
+   "issue SCSI INQUIRY command and/or decode its response",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_logs",
+   "77b4a296be65abaf5cd3b24c51ecf27b99768393c5434cde55d7c19a8249ae6d",
+   "sg3_utils",
+   "access log pages with SCSI LOG SENSE command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_luns",
+   "8a08c4ea4d11d6ee81f5620ce57968e8ec498de80d0b902ca4b7564cb8b5a240",
+   "sg3_utils",
+   "send SCSI REPORT LUNS command or decode given LUN",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_map",
+   "16c3dcae3241865c7f52e111b4824518d0aa887cb454ac6b55e8a8d34db0e3fe",
+   "sg3_utils",
+   "displays mapping between Linux sg and other SCSI devices",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_map26",
+   "d7f6d57466235a66461ed3ee21c8256b108c49a13ff7eaa76dbe6dbce30461bc",
+   "sg3_utils",
+   "map SCSI generic (sg) device to corresponding device n...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_modes",
+   "c9eeda278859af5acbc40c2b6e81b8a2739f0156e0fab698226a4fc2603855ed",
+   "sg3_utils",
+   "reads mode pages with SCSI MODE SENSE command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_opcodes",
+   "5cbf9226309752378a0f1a50fbb65ec0643629d68d46454de8a548e9c2804d12",
+   "sg3_utils",
+   "report supported SCSI commands or task management func...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_persist",
+   "f9ddc34650c5ddac990470d17834aed5a02aed81ea3662fe8b8b724a929b289f",
+   "sg3_utils",
+   "use SCSI PERSISTENT RESERVE command to access registra...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_prevent",
+   "1d36bb722949ce30e185c6daf4eda19b2280e9383703401bb2c910cb83561d5a",
+   "sg3_utils",
+   "send SCSI PREVENT ALLOW MEDIUM REMOVAL command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_raw",
+   "c4ac61329c0055a74b10a9e504804e5421232c21a6e3c80cbbe7fe6f9ad3f336",
+   "sg3_utils",
+   "send arbitrary SCSI or NVMe command to a device",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_rbuf",
+   "dfeef46370bbf8b67606c20cce91cdc61bb6f4d394db2739b5726b27e89d0c05",
+   "sg3_utils",
+   "reads data using SCSI READ BUFFER command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_rdac",
+   "4eb98b062cfa499588f31f144bd343439d1414f88858a31a914ebb46de380c9e",
+   "sg3_utils",
+   "display or modify SCSI RDAC Redundant Controller mode ...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_read",
+   "e07264f6f6d2bc321f1218f6a8f33beec76e0e26dc5ee4ca5304594f191861e9",
+   "sg3_utils",
+   "read multiple blocks of data, optionally with SCSI REA...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_read_attr",
+   "a124b78f0830657cb34761d1c0b112e547f423026444de522af53317cf52a4ec",
+   "sg3_utils",
+   "send SCSI READ ATTRIBUTE command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_read_block_limits",
+   "5d312060b9d50e2362f4046b3333a4aca54a9b2b447e4839e6e3470ce4e41bf2",
+   "sg3_utils",
+   "send SCSI READ BLOCK LIMITS command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_read_buffer",
+   "cf5f94a7264226da9ee88d2b6b7f52af2b29d98e689738dc55c81b84be8d0f30",
+   "sg3_utils",
+   "send SCSI READ BUFFER command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_read_long",
+   "c648b379573726647e7e6d9687d0f792fc434a8dc0db9e993dde3bb380a5700f",
+   "sg3_utils",
+   "send a SCSI READ LONG command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_readcap",
+   "17ee9b7d9db459d616c47e2d88f398cc4ff26575ac94fcb771a26e885741f50d",
+   "sg3_utils",
+   "send SCSI READ CAPACITY command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_reassign",
+   "6365797d91c7a04bbb5aa20a7020b506e932916142621e820ee7331d375fb97c",
+   "sg3_utils",
+   "send SCSI REASSIGN BLOCKS command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_referrals",
+   "f34937ed61177664b20e6608606c28bf49abc32130f1021a888260f6eaac47a7",
+   "sg3_utils",
+   "send SCSI REPORT REFERRALS command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_rep_pip",
+   "aa909449842dfb4d2d906a55066bca13ff49de7600ce209be568b5cc9d3fb286",
+   "sg3_utils",
+   "send SCSI REPORT PROVISIONING INITIALIZATION PATTERN c...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_rep_zones",
+   "3772dcad5da39790841cd519a33435b4f8e507a037c64b0edbef0a7316614a1a",
+   "sg3_utils",
+   "send SCSI REPORT ZONES, REALMS or ZONE DOMAINS command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_requests",
+   "a9b3ded9c7ff51a9d2b4d9824888fa5aaa77ced6ee6616a909368ac21e2223f0",
+   "sg3_utils",
+   "send one or more SCSI REQUEST SENSE commands",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_reset",
+   "d13749a9aa53cc753cd7c770057ddf59d7c51c207769c3859b1bd901a5331bbd",
+   "sg3_utils",
+   "sends SCSI device, target, bus or host reset; or check...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_reset_wp",
+   "da60748bbcd01f08ca7a40eff4c071029640ba23b709cae53f5018c15a458f93",
+   "sg3_utils",
+   "send SCSI RESET WRITE POINTER command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_rmsn",
+   "291432b02dbc13a14699c0525de3ae2298648b468442ef833b1f49b7212bb0c2",
+   "sg3_utils",
+   "send SCSI READ MEDIA SERIAL NUMBER command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_rtpg",
+   "b3267b3f9b3f6325e969ce442d218f7cd695c9c0cc820066b1ec2fc0a2ddd091",
+   "sg3_utils",
+   "send SCSI REPORT TARGET PORT GROUPS command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_safte",
+   "56c39384575f6c7ea32414a9dfbb08b7dcb185d4f70a864935266e21bbaa2990",
+   "sg3_utils",
+   "access SCSI Accessed Fault-Tolerant Enclosure (SAF-TE)...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_sanitize",
+   "049378a370a986f646e96fd240e74dd73d5c9b7537f7e1c7cb782cb34a4337e1",
+   "sg3_utils",
+   "remove all user data from disk with SCSI SANITIZE command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_sat_identify",
+   "f87ffb09e329001a7a6bd64f09ed7de5109724cb59382e1666e8de93606a5233",
+   "sg3_utils",
+   "send ATA IDENTIFY DEVICE command via SCSI to ATA Trans...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_sat_phy_event",
+   "9cbca565cb000629675cbe47258f99c90ec412596843c7971b8a15aa97110984",
+   "sg3_utils",
+   "use ATA READ LOG EXT via a SAT pass-through to fetch S...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_sat_read_gplog",
+   "66a4d9087a764c77475eaadbb85695a83fdded6917f973ed190a65aedaa42cff",
+   "sg3_utils",
+   "use ATA READ LOG EXT command via a SCSI to ATA Transl...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_sat_set_features",
+   "51cd3c6da5179b0fede75e2c61d95e692f917e7bdb8a89c8556227ca35126773",
+   "sg3_utils",
+   "use ATA SET FEATURES command via a SCSI to ATA Tran...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_scan",
+   "8faa71b883b8ebd3c931bd33ee80e5f4988bb8b7d05e1b4872250ed8a7dc7f0e",
+   "sg3_utils",
+   "scans sg devices (or SCSI/ATAPI/ATA devices) and print...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_seek",
+   "9bc2672d8da1ec2404ca66f77f7dac1f04908c28d7d3c244e69df5919c496de5",
+   "sg3_utils",
+   "send SCSI SEEK, PRE-FETCH(10) or PRE-FETCH(16) command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_senddiag",
+   "28bf2e1508cfc03239dc4e50c72edda5462884a58d31cdb228215831b09c8c11",
+   "sg3_utils",
+   "performs a SCSI SEND DIAGNOSTIC command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_ses",
+   "63a1c889930d9860e637d02ba2665db226ace911eb9d1d1f07a300a09751ca18",
+   "sg3_utils",
+   "access a SCSI Enclosure Services (SES) device",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_ses_microcode",
+   "11ace40bb167aa7374debd5997c2eca531624daca3d277f75de0193bd5fc251c",
+   "sg3_utils",
+   "send microcode to a SCSI enclosure",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_start",
+   "e1244bb0ae0a8e94a176430d2e0752a818f2f89cbb7a6dd5cace3d068f806cee",
+   "sg3_utils",
+   "send SCSI START STOP UNIT command: start, stop, load o...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_stpg",
+   "5c6c69af94c0ddffb104e999989d644892a3294bb0c1c8020e8e97db5760744d",
+   "sg3_utils",
+   "send SCSI SET TARGET PORT GROUPS command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_stream_ctl",
+   "78158eefa6877d001e372316850c657bd200da23e56aff41904bf6ec3caf9731",
+   "sg3_utils",
+   "send SCSI STREAM CONTROL or GET STREAM STATUS command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_sync",
+   "b5ed98a800d7803c8d40287f756d348225f5ed5f2d3d1ce90a53cc5a1d99ac95",
+   "sg3_utils",
+   "send SCSI SYNCHRONIZE CACHE command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_test_rwbuf",
+   "aef8f553a7781df7441b1f5addcd7182a84a074b381a743e880478b5f5b61e3f",
+   "sg3_utils",
+   "test a SCSI host adapter by issuing dummy writes and r...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_timestamp",
+   "e4d410a3a1f226e2e2d27b559eaf7980e77e2f94ed743f321b47ca8f34917164",
+   "sg3_utils",
+   "report or set timestamp on SCSI device",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_turs",
+   "8080dd5a52f60ebc6ba62c32a6c3a5947d5c38dfc048b552e04428e87fa44873",
+   "sg3_utils",
+   "send one or more SCSI TEST UNIT READY commands",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_unmap",
+   "374a8aab25359f905710ba1bc4d9fbe11739b87c012debcd120eaaab1482fae4",
+   "sg3_utils",
+   "send SCSI UNMAP command (known as 'trim' in ATA specs)",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_verify",
+   "1402ffd351c1842161cb507ed50a01faedeff52786516f0064696ed7820598dc",
+   "sg3_utils",
+   "invoke SCSI VERIFY command(s) on a block device",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_vpd",
+   "8ca286c068ac163c917c9676419e3212957d51176006ae698f87e86f3bbfbfee",
+   "sg3_utils",
+   "fetch SCSI VPD page and/or decode its response",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_wr_mode",
+   "f83d1438385d6c32f0d8440e4cf8c0e68cb588651931a6d8cfe1178be6b83aa5",
+   "sg3_utils",
+   "write (modify) SCSI mode page",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_write_buffer",
+   "11fae9f14a2699607f11df1ad933385c4f55b4a6b57ee6c7a280a6dcfca01bd8",
+   "sg3_utils",
+   "send SCSI WRITE BUFFER commands",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_write_long",
+   "7550804942014eabda553ed87a0e0e6c71a4dd2ab972a936476b58e88221eb5b",
+   "sg3_utils",
+   "send SCSI WRITE LONG command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_write_same",
+   "bdc7a3643a7a137fad36d1c2306018a9c8afcd2c3fac400fe2e7ffc525819285",
+   "sg3_utils",
+   "send SCSI WRITE SAME command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_write_verify",
+   "cbc8f7e60f481a367734fc04f17a45bf72319b3fe4139f7e21c60b0ebcf7c69d",
+   "sg3_utils",
+   "send the SCSI WRITE AND VERIFY command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_write_x",
+   "749c7fb5fefebe0785d4f9f274880fabd0d17f98b134ca850d391d159770b0ea",
+   "sg3_utils",
+   "SCSI WRITE normal/ATOMIC/SAME/SCATTERED/STREAM, ORWRIT...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_xcopy",
+   "9b863a0f87cc3740492400d3bdc4ae02e8773e1c9659c2576a9032915e8d64dc",
+   "sg3_utils",
+   "copy data to and from files and devices using SCSI EXT...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sg_zone",
+   "f81c81b9f303dba2bd1a0d8ade6c9c1e7d5337741b68509a9469c7ef595ee22f",
+   "sg3_utils",
+   "send a SCSI ZONE modifying command",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sginfo",
+   "e82cd8bea3972b49297c3e3c4820920f6881306e0bfa5f69e00b0fff1f090515",
+   "sg3_utils",
+   "access mode page information for a SCSI (or ATAPI) device",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sgm_dd",
+   "63bcb747def7139a0828b11556d6be0bea061bf8d6177a699987aba3e684c96f",
+   "sg3_utils",
+   "copy data to and from files and devices, especially SC...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sgp_dd",
+   "1555c168f47e9f9a21e2d7755e30f413af9eebf79e44cb976f6be5b5d09aa809",
+   "sg3_utils",
+   "copy data to and from files and devices, especially SC...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sha1sum",
+   "9c87b83e7c88354bfa6f9eb1a3403b06253a2b1b297b8b192e78fef9c1af2b9d",
+   "coreutils;coreutils-single",
+   "compute and check SHA1 message digest",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sha224sum",
+   "fd6470765deeace939ee554bd29810611c4312fd10e2aef5abd950b613e216f6",
+   "coreutils;coreutils-single",
+   "compute and check SHA224 message digest",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sha256sum",
+   "f2acf293b391010186110661721327008d036208b6ee61b2649f2286f15a5ee4",
+   "coreutils;coreutils-single",
+   "compute and check SHA256 message digest",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sha384sum",
+   "2a5a046334a13e2efb38f94734cd911d942168064bd119a78ae4e042c0385068",
+   "coreutils;coreutils-single",
+   "compute and check SHA384 message digest",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sha512sum",
+   "9825c14b2206acce94bf838dcc19624f07c7920d628d80d49dfdaa22b4764c23",
+   "coreutils;coreutils-single",
+   "compute and check SHA512 message digest",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/showconsolefont",
+   "7d71e3a6583a93e8ded294538413acbaaf2978dfa0513e97465a84aef11067ed",
+   "kbd",
+   "Show the current EGA/VGA console screen font",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/showkey",
+   "85af4b1f43eba2b02d3533f62c7f05cec209cc0204c59b84ddd1895128df4668",
+   "kbd",
+   "examine the codes sent by the keyboard",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/shred",
+   "974517257458bb0c97c83102b0a2245a8251775e55c11d94c7b3a6c74a75ebe8",
+   "coreutils;coreutils-single",
+   "overwrite a file to hide its contents, and optionally ...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/shuf",
+   "ebd48946cc560f5fbb50a84a50ad549051d2cbf792eec4b3e424b079a7c6aebd",
+   "coreutils;coreutils-single",
+   "generate random permutations",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/skill",
+   "17af070ae03003879eaa6328bcd18162193804fba70bd4d9c1223215a05c8559",
+   "procps-ng",
+   "send a signal or report process status",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/slabtop",
+   "24ab16bca0691a40e045acd059f1a6a8bc7925b57ceec6b6bce9c2a70067d481",
+   "procps-ng",
+   "display kernel slab cache information in real time",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sleep",
+   "6f6167444e074f544a5bc61fea96b774c8c57aa58d27b4ea7ea27a57f176b73c",
+   "coreutils;coreutils-single",
+   "delay for a specified amount of time",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/snice",
+   "e24513f411f17ef763ed9a10d1820a08c08357b58aa4fc85555ed3e85ae9417f",
+   "procps-ng",
+   "send a signal or report process status",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/soelim.groff",
+   "1fb10698dccd4c0a6e889948be49400a6219de8286f61b9f057494157ee0e06c",
+   "groff-base",
+   "interpret .so requests in groff input",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sort",
+   "2fdb4b36fba009b333bedef668e2a7778c97c4d6751d483731bff744cb4323f5",
+   "coreutils;coreutils-single",
+   "sort lines of text files",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/split",
+   "fb06b3319d865b4efcf7ea6dcb9bc1e6c9df84ba96e83b3091ac1ef5c26af988",
+   "coreutils;coreutils-single",
+   "split a file into pieces",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sprof",
+   "dd8472bcc44b4d03ec488c8dde2a6ffd24a7522d62d2cd9508b948ed0fbdc113",
+   "glibc-common",
+   "Common binaries and locale data for glibc",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ssh",
+   "5bd3160344bd41cd1229c5657344768a0c77b718a793147b8f2cece6f52f382f",
+   "openssh-clients",
+   "OpenSSH remote login client",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ssh-add",
+   "ed08fcb117b8d6796dbe6703324b73ef8d870c8dce18906840cce7b37643047e",
+   "openssh-clients",
+   "adds private key identities to the OpenSSH authenticat...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ssh-agent",
+   "d373f70d2b06bc6ccee0e742b98d7de05ea14aa944bd07742ad138793138eedb",
+   "openssh-clients",
+   "OpenSSH authentication agent",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ssh-keygen",
+   "723c8f98fbe430897396edbf018c5a9970cbd6cc1620ae71caf4865510c61a56",
+   "openssh",
+   "OpenSSH authentication key utility",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ssh-keyscan",
+   "c2e596a95db27e5f839c8bcd7950537895f91e6023699369f74d4836d6bae7dd",
+   "openssh-clients",
+   "gather SSH public keys from servers",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/stat",
+   "0910444ac975dd492ebd3d0131a3b50b8b5a5e9aa74443f7a3002aa922d4ea4c",
+   "coreutils;coreutils-single",
+   "display file or file system status",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/stdbuf",
+   "fe776fa1b3e304cf63c3ef9085e89928971f5d54ff365fb7a0f89dff42d9ba2b",
+   "coreutils;coreutils-single",
+   "Run COMMAND, with modified buffering operations for it...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/stty",
+   "39818159dd8b29cf12660d6d429222bb61a810cfb5354365b7041d24b688753b",
+   "coreutils;coreutils-single",
+   "change and print terminal line settings",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/su",
+   "bb177cc03cef61c86c1f15b6b1b7e2d44cb16aae15913228fdd2745c0e2902ac",
+   "util-linux",
+   "run a command with substitute user and group ID",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sudo",
+   "94a84624c34d33713cb53728036059ad524392c282e16280095f43612056b42f",
+   "sudo",
+   "execute a command as another user",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sudoreplay",
+   "0a3a61663653164796a11ab0f724690374292e6ab142b1fcaff7496848ee9ac9",
+   "sudo",
+   "replay sudo session logs",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sum",
+   "f15fe6960b68a6e1989c76d5ec1f0768128c918ac4864b9f5db31b2fda115141",
+   "coreutils;coreutils-single",
+   "checksum and count the blocks in a file",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/sync",
+   "ecdccf052db6b2a8ad54deb76a62ba82834374463ad1c58009e415cc196318f3",
+   "coreutils;coreutils-single",
+   "Synchronize cached writes to persistent storage",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemctl",
+   "0017353e109f9abc9c8e7faf93b98ed980f70572c9d11bd9ecd46d52b1fbc8e4",
+   "systemd",
+   "Control the systemd system and service manager",
+   "systemd-halt.service;systemd-kexec.service",
+   true
+  ],
+  [
+   "/usr/bin/systemd-analyze",
+   "d515897b96e49b10c6a86ffba076c6629d35d13c3076b621a3c9b975b5a3fa0b",
+   "systemd",
+   "Analyze and debug system manager",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-ask-password",
+   "3d3abcd0b3106a5075556d26ad6cc2d4f24f001b0344b54b941e36ba63a0e8ef",
+   "systemd",
+   "Query the user for a system password",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-cat",
+   "c80bb5b2a16641f41afb68a00e7e7392bb3fab94d4a2338cda87c69fa0557bd3",
+   "systemd",
+   "Connect a pipeline or program's output with the journal",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-cgls",
+   "5b881f3af77fc16e1fd03137987c07bca8acd602d3c166dbc18f9a437af00089",
+   "systemd",
+   "Recursively show control group contents",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-cgtop",
+   "28c9b26e0ebce7cafff6462aa0e76ea63ecf37c981f644320bd3e59ac2e3e4fc",
+   "systemd",
+   "Show top control groups by their resource usage",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-creds",
+   "9cd34976e4ccd0270dfe0ed34404bd708b99a26aec8b2a85f178868ec72fbf2a",
+   "systemd",
+   "Lists, shows, encrypts and decrypts service credentials",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-delta",
+   "97b7f65e83ba1052a28503018d0e6604174ef5cc521930100a0a1659728d560f",
+   "systemd",
+   "Find overridden configuration files",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-detect-virt",
+   "3a192c1d154ade82e76305fe031df076bcc38ddc3d08fcc50b55703a59b01b9b",
+   "systemd",
+   "Detect execution in a virtualized environment",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-dissect",
+   "b91f27356374a66b04bc038c4d38c152b2088efd74c7e2e33ce57a3417067dcf",
+   "systemd",
+   "Dissect Discoverable Disk Images (DDIs)",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-escape",
+   "c7c14edd3cfb1b8dc1ae0eb60655772025902bfe6ccb8619ed26bce1ca27051a",
+   "systemd",
+   "Escape strings for usage in systemd unit names",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-firstboot",
+   "dd0fb8932dc47d7cd8893ecf5f2bbd0c1139c1775746ede60c8ee9afa1597919",
+   "systemd",
+   "Initialize basic system settings on or before the fir...",
+   "systemd-firstboot.service",
+   true
+  ],
+  [
+   "/usr/bin/systemd-id128",
+   "f4593fc3214a8736c1d22cd7016eb8b544ef78f00f3780af6a25dee3b1533e2f",
+   "systemd",
+   "Generate and print sd-128 identifiers",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-inhibit",
+   "5b4eb4872adb0559e245f5ddd42ac2538e96197c0056bec600bae9c96cdddb46",
+   "systemd",
+   "Execute a program with an inhibition lock taken",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-machine-id-setup",
+   "25b30d93b50d3db1f24f3b1ae13762b9e2ba59f0e268be889dbda1b126017729",
+   "systemd",
+   "Initialize the machine ID in /etc/machine-id",
+   "systemd-machine-id-commit.service",
+   true
+  ],
+  [
+   "/usr/bin/systemd-mount",
+   "47bd836e1c8e822ad84774ca6d4c3680e3d47492f7a32264609438b45dea3378",
+   "systemd",
+   "Establish and destroy transient mount or auto-mount po...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-notify",
+   "ff03a83afd05fb9d2f99c51620288dc599e220373bcc85b52c90db6ad25be754",
+   "systemd",
+   "Notify service manager about start-up completion and o...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-path",
+   "b8e932895bcd867dafb09315f0e3cbe33b5730acb7519c614f6e33508d3f4784",
+   "systemd",
+   "List and query system and user paths",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-run",
+   "1529b85a5d18a2d86d74684a362d7655408d1579a7060303cd05d04fe3ed0569",
+   "systemd",
+   "Run programs in transient scope units, service units, ...",
+   "man-db-restart-cache-update.service",
+   true
+  ],
+  [
+   "/usr/bin/systemd-socket-activate",
+   "2f95e8a6fae9db216d0fa0ba9b13903a6531e0141160788ce18d872c70a0ece4",
+   "systemd",
+   "Test socket activation of daemons",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-stdio-bridge",
+   "ea8ebdbdf423e7892bdc46d819d7694cd96e10f8b50c4aa75749cbb0cc64b38a",
+   "systemd",
+   "D-Bus proxy",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/systemd-sysext",
+   "d96ec35cecaffb577658dd553c998629eb38c9f967b7b235e075f7cc0dfc19bc",
+   "systemd",
+   "Activates System Extension Images",
+   "systemd-sysext.service",
+   true
+  ],
+  [
+   "/usr/bin/systemd-sysusers",
+   "2b471973452e970938172d286b7c1dc18f3adf31b807db26224ad783b3ec107d",
+   "systemd",
+   "Allocate system users and groups",
+   "systemd-sysusers.service",
+   true
+  ],
+  [
+   "/usr/bin/systemd-tmpfiles",
+   "ab58e4a8d646ef021f4bec26ea828938d76de55e7d949f792e5af361e76e1384",
+   "systemd",
+   "Creates, deletes and cleans up volatile and temporary ...",
+   "systemd-tmpfiles-clean.service;systemd-tmpfiles-setup.service",
+   true
+  ],
+  [
+   "/usr/bin/systemd-tty-ask-password-agent",
+   "2903a8864a7fb900bc5cf212ec81fc56ae63ca9ee121deb7a117072e9ecf6642",
+   "systemd",
+   "List or process pending systemd password...",
+   "systemd-ask-password-console.service;systemd-ask-password-wall.service",
+   true
+  ],
+  [
+   "/usr/bin/tabs",
+   "5936f9f8c1d9dbc0c9128be47a4f43d78148fccee4bf2aced926cbe62b79a02b",
+   "ncurses",
+   "set tabs on a terminal",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/tac",
+   "e51814f1070a50d563d4930814a15a2e88eb70228a315cac09d0236870d15a07",
+   "coreutils;coreutils-single",
+   "concatenate and print files in reverse",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/tail",
+   "9bb54c44e56e58144e545d49794e575a99270494f4d70ce51ef89face62d3121",
+   "coreutils;coreutils-single",
+   "output the last part of files",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/tar",
+   "0868f0237b24aca1771dbfe2900052f4f867a4b525137496715ee2b0a46ec1ef",
+   "tar",
+   "an archiving utility",
+   "",
+   false
+  ],
+  [
+   "/usr/bin/taskset",
+   "a72254178813c4ff63c3dc4540c558e0264452a0cdeae8c00f7e74c106d062fa",
+   "util-linux-core",
+   "set or retrieve a process's CPU affinity",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/tbl",
+   "5000c58be94a05435ff1b32768b530e373f983eb79b55aa5507390f4ce062a9d",
+   "groff-base",
+   "format tables for troff",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/tee",
+   "e7ed377ba062b63aa0e7679b158d1d0bd58d335193327f0002d68b0c5196bd21",
+   "coreutils;coreutils-single",
+   "read from standard input and write to standard output ...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/test",
+   "974688a288c872a3b75d0087d484e7f062b9773cb41222cdee9d1dd395ade587",
+   "coreutils;coreutils-single",
+   "check file types and compare values",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/tic",
+   "9f61ad2ddf6652a17e1b4f5f618e5b20c83a7f944779485a554db0dd4377ddf4",
+   "ncurses",
+   "the terminfo entry-description compiler",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/timedatectl",
+   "5a4f624d6143e51671304221f550c2a7fd49f3a5a99845bacd0c762900e262ba",
+   "systemd",
+   "Control the system time and date",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/timeout",
+   "91c9f7e0cd55fe23863c68b5aeff2c111ea22da91149a617de29f4359ff5ba39",
+   "coreutils;coreutils-single",
+   "run a command with a time limit",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/tload",
+   "beb7209645311193cd263a755f9dc87a0a5d9557422b63c417b31b525fda42b5",
+   "procps-ng",
+   "graphic representation of system load average",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/toe",
+   "5aad15ee6f5238f485c2aa596d990212dd2e2a87d06098948fc19da1bfd116dc",
+   "ncurses",
+   "table of (terminfo) entries",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/top",
+   "d53c9b16ed0e9f4ec6688ca1366688d36d33cb847bbeac9abc3ba6649f9e05a4",
+   "procps-ng",
+   "display Linux processes",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/touch",
+   "cfbdaa925f0c2edc8f9502d2b972a101c6c670a0a825af6b7560c37d95b001d9",
+   "coreutils;coreutils-single",
+   "change file timestamps",
+   "selinux-autorelabel-mark.service",
+   true
+  ],
+  [
+   "/usr/bin/tput",
+   "2d092583cff8622ca8bc2747297b47a481855ffdd26a6b5b2e47fa35176a159a",
+   "ncurses",
+   "initialize a terminal or query terminfo database",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/tr",
+   "1f1caff97536f15f77224c82516a37e6e7450ce7e68e60938c81ad8ad1dc280c",
+   "coreutils;coreutils-single",
+   "translate or delete characters",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/tracepath",
+   "eb10eabf500327b376dcb16dfb7cda73169bc97c22aea1a5d032b09b6d9aef83",
+   "iputils",
+   "traces path to a network host discovering MTU along th...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/troff",
+   "5ae7268c592dc940cf4a9c88231bc287baec6a968396bc9f427cd9e8cf40c9cc",
+   "groff-base",
+   "the troff processor of the groff text formatting system",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/true",
+   "46805fd4bff39d40f38955389bf6ec90739943ba2d3d54f6ef709a38b45692c0",
+   "coreutils;coreutils-single",
+   "do nothing, successfully",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/truncate",
+   "fabcc7e31cac15d04abf9989be36c0c76709eef746342248c2a9d2f5a230ed3f",
+   "coreutils;coreutils-single",
+   "shrink or extend the size of a file to the specified size",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/trust",
+   "1c7d9df7979dd102dafe87a1b221c0627cca34e7c8476e0918952f1784fb4986",
+   "p11-kit-trust",
+   "Tool for operating on the trust policy store",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/tset",
+   "bc394fa7b5c3c31bed0970502c1e9fb4de1a5ec45b05857cefc91852fa3ad538",
+   "ncurses",
+   "terminal initialization",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/tsort",
+   "59f86fde4b05d333cb9cacd0c4f658dc7d3085515c80b9382989979ffe6e759e",
+   "coreutils;coreutils-single",
+   "perform topological sort",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/tty",
+   "270436dbf24e41d63d2e2c5ac4ada1429b4057f8f00f0a424e5c650ad8460186",
+   "coreutils;coreutils-single",
+   "print the file name of the terminal connected to stand...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/ul",
+   "1e3156e58cc3ad8619cd02280c6dfe403f6729c42356d68b0a6ce64378923824",
+   "util-linux",
+   "do underlining",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/umount",
+   "c48a7b8f006145cf4f200561bab0eabe058d6dec99d7b108e2605f77c8664091",
+   "util-linux-core",
+   "unmount filesystems",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/uname",
+   "790f9576aed97629e0e5a2b5c5d048a8fe837abe9b80fd160c8b01271df304db",
+   "coreutils;coreutils-single",
+   "print system information",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/unexpand",
+   "f9e7b16c6771a47efc38e6e156ad2143fe169457d66b6e0c3abbbdc821a55c34",
+   "coreutils;coreutils-single",
+   "convert spaces to tabs",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/uniq",
+   "f5b60576a802938c4d2dda2f2e37a4493e8a93d2759d81c0f468f64e50d7b14a",
+   "coreutils;coreutils-single",
+   "report or omit repeated lines",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/unlink",
+   "92943a2aa7a164f58557d2d10817ebc4ee374bfb981f5cbd0c6a3b7ed0bd9962",
+   "coreutils;coreutils-single",
+   "call the unlink function to remove the specified file",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/unshare",
+   "468648eb5e9cf9e7196413c970a81bdf3dba9eb85397a6d2dd4cdd664015314e",
+   "util-linux-core",
+   "run program in new namespaces",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/uptime",
+   "743e4be5f771d7c0f7c427275327371633cd2d776ac069214c7c19ed250071b5",
+   "procps-ng",
+   "Tell how long the system has been running.",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/users",
+   "7d7ad07b2ef1b255d7827869e647cb15e12d562047d5e4ff4a9bb09561152272",
+   "coreutils;coreutils-single",
+   "print the user names of users currently logged in to t...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/utmpdump",
+   "4404f290750d34f1ad0d9b48d658baae6f8c18859f9d282010c90c541a939f2b",
+   "util-linux",
+   "dump UTMP and WTMP files in raw format",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/uuidgen",
+   "33dd55a17e44696b272bfe7bbec1e5d6c2299691a12b6f4c9fb55110112b0610",
+   "util-linux",
+   "create a new UUID value",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/uuidparse",
+   "992441a344f89fc0845d79c2ff739e8dd3c8c3b02e2c3f78804a3bf84c46a9cc",
+   "util-linux",
+   "a utility to parse unique identifiers",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/vdir",
+   "96f01b7ea9637b85e7925fca4fd7d99556ed4688dabcd942022d83d5921cd6c1",
+   "coreutils;coreutils-single",
+   "list directory contents",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/vi",
+   "38ddd4f07b958da39487119fea61df196e8c3a9ea3a50f5395baf5820594bb4a",
+   "vim-minimal",
+   "Vi IMproved, a programmer's text editor",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/vlock",
+   "3bb48b60af6e0f8d3c0828454a1cd14b5eab9e2b9b84727cd643e5d237bcab9c",
+   "kbd",
+   "Virtual Console lock program",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/vmstat",
+   "1ad2dd8ebe97cd2041c71253deee9907f096fd8ecbd26ccaa6ec28853522a109",
+   "procps-ng",
+   "Report virtual memory statistics",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/w",
+   "683f18a898ccc028e445b8ae4bb5a90e7aaa36fbb09981dc1b191c268e80c5c4",
+   "procps-ng",
+   "Show who is logged on and what they are doing.",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/wall",
+   "76786de89b49227060c73bd07c9136999f4a9b4adde12fcb05d0cea8073b7cfc",
+   "util-linux",
+   "write a message to all users",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/watch",
+   "9c57d7ed931f7c920d2b34e3aba658981bab6d3fcb1b451133465ee116551902",
+   "procps-ng",
+   "execute a program periodically, showing output fullscreen",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/watchgnupg",
+   "cf1c7a8e3396bd1a11df5ff95c0879b3a6321b703736999fd55a9ff961b280a4",
+   "gnupg2",
+   "Read and print logs from a socket",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/wc",
+   "4395065cbca2bf9189f8841b09c6d589dabe1efd9fcc537c4e63281b793ebc41",
+   "coreutils;coreutils-single",
+   "print newline, word, and byte counts for each file",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/wdctl",
+   "d79c0566aa914359be73e62e42fbf40a75662ee413eda7dd8ffc4c3d5dab1927",
+   "util-linux",
+   "show hardware watchdog status",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/whatis.man-db",
+   "47c325c69626bc85cb39d9fa3ceae0c2ac639da69b053ad3aedbee379f471dd4",
+   "man-db",
+   "display one-line manual page descriptions",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/whereis",
+   "b7cb195cf41ee258eb3defd23c6f395816fc6667fdafd83990403904603142bc",
+   "util-linux",
+   "locate the binary, source, and manual page files for a...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/which",
+   "fc20448bb5410a59eba58758b43cce10a37dba5ba2e0ab5c61626d72ebed60f7",
+   "which",
+   "shows the full path of (shell) commands.",
+   "",
+   false
+  ],
+  [
+   "/usr/bin/who",
+   "b9ae9f8952a589003bf098f0dc67859294efa8eec6918abeb9b977a1507ffad9",
+   "coreutils;coreutils-single",
+   "show who is logged on",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/whoami",
+   "9324c1b32e2523af0f5465375db507bfd9b9d6f729dc4347430141ffd9e08d78",
+   "coreutils;coreutils-single",
+   "print effective userid",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/write",
+   "3568b40b7ec3cc8c99918b4c0e1eb4456df1ee7c7c457e32df853b66166c19cf",
+   "util-linux",
+   "send a message to another user",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/xargs",
+   "e2c3ecbf697414f8d7ac9e61c296d9c817e2f8fd0eb1ba0eeef7d5e804f8aa6c",
+   "findutils",
+   "build and execute command lines from standard input",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/xmlcatalog",
+   "53d703080a26446a4a4d11346fb77c4db4f836bfbba0631e423c1328322edd9a",
+   "libxml2",
+   "Command line tool to parse and manipulate XML or SGML ...",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/xmllint",
+   "40f9a50834e7f622a72f7ac6abc64fae88ab4f9eb9e1aae0b48444f1ae4d4090",
+   "libxml2",
+   "command line XML tool",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/xmlwf",
+   "57a8952f5f1dbb96f594d8e3c21cb2e5780fba721002ab5183858191b81d9450",
+   "expat",
+   "Determines if an XML document is well-formed",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/yes",
+   "f1d423c1e63b89291b15091c43594a6ebbc9ec918c347ecb78e4905fcb5ce1a6",
+   "coreutils;coreutils-single",
+   "output a string repeatedly until killed",
+   "",
+   true
+  ],
+  [
+   "/usr/bin/zdump",
+   "fa7f018eb5b976df7e8217fcb1706be09c392fe6c2f20c3c19f73e847e5a9c51",
+   "glibc-common",
+   "Common binaries and locale data for glibc",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/security/pam_filter/upperLOWER",
+   "01f61ce38c0c108500ad357a71488f8ad567a6e6266c68a600a44901448204cd",
+   "pam",
+   "An extensible library which provides authentication for applications",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/system-generators/systemd-debug-generator",
+   "b80f1ca41531bb7f22ce5827a4a1a9f1e631c0745d54a828d4b4d404bfa435a0",
+   "systemd",
+   "Generator for enabling a runtime debug shell an...",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/system-generators/systemd-fstab-generator",
+   "f2a5c285a516c32dc56ad1dbed2989453ac10bc1bfb74d533d8a2bf4a82ae13e",
+   "systemd",
+   "Unit generator for /etc/fstab",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/system-generators/systemd-getty-generator",
+   "2487f27cd23a4df5b07b3b6b716525b0166f4d414ece08297d557dc11bc4f67b",
+   "systemd",
+   "Generator for enabling getty instances on the c...",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/system-generators/systemd-rc-local-generator",
+   "f22a66e3bd39d39fa8879811f3d713b172338e81bcc6d0423560f0780dc3013c",
+   "systemd",
+   "Compatibility generator and service to start...",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/system-generators/systemd-run-generator",
+   "893d47395f4df635fe6b168fa0383297061dfff2fd96bac90a9098ae57388b6e",
+   "systemd",
+   "Generator for invoking commands specified on the ...",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/system-generators/systemd-system-update-generator",
+   "24c840b02f3b35f14ff0c08c529b9631547f90af76469f21b186162bbdf77bc2",
+   "systemd",
+   "Generator for redirecting boot to offli...",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/system-generators/systemd-sysv-generator",
+   "dbf9224003ddac92db4021986484f608385d37d9e60bb230a1ef3535fa4d937f",
+   "systemd",
+   "Unit generator for SysV init scripts",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd",
+   "5561e7ca7e668175689a9c13b32c3a0bacd44eceeef8122545e15eab69f8b4c3",
+   "systemd",
+   "systemd system and service manager",
+   "user@.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-ac-power",
+   "ea5a869df9ca4f851137d3a82a100660a0d23acf418ba40c32071e40672b1955",
+   "systemd",
+   "System and Service Manager",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-boot-check-no-failures",
+   "f1c80fcca3bb9eb1114bcb139bc7e0d20cd2c919d5a078f3a3eb9e85b0fc6554",
+   "systemd",
+   "verify that the system booted up cleanly",
+   "systemd-boot-check-no-failures.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-cgroups-agent",
+   "a2dac335120a49489cc2c2aa44209bad4a4c9ff40a6344efba1cc89c4850847b",
+   "systemd",
+   "System and Service Manager",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-export",
+   "08f0795dc93fe9ff1e8a12de870217530c4e1584697af3c772e50bf8d37e81f2",
+   "systemd",
+   "System and Service Manager",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-hostnamed",
+   "b46a78906e9375ae61c71fadb7b4505454b6ef147f092f399bfb6b587b0ff571",
+   "systemd",
+   "Daemon to control system hostname from programs",
+   "dbus-org.freedesktop.hostname1.service;systemd-hostnamed.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-initctl",
+   "fbf927dc5f2f45684b486a69ecedeef4c46b8fb2981942e4f6a642f0e0b545f4",
+   "systemd",
+   "/dev/initctl compatibility",
+   "systemd-initctl.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-journald",
+   "28fb2fb9bc68ff5287c658556ef92dada738864bd79e5c81269e7a75fd21071a",
+   "systemd",
+   "Journal service",
+   "systemd-journald.service;systemd-journald@.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-localed",
+   "535fc22936b538599c30308db3498196b63ab46b0774159cf5ca8a668f498a0c",
+   "systemd",
+   "Locale bus mechanism",
+   "dbus-org.freedesktop.locale1.service;systemd-localed.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-logind",
+   "96feaf3e07da4336394c44d5d01b23700fcb250eb71b16a2932c1e4b513a44e0",
+   "systemd",
+   "Login manager",
+   "dbus-org.freedesktop.login1.service;systemd-logind.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-network-generator",
+   "e17e9dc451ede5165b6a73c90d639953f526642cbf540b85495d1cb4d5c927cc",
+   "systemd",
+   "Generate network configuration from the kerne...",
+   "systemd-network-generator.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-reply-password",
+   "84e284c70457f11785e84a243dbaedd382c9816a913172b76a4a1b4494975733",
+   "systemd",
+   "System and Service Manager",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-shutdown",
+   "ec58336e56410265d62d5f2321da7941826ee09d3b5f8de26932c68dcf46e9fc",
+   "systemd",
+   "System shutdown logic",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-socket-proxyd",
+   "6da007eb811eda9e7f56924a4cf0097ff819892a979e5063ac0bf37d8d8cbdcd",
+   "systemd",
+   "Bidirectionally proxy local sockets to another (p...",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-sulogin-shell",
+   "7e98bf26600504852f551cfebb3f7d90ba222ddcb145a56b540f78dc08bafd8b",
+   "systemd",
+   "System and Service Manager",
+   "emergency.service;rescue.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-sysupdate",
+   "fb21048ab75959f802e6a8daa0626983df0095bc309bc28708ffd38801d2417e",
+   "systemd",
+   "Automatically Update OS or Other Resources",
+   "systemd-sysupdate-reboot.service;systemd-sysupdate.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-timedated",
+   "e685c08fc712a291ebcb933ea5a3c7b39854caf28b10ed00148b6a368bdad198",
+   "systemd",
+   "Time and date bus mechanism",
+   "dbus-org.freedesktop.timedate1.service;systemd-timedated.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-update-done",
+   "9599e6ec6d7d79b6bea039f12c58572eda3061c96cb25a4467b598e48e1a5374",
+   "systemd",
+   "Mark /etc/ and /var/ fully updated",
+   "systemd-update-done.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-update-utmp",
+   "ba9723a01a13e48587a8569ee09ea53cd6cfc1eaf19394c6972bdf1383833f2e",
+   "systemd",
+   "Write audit and utmp updates at bootup, runlevel ch...",
+   "systemd-update-utmp-runlevel.service;systemd-update-utmp.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-user-runtime-dir",
+   "53f055e5242b6c0050f62fcffcad2e8199732d58ff043025f1d9e337abd18f16",
+   "systemd",
+   "System and Service Manager",
+   "user-runtime-dir@.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-user-sessions",
+   "4cb96ce26b855de97263dbd3c19e86ac47a7fbbc8dae340e9f636a55bf96b2f5",
+   "systemd",
+   "Permit user logins after boot, prohibit user logi...",
+   "systemd-user-sessions.service",
+   true
+  ],
+  [
+   "/usr/lib/systemd/systemd-xdg-autostart-condition",
+   "79b008dad3b45badf8e78bf568c4da2a991661bc8058b4b4b53fe5a779cb59d1",
+   "systemd",
+   "System and Service Manager",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/user-environment-generators/30-systemd-environment-d-generator",
+   "32b8114ed7370825537eadda6963e696ef5069c10f220fc004ad8e0e0a910766",
+   "systemd",
+   "Load variables specified by environm...",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/systemd/user-generators/systemd-xdg-autostart-generator",
+   "14f080095e49adebacec56ff657d199772ab2a2399508a6bdcdadd4c8407e13a",
+   "systemd",
+   "User unit generator for XDG autostart f...",
+   "",
+   true
+  ],
+  [
+   "/usr/lib/udev/rename_device",
+   "bb953de5b9baeae798337cb550384de6350225fb5e51261abbe0942eddbfa552",
+   "initscripts-rename-device",
+   "Udev helper utility that provides network interface naming",
+   "",
+   true
+  ],
+  [
+   "/usr/lib64/security/pam_filter/upperLOWER",
+   "e5e4e3a7f3212d2f2bbe9c7f3c0d84bf16cbba3589acb42e6c799ede2e582ae5",
+   "pam",
+   "An extensible library which provides authentication for applications",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/awk/grcat",
+   "01b5deef8969921f03e9f272b9503238c633c2f346806f2ba7f9ae22df6c7782",
+   "gawk",
+   "The GNU version of the AWK text processing utility",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/awk/pwcat",
+   "e77e5d5f4347b0c44c70c9320fe5276215bab80bd1f75db796520ecf24da029b",
+   "gawk",
+   "The GNU version of the AWK text processing utility",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/dirmngr_ldap",
+   "f3105af7542f90de521d74cb0b7041b7bdbb2f292693c635a9b4a66a5b105efe",
+   "gnupg2",
+   "Utility for secure communication and data storage",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/getconf/POSIX_V6_ILP32_OFF32",
+   "955d39a1bb8ffb4679004eb01e3ac8b6663fa533b94456ebae69ef38c4215c74",
+   "glibc",
+   "The GNU libc libraries",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/getconf/POSIX_V6_ILP32_OFFBIG",
+   "955d39a1bb8ffb4679004eb01e3ac8b6663fa533b94456ebae69ef38c4215c74",
+   "glibc",
+   "The GNU libc libraries",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/getconf/POSIX_V6_LP64_OFF64",
+   "a854a3890436fc3df43af477718ebc05359ca1f07194f38c16d0d49a5c51731c",
+   "glibc",
+   "The GNU libc libraries",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/getconf/POSIX_V7_ILP32_OFF32",
+   "955d39a1bb8ffb4679004eb01e3ac8b6663fa533b94456ebae69ef38c4215c74",
+   "glibc",
+   "The GNU libc libraries",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/getconf/POSIX_V7_ILP32_OFFBIG",
+   "955d39a1bb8ffb4679004eb01e3ac8b6663fa533b94456ebae69ef38c4215c74",
+   "glibc",
+   "The GNU libc libraries",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/getconf/POSIX_V7_LP64_OFF64",
+   "a854a3890436fc3df43af477718ebc05359ca1f07194f38c16d0d49a5c51731c",
+   "glibc",
+   "The GNU libc libraries",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/getconf/XBS5_ILP32_OFF32",
+   "955d39a1bb8ffb4679004eb01e3ac8b6663fa533b94456ebae69ef38c4215c74",
+   "glibc",
+   "The GNU libc libraries",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/getconf/XBS5_ILP32_OFFBIG",
+   "955d39a1bb8ffb4679004eb01e3ac8b6663fa533b94456ebae69ef38c4215c74",
+   "glibc",
+   "The GNU libc libraries",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/getconf/XBS5_LP64_OFF64",
+   "a854a3890436fc3df43af477718ebc05359ca1f07194f38c16d0d49a5c51731c",
+   "glibc",
+   "The GNU libc libraries",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/gpg-check-pattern",
+   "2e4d2243e34b014b0808b3ca8f10be2a58403d292accf2b5d9b8bdaee55b2a0f",
+   "gnupg2",
+   "Check a passphrase on stdin against the patternfile",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/gpg-pair-tool",
+   "0ff4167a5097705b626ba883ee7b9dcb54d7fba3c9bce200b06e9aaea4bf69ac",
+   "gnupg2",
+   "Utility for secure communication and data storage",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/gpg-preset-passphrase",
+   "f58bb53e44ed8fa9ff90d061bdb3404b89de8a7d7f02ec04ee9fe812e0f8ec4d",
+   "gnupg2",
+   "Put a passphrase into gpg-agent's cache",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/gpg-protect-tool",
+   "60ba9cc206b1cdc180147101a410f90e12c92f82a101ce2ca8c644075f6fb369",
+   "gnupg2",
+   "Utility for secure communication and data storage",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/keyboxd",
+   "d006fc9586b741334cca226b0e64d18c598f1ef9c170f6c06b2f54a61d4fce0b",
+   "gnupg2",
+   "Utility for secure communication and data storage",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/man-db/globbing",
+   "ccc5ad4baa2496c534d9128674fc9a0a09901705703da7f1a4ae1f228a7a25a3",
+   "man-db",
+   "Tools for searching and reading man pages",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/man-db/manconv",
+   "428c4733894d4261340446c415ce2b0a0b7a2f8d342c3dc70222bb4dbeb54ec5",
+   "man-db",
+   "convert manual page from one encoding to another",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/man-db/zsoelim",
+   "7b6ffbcb6da999a3cdfd98b93a17d830f8556f912c3033192ce0f8364f22037f",
+   "man-db",
+   "Tools for searching and reading man pages",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/openssh/sftp-server",
+   "bff1d38607a58417ff515bb6750afda58109d1f2ad30855cc9943703564b6e70",
+   "openssh-server",
+   "OpenSSH SFTP server subsystem",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/openssh/ssh-keysign",
+   "491626746d743b92935a1d94d8ba3fa96b43039b0e5bda7e118f5e8d832ff9c3",
+   "openssh",
+   "OpenSSH helper for host-based authentication",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/openssh/ssh-pkcs11-helper",
+   "31c0785b05481071034cb832901e4e1f99568f81f88793a4ccf6ac788b202fae",
+   "openssh-clients",
+   "OpenSSH helper for PKCS#11 support",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/openssh/ssh-sk-helper",
+   "128bc9bc25e11be2a98c4ed211738ffeaaae335ed9ee7984dce6cd058fcf8f48",
+   "openssh-clients",
+   "OpenSSH helper for FIDO authenticator support",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/openssh/sshd-session",
+   "c1ddabe19a385ef7106a334efe31f813e2e5419647948d487c498ee36b048063",
+   "openssh-server",
+   "An open source SSH server daemon",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/p11-kit/p11-kit-remote",
+   "50d7481a958ff5e0b5aa5d299a57105195b9c0fe4efc705e5dff864219028f29",
+   "p11-kit",
+   "Library for loading and sharing PKCS#11 modules",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/scdaemon",
+   "7d8aa4759b7e4681ec7ba784e0a60fcbe3690267dc1d2f66bbd65a71428ccb25",
+   "gnupg2",
+   "Smartcard daemon for the GnuPG system",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/selinux/hll/pp",
+   "cfefc143f0e037b545805e57cc7b38dad575e55c539f8e8703cab8aaab9cb7bf",
+   "policycoreutils",
+   "SELinux policy core utilities",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/sudo/sesh",
+   "11fd0525d6d2fb71bcde860e57a4d50ef636c6017ecd696428e090e6accd5252",
+   "sudo",
+   "Allows restricted root access for specified users",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/utempter/utempter",
+   "35e0a5478cf7ff7189a60b51bcbffa50dea93bfd98580219c25dadde9f160c91",
+   "libutempter",
+   "A privileged helper for utmp/wtmp updates",
+   "",
+   true
+  ],
+  [
+   "/usr/libexec/virt-what-cpuid-helper",
+   "63018843113d37636d55c04e86cc7932dbbfcb1e2fa82f9e7a0758d765094a3d",
+   "virt-what",
+   "Detect if we are running in a virtual machine",
+   "",
+   false
+  ],
+  [
+   "/usr/sbin/accessdb",
+   "9915f8d526e2f72650cd4bce5807c9e7fc92120aae90747462dfd1e2f01740a0",
+   "man-db",
+   "dumps the content of a man-db database in a human read...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/addpart",
+   "2e03090290758a2277c0e025219a48a5b02c215e827cdd862be87aae38423ce0",
+   "util-linux",
+   "tell the kernel about the existence of a partition",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/agetty",
+   "085e38e7465cde237855dc5c9f07b0da07188b11171723eb65a79be4f17a06f3",
+   "util-linux-core",
+   "alternative Linux getty",
+   "autovt@.service;console-getty.service;container-getty@.service;getty@.service;serial-getty@.service",
+   true
+  ],
+  [
+   "/usr/sbin/alternatives",
+   "b432a2af811781d961fac005249930fea6c7510687ec377414166eeed06f8c9f",
+   "alternatives",
+   "maintain symbolic links determining default commands",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/anacron",
+   "559ba9e1234a41e6fa666b8b3f1d4301425634e11eb8664cdc30c6157631d652",
+   "cronie-anacron",
+   "runs commands periodically",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/avcstat",
+   "e4626b867c09a40430db6226944676913d71d6aee8305941c3d9c8fec99f29a4",
+   "libselinux-utils",
+   "Display SELinux AVC statistics",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/biosdecode",
+   "5d511a3a63efe590cfa7ffa1d6b0a7eca161067d319ef7e8752decf75864cf9a",
+   "dmidecode",
+   "BIOS information decoder",
+   "",
+   false
+  ],
+  [
+   "/usr/sbin/blkdiscard",
+   "5dd6d6238803abb75042151493e40052c5e3710d3966236351f94e0cdac85ada",
+   "util-linux",
+   "discard sectors on a device",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/blkid",
+   "302e744e329af80f3ed949f7fd2a2c8ab2c675e6e3ec45a8c23e549f01aa7b5b",
+   "util-linux-core",
+   "locate/print block device attributes",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/blkzone",
+   "18b63292e8916a8345e753633f0091878ad66ff03993408a44526dd10bcbc03c",
+   "util-linux",
+   "run zone command on a device",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/blockdev",
+   "e1309f2e4596ef722747ae18f7aeddba257ddfb305f8e80f26eba5b18e86006f",
+   "util-linux-core",
+   "call block device ioctls from the command line",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/bridge",
+   "ec01f6da148bf5ddc2c34f380a480dd96bf2add20eab6331f0e9ce953b4f29b0",
+   "iproute",
+   "show / manipulate bridge addresses and devices",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/capsh",
+   "af2add4725f29ee4a11b481611f8439fffd1c334136864b2d55ae8324a12f63e",
+   "libcap",
+   "capability shell wrapper",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/cfdisk",
+   "7200c75c06bf9d508d148b4cb87336b4f67a0330601b0743ed9ebb46d327fcd8",
+   "util-linux",
+   "display or manipulate a disk partition table",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/chcpu",
+   "9d621756169e10a1da686879d061c88108e9ca0366da4659653bcfdc5f54f421",
+   "util-linux",
+   "configure CPUs",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/chgpasswd",
+   "c04052621d7842330ed2c41914e387d71ec130494650b5b739eb5262a72ea255",
+   "shadow-utils",
+   "update group passwords in batch mode",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/chpasswd",
+   "7839e830cd3987ade86ae81267abac8f9882d1efa39aa7ede0acebc767002f4e",
+   "shadow-utils",
+   "update passwords in batch mode",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/chroot",
+   "9c06ec573b999546a7182ec1baf51c6c0e73c614fd588741efbcad407d1fd9c7",
+   "coreutils;coreutils-single",
+   "run command or interactive shell with special root dir...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/cracklib-check",
+   "2f3e786166e79a4d42e49e5a6f7badd01b69550494b20b1045119ded020c99be",
+   "cracklib",
+   "Check passwords using libcrack2",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/cracklib-packer",
+   "e08ca45d5de50b73b86d207168f4900e41bbc676901133b088aadc325f5d8d9a",
+   "cracklib",
+   "cracklib dictionary utilities",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/cracklib-unpacker",
+   "2eca7ccae5b3933c9aab2569de812942f5296c532abc0a149cd57426c13f71e4",
+   "cracklib",
+   "cracklib dictionary utilities",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/crond",
+   "0dc4a948c5d756986f96b14e1599fd94cf03766f9bf66fa48a581783195d4f58",
+   "cronie",
+   "daemon to execute scheduled commands",
+   "crond.service",
+   true
+  ],
+  [
+   "/usr/sbin/ctrlaltdel",
+   "307459096eb87de672c3c1e08f2213df8a2ed8b7b9a7a10951ed4eee5e5e41fc",
+   "util-linux",
+   "set the function of the Ctrl-Alt-Del combination",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/dcb",
+   "abbc80f1ad7c05b32b59fa2feb82feccdc09f1239876703c3e8464bbe8944a69",
+   "iproute",
+   "show / manipulate DCB (Data Center Bridging) settings",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/delpart",
+   "91aeb4904514fd4cae101ed8c8b81f0792b563aa1ee2e358235daf7c6dd44acd",
+   "util-linux",
+   "tell the kernel to forget about a partition",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/devlink",
+   "936086f2dbc69e787ce22a7581539690aa247cbefb77b1d2cfd79dea86552b8e",
+   "iproute",
+   "Devlink tool",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/dmidecode",
+   "0429da2c350cba460cdf0bdad49fb2d7a33b5e87d3569069c7e5838ca137c3a7",
+   "dmidecode",
+   "DMI table decoder",
+   "",
+   false
+  ],
+  [
+   "/usr/sbin/dpll",
+   "f3f7431b5d89aca0e9f9076858a96e772e6360f5cbb9d20400390889cdfab04a",
+   "iproute",
+   "Digital Phase Locked Loop (DPLL) subsystem management",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/faillock",
+   "b25cf2b1dd5b37d4f3b0606279b44b5d326e80785997e6adb7bdd1a907295100",
+   "pam",
+   "Tool for displaying and modifying the authentication f...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/fdformat",
+   "53a34754867cb1a35b7528b27499abb90edfec63326e6498db7ade4f79a8036d",
+   "util-linux",
+   "low-level format a floppy disk",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/fdisk",
+   "3ed94ab99da8796a8f27f59f97c1de613c15202f4ad5180fe3ce29dee0eac9c0",
+   "util-linux",
+   "manipulate disk partition table",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/findfs",
+   "34aa4acfb05a9d127bbb50554ab0ae45193512ad978f045b495b86ac3fd57510",
+   "util-linux",
+   "find a filesystem by label or UUID",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/fsck",
+   "1e3d9524eb9ac8244e121e49f224ae469970c866145ed883ac4a309ec9048ba9",
+   "util-linux-core",
+   "check and repair a Linux filesystem",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/fsck.cramfs",
+   "049600e0073b2a1d1955c6c7d1a49c12028a303fc297da92a243988415b1dae3",
+   "util-linux",
+   "fsck compressed ROM file system",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/fsck.minix",
+   "cfec2aff19915a3100b85eaac0cd07f7373d6a6cd8f133e9b0afdda6b56143e7",
+   "util-linux",
+   "check consistency of Minix filesystem",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/fsfreeze",
+   "8ee5a45587b8e6358f1024e47d2c4803334dfa8add5772bc705cadfeed844eb3",
+   "util-linux",
+   "suspend access to a filesystem (Ext3/4, ReiserFS, JFS,...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/fstrim",
+   "e277e968df468a1a510981c064c9e1a8e669f07206a7467d6166582b86509cae",
+   "util-linux",
+   "discard unused blocks on a mounted filesystem",
+   "fstrim.service",
+   true
+  ],
+  [
+   "/usr/sbin/fuser",
+   "f38c7e473e05748b4ae06eccdeda02603dcc93dfcadf768dced15851f9495811",
+   "psmisc",
+   "identify processes using files or sockets",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/g13-syshelp",
+   "8c8bf09a24a3ea0c72de7dafc1c9d34ad29ace6acaade94ce2bef7271dcfc860",
+   "gnupg2",
+   "Utility for secure communication and data storage",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/genl",
+   "5c1f00e38fe0e9d3077e2559d251206edd428b47d3936545484dc4beca273663",
+   "iproute",
+   "generic netlink utility frontend",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/getcap",
+   "f14a44458c11fd769260fec17bdf8a9e0caf713b240ea1b101a05c0cf6205a76",
+   "libcap",
+   "examine file capabilities",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/getenforce",
+   "09e0647ba7fb96e49d2375b8bbd4421a040b28b570541e24763d42f7d6de2735",
+   "libselinux-utils",
+   "get the current mode of SELinux",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/getpcaps",
+   "750cbd5e03e1972dcfe2f3250da888839240b0537de5b20284e060e94a90e4a0",
+   "libcap",
+   "display process capabilities",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/getpidprevcon",
+   "76bf3b519481c3ca20a63650a60d0d607bf244f70694625c3170ec4c848531b4",
+   "libselinux-utils",
+   "SELinux libselinux utilities",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/getpolicyload",
+   "e3f8daecf6e9141a5417aaecd8cde014bbaf2e431016494a90abdd89ff68dc5a",
+   "libselinux-utils",
+   "SELinux libselinux utilities",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/getsebool",
+   "6b486c512f2bac7087ff3e264f30b755a6cf75d4d89a6e1d019074d85cec84cf",
+   "libselinux-utils",
+   "get SELinux boolean value(s)",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/groupadd",
+   "24bff0524eda5e6a3c77be056dbb8e8cc0d4f530d4780e5c56f1a53bfae6708d",
+   "shadow-utils",
+   "create a new group",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/groupdel",
+   "649d34cf5a69ef6fe72ea37a910a189527f0a97977e44ab6555c3e18a25cfd90",
+   "shadow-utils",
+   "delete a group",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/groupmems",
+   "ca8cf72e4aee931b5b744b956829f4dec7e4bfe381720e20e01971ad43450c0f",
+   "shadow-utils",
+   "administer members of a user's primary group",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/groupmod",
+   "d1dcfeb5e3ab57c5b97a980753dfdca5690c4d7a6f20cd8bf8fb47eb99bbe8cd",
+   "shadow-utils",
+   "modify a group definition on the system",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/grpck",
+   "f2f0eb80574e15e320ae9c0bba1f12f5e1111665334d1a0f266aa5a11309534c",
+   "shadow-utils",
+   "verify integrity of group files",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/grpconv",
+   "b8b46d31f9ed4bcf6d3911c2b4234303e1ef3db7776a7b5b045c27ea07f3e6fd",
+   "shadow-utils",
+   "convert to and from shadow passwords and groups",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/grpunconv",
+   "c6a40eb46c4b36d65f150135fcb59f2c79aba565254aef88aca1a71418d75b5f",
+   "shadow-utils",
+   "convert to and from shadow passwords and groups",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/hwclock",
+   "91a71c257db7caab7a11ac9095e837da3168c755c0e4f90d621371fbb6926e53",
+   "util-linux",
+   "time clocks utility",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/iconvconfig",
+   "74d65d2abd6520b4b15b87ed4707b745398c7e6f428540853c4c201da37de788",
+   "glibc",
+   "The GNU libc libraries",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/ifenslave",
+   "39ced0f6cee6cd43cdac8c907f0c621b0df14285f8a5270ff8c8bf7e87ef5bd5",
+   "iputils",
+   "Attach and detach slave network devices to a bonding d...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/ifstat",
+   "18e71834f5010cf593ceaa50852e3ec3979d6a726d6c310beb30978a258589a7",
+   "iproute",
+   "handy utility to read network interface statistics",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/ip",
+   "e461f0e88ac77abef1bf478947cb955c921e5fa57f2719d5a23e89b4c6bf7931",
+   "iproute",
+   "show / manipulate routing, network devices, interfaces...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/key.dns_resolver",
+   "fdf669bdffb801c3038ac27f888c2593d449d856682c4e2296c4abe868edb08c",
+   "keyutils",
+   "upcall for request-key to handle dns_resolver keys",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/lchage",
+   "625dab3b085de521b8e009fc820d79e289b122a333e67f434468c452a1a217eb",
+   "libuser",
+   "Display or change user password policy",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/ldattach",
+   "e90311125ef010ecd240e5d51d771bca07ce47a4bd48ad78683665cd3f247d8a",
+   "util-linux",
+   "attach a line discipline to a serial line",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/ldconfig",
+   "458ebd6fcee6fb4b963c720b33bf43f691a1e12bebfa474136408c953ac105af",
+   "glibc",
+   "The GNU libc libraries",
+   "ldconfig.service",
+   true
+  ],
+  [
+   "/usr/sbin/lgroupadd",
+   "897937f9274db33b3c48cd39366819417b766e3818c3c14ff7280d375fc84076",
+   "libuser",
+   "Add an user group",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/lgroupdel",
+   "935edcc26e4215f2f825ed17a913d76a40e078814c42f0d523cc2f6325804c16",
+   "libuser",
+   "Delete an user group",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/lgroupmod",
+   "790c8d9adec7ca12c65656513ce7310b66200a6d08d11e7212e7627dd72e298e",
+   "libuser",
+   "Modify an user group",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/lid",
+   "5eb5a825d52ea338689de89dcaf14aa8627e79d568a562c528dc5d4863b0fb70",
+   "libuser",
+   "Display user's groups or group's users",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/lnewusers",
+   "38bd03cf2b10d5a4e9df98ade882159de115dea1e090aaab453696a85f2c0985",
+   "libuser",
+   "Create new user accounts",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/lnstat",
+   "62ba11083dd118b87ffcc1bf62e2e8140f000168f45fbd6e7dee2d265bd5c3de",
+   "iproute",
+   "unified linux network statistics",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/load_policy",
+   "e3c7a7242f244360c5cf2b5ff9076ab060691ed88ccb4e5e1b1c273e9c44bf04",
+   "policycoreutils",
+   "load a new SELinux policy into the kernel",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/logrotate",
+   "7af37f82779574cdc0121acf5bd930a01d97a19224f06b4991d5c8f36328884c",
+   "logrotate",
+   "rotates, compresses, and mails system logs",
+   "logrotate.service",
+   true
+  ],
+  [
+   "/usr/sbin/losetup",
+   "1e7b5b73c54c320c0255f8cf06a0682f55c98dae140bc7287bb8517b0c6d5466",
+   "util-linux-core",
+   "set up and control loop devices",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/lpasswd",
+   "0673613d873646775d8ac5114f1082d7ad6bff1a849cabffd36506114afac711",
+   "libuser",
+   "Change group or user password",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/lshw",
+   "b45ddce0402479e37e1a5b12b8f9d6571649ca05414d2e91f878e79bc87c4e67",
+   "lshw",
+   "list hardware",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/luseradd",
+   "fb75f6c66413693e3948afe46d23dcbcdb8e6a9b537cad8282724ef76c90b6d6",
+   "libuser",
+   "Add an user",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/luserdel",
+   "b4185e9ccf50f44078761788f525a5acbd7845a569be20bf13a726b550845025",
+   "libuser",
+   "Delete an user",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/lusermod",
+   "e8aaf09828217f86ad654062019982ff2791b0451f4ee4151e2ea697c9b6b05c",
+   "libuser",
+   "Modify an user",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/matchpathcon",
+   "c63a90f0392df47dc5a3d702510fdb1cbfb9af294c863234eeb53b74d225bb46",
+   "libselinux-utils",
+   "get the default SELinux security context for the speci...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/mkfs",
+   "c2086dda5d2bf396dc336b5136d07d252387b78d78540a6d82bacf8b26c49312",
+   "util-linux",
+   "build a Linux filesystem",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/mkfs.cramfs",
+   "77fbc0f7848b4ee4de4a531acb27ed45eda643afb32774620102d4024a8c84c9",
+   "util-linux",
+   "make compressed ROM file system",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/mkfs.minix",
+   "5fc231872c67baf5a68f0c877d3171b89c6256816bfb9e1175089dd8d99e98d3",
+   "util-linux",
+   "make a Minix filesystem",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/mkhomedir_helper",
+   "5ce6552503527f575a7025b3a7f294bb94f8d1d42845a3beb744caefdc78dec7",
+   "pam",
+   "Helper binary that creates home directories",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/mkswap",
+   "034b4bde73d8c2aa2b347de7f5e3f6564d9e41e2d228a28f82ad98b23f354550",
+   "util-linux-core",
+   "set up a Linux swap area",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/newusers",
+   "9d884082e2632b06b79d94c3f470958ebda2f49c853a9b1229dd0b4ff142dd34",
+   "shadow-utils",
+   "update and create new users in batch",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/nologin",
+   "13f6e187364de936cddd7ad4ac0ec8d7ab97104c476aa7225e37324936020e40",
+   "util-linux",
+   "politely refuse a login",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/nstat",
+   "e2d5b47a931a8455b215d0e4e49a8be9127a7e40ae6ca6ed2bd59101f2cb319e",
+   "iproute",
+   "network statistics tools.",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/ownership",
+   "4cd16e640295a6842b37efb05d9e66a4338afac06f22b663023ff2a3d06f71a0",
+   "dmidecode",
+   "Compaq ownership tag retriever",
+   "",
+   false
+  ],
+  [
+   "/usr/sbin/pam_console_apply",
+   "c07c8fc6384b2c289d72991155366f3ee19ae4fbad80c9b86680f5c309a046e9",
+   "pam",
+   "set or revoke permissions for users at the system con...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/pam_timestamp_check",
+   "2cc93196e3858f5e7cdfdf8f96fc8e99ff88c252263fab6d039e9b8a0fd7cfd3",
+   "pam",
+   "Check to see if the default timestamp is valid",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/partx",
+   "013df626accce6644a4d0e7e07e2f2f0786279837b8f2bba6bc4c2036114844b",
+   "util-linux-core",
+   "tell the kernel about the presence and numbering of on...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/pivot_root",
+   "f78ad092ad022906202cdbf83d8ff1267c0be59da1045e2858828f62698e7548",
+   "util-linux",
+   "change the root filesystem",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/pwck",
+   "71b887b331483b4eb1eb42581c0e46e9e1efe7f9dcf3b4cef95853ac83c61a0f",
+   "shadow-utils",
+   "verify integrity of password files",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/pwconv",
+   "f65ab87fb550fd1a8eb37f343e034d3bd179537ce3cfb09de31ebaa2d357df6b",
+   "shadow-utils",
+   "convert to and from shadow passwords and groups",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/pwhistory_helper",
+   "c311563996386728f3e71ca1e81ca7aa1db7349bfb81be8767b1ad383d4461f1",
+   "pam",
+   "Helper binary that transfers password hashes from pass...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/pwunconv",
+   "91bf2a1cc7b664ea1786c486a9e5973d3374eeb2da87accb2d2a1259bcdae257",
+   "shadow-utils",
+   "convert to and from shadow passwords and groups",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/rdisc",
+   "b1ecd4ebed2156d4107d16c6b97ab19c028a075e6e1dd48a4079c620a8f7cf42",
+   "iputils",
+   "network router discovery daemon",
+   "rdisc.service",
+   true
+  ],
+  [
+   "/usr/sbin/rdma",
+   "79f9055ff5ed6c93a6e55eef58236fba3d03c2e88e4c240b6a040a51bf3dc7bf",
+   "iproute",
+   "RDMA tool",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/readprofile",
+   "6c9a37296e1800d2b8068f8f526f7eecb13273d6e1026d588bf5f74c007d32b6",
+   "util-linux",
+   "read kernel profiling information",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/request-key",
+   "21ef6595cea49f08f45eb97c397bf7753a2d435365e4db7c239b0828d2769887",
+   "keyutils",
+   "handle key instantiation callback requests from the ke...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/resizepart",
+   "f4fd0e62cc91e77f00d806ac580ad5251a3f25575ca23f4c35469799da6712d1",
+   "util-linux",
+   "tell the kernel about the new size of a partition",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/restorecon_xattr",
+   "79345f383cad59b0d53d62c29f980cab72b7a1043ab9b0de34b1a4037940ea47",
+   "policycoreutils",
+   "manage security.sehash extended attribute entries adde...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/rfkill",
+   "2434bfe1bb585d57f9c4de0f75aecc2efb6d4fe6ec9caacec9fb0762067ed5f8",
+   "util-linux",
+   "tool for enabling and disabling wireless devices",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/rsyslogd",
+   "5be9be6132412ee017b7de3ea071944a5c6d33bb293e5b3afcf8e04c927c77ac",
+   "rsyslog",
+   "reliable and extended syslogd",
+   "rsyslog.service",
+   true
+  ],
+  [
+   "/usr/sbin/rtacct",
+   "925dba5c8cf64fe84bf52330e3a0a152930b1b0afc8ba66b0aee9a02e9bceecb",
+   "iproute",
+   "network statistics tools.",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/rtcwake",
+   "6fb3b0e10d29131561ee50008b1c3c60ec3e44d9a309abeaec6dfab0d70a6623",
+   "util-linux",
+   "enter a system sleep state until specified wakeup time",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/rtmon",
+   "e034df5313be02cc7a3ea276b5a0562a0d63e3023c53703758dc816088c8edd5",
+   "iproute",
+   "listens to and monitors RTnetlink",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/runuser",
+   "05f6152ce9624098027666da6c1fae6bfabf508493f6173b4f8702691a35f5dc",
+   "util-linux",
+   "run a command with substitute user and group ID",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/sasldblistusers2",
+   "41dde1653f48b854d0b928dc3242c1ac9a7cf222925b5b7bb00e38ca2115fdbc",
+   "cyrus-sasl-lib",
+   "Shared libraries needed by applications which use Cyrus SASL",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/saslpasswd2",
+   "9b6cf403d1d2a816351473d85e638b94ac60d6f729d92a6b812af52de04839e1",
+   "cyrus-sasl-lib",
+   "Shared libraries needed by applications which use Cyrus SASL",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/sefcontext_compile",
+   "2b927f416cb8f51eb5833f369760c8af778e686b3530107e72f84a717120e24c",
+   "libselinux-utils",
+   "compile file context regular expression files",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/selabel_digest",
+   "eba1a36e19341106cbfec33b89fdb021f84246ebcf022fead4d06ff81426a1f2",
+   "libselinux-utils",
+   "SELinux libselinux utilities",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/selabel_get_digests_all_partial_matches",
+   "9625603e27fb7d1ef3753612d4c9a0bd5b42280daa7de9c090e934c9b1db96f1",
+   "libselinux-utils",
+   "SELinux libselinux utilities",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/selabel_lookup",
+   "5dd41858fdae35735c9bb79a29a89b2ce4edf5004bd75a944c2bf8ffa03e0af1",
+   "libselinux-utils",
+   "SELinux libselinux utilities",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/selabel_lookup_best_match",
+   "eebc00a45176142e085cdfd494e9730cba2fa2cff071dae635eb823f5dabf8dc",
+   "libselinux-utils",
+   "SELinux libselinux utilities",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/selabel_partial_match",
+   "d971a5946c69d4f93f0962f26d0087717668f0a0af6c11acf688736520707fdb",
+   "libselinux-utils",
+   "SELinux libselinux utilities",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/selinux_check_access",
+   "281c4d97bf384f7c09f021bcb087bdb710971c25aa4e1a92027d70a24987a9ba",
+   "libselinux-utils",
+   "SELinux libselinux utilities",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/selinuxconlist",
+   "083ac81249878349d5b8470714cc47514f1f59e0f91b1a46adf183eaf35d9e9e",
+   "libselinux-utils",
+   "list all SELinux context reachable for user",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/selinuxdefcon",
+   "05a0901e7cc757edc2981124795c9632817ba848e528a0c5267679863b9e7ad0",
+   "libselinux-utils",
+   "report default SELinux context for user",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/selinuxenabled",
+   "d1fce902c9be866e88d7a15cf2e5ee16ab7d6ebcd1aa0c6325877d05e9426093",
+   "libselinux-utils",
+   "tool to be used within shell scripts to determine if s...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/selinuxexeccon",
+   "016b276dad63ee4a1d601d92608462fe6c93c129166ae5aa10b79b2ad24d6bac",
+   "libselinux-utils",
+   "report SELinux context used for this executable",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/semodule",
+   "b778169942257247af42e88feb7b90c57247480cb251ed0c958826aaef8208db",
+   "policycoreutils",
+   "Manage SELinux policy modules.",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/setcap",
+   "5b9a4d2d45b07cc3e37d2b664805662c131bbe6e9b6361e0e1b11dbd20146d6d",
+   "libcap",
+   "set file capabilities",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/setenforce",
+   "2f1f8f39b9dbcac8fc120397f680f48a6f595318ed86752936fd64475aa8784b",
+   "libselinux-utils",
+   "modify the mode SELinux is running in",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/setfiles",
+   "8f45876b578acfe1471c89237baf0f009e4e483abed0284e846810afe5013d3a",
+   "policycoreutils",
+   "set SELinux file security contexts.",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/setsebool",
+   "8c0b5e9f0bf281d761945b4e5b1b9f5d7356a96b890260862a3e05c8151c1061",
+   "policycoreutils",
+   "set SELinux boolean value",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/sfdisk",
+   "ca0738570661bcbc3d3ae44263bf8ea1f0b463a20946a81e5136c87429663b0a",
+   "util-linux",
+   "display or manipulate a disk partition table",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/ss",
+   "57f229605cc48220fe7ca34278d46aed70a2e4333fae10ea903ee36fd2682627",
+   "iproute",
+   "another utility to investigate sockets",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/sshd",
+   "7d6e70fd10e340c0af8e77a924211a544408210b8f48f9f015ccf388e65915a6",
+   "openssh-server",
+   "OpenSSH daemon",
+   "sshd.service;sshd@.service",
+   true
+  ],
+  [
+   "/usr/sbin/sulogin",
+   "04edf258ba6a4764b557b579931a399f91d52013161035413c5af93dc17d0e86",
+   "util-linux",
+   "single-user login",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/swaplabel",
+   "df427bbef323de108e3a9dccc0a0f2e530afb912af5a541f6e80c7f7752f1103",
+   "util-linux",
+   "print or change the label or UUID of a swap area",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/swapoff",
+   "747fc2112b27dbc46b0fed2f295829149b2a16e8e650200aa773320295c7bd62",
+   "util-linux-core",
+   "enable/disable devices and files for paging and swapping",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/swapon",
+   "afd46cd049fab83ec3c62bd38bfc68021a20d252ad97d05197c36d3ad5ff5869",
+   "util-linux-core",
+   "enable/disable devices and files for paging and swapping",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/switch_root",
+   "f40c69ba07bbb2a252dac2f4c3a9e31f865b5b1c4682e4c346c53c3a91b6e40f",
+   "util-linux-core",
+   "switch to another filesystem as the root of the mount ...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/sysctl",
+   "ba9a4834c8a15a33cf54707a982796634354a406e1dfc5be5100feb04ee6e78f",
+   "procps-ng",
+   "configure kernel parameters at runtime",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/tipc",
+   "42c5bcfaa3a6c31d1ea7c61284812a8b93e9372f8213890435b5f41f91bafafb",
+   "iproute",
+   "a TIPC configuration and management tool",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/unix_chkpwd",
+   "48460baf8aa1ba0774c07c579ec4588fd11528151414df6833aa2c5569af7c77",
+   "pam",
+   "Helper binary that verifies the password of the curren...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/unix_update",
+   "2ddba694f9932e6584f280cdcf103960ca54f05cfbf67450a44c961b3e6f8458",
+   "pam",
+   "Helper binary that updates the password of a given user",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/useradd",
+   "07377d92082b4d49693c4477b2a72acb149950bc14a81c66b1a237f29a8ec95e",
+   "shadow-utils",
+   "create a new user or update default new user information",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/userdel",
+   "55c6da03442407ff4ef6be9067343a1c6c50a1a95f369be88ed7e2b85af7969d",
+   "shadow-utils",
+   "delete a user account and related files",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/userhelper",
+   "47d032101902c8654babb05c0d1c92b996030e5df7d5b5b6290b0906388dc484",
+   "usermode",
+   "A helper interface to PAM.",
+   "",
+   false
+  ],
+  [
+   "/usr/sbin/usermod",
+   "720d82c09e6de6b766e0dfc1f53272e5bd725af62a4f947a6e1483396190682b",
+   "shadow-utils",
+   "modify a user account",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/validatetrans",
+   "fac2289c8e9c4b0495e6b27f3e71c061ad2a580e48766194343d6ad2cf94c9b8",
+   "libselinux-utils",
+   "SELinux libselinux utilities",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/vdpa",
+   "0c6d9f20a3d17433c10af934cda7dca3bc82e80da26ca107909d77bb16cf775e",
+   "iproute",
+   "vdpa management tool",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/vipw",
+   "b42c427d5c1492bfd01f626aab54a2e9f656818e6065afea4cee6675c86f4405",
+   "shadow-utils",
+   "edit the password, group, shadow-password or shadow-gr...",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/virt-what-cvm",
+   "9906b37c1dff63044be8b134e3212f2e08cf5659dcef885d3529f0a21cb886f5",
+   "virt-what",
+   "detect if we are running in a confidential virtual mac...",
+   "",
+   false
+  ],
+  [
+   "/usr/sbin/visudo",
+   "8e4da9c00af853c726a25b3dcd244e513a44ba84a9581dfc1734c9100ede8c8a",
+   "sudo",
+   "edit the sudoers file",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/vpddecode",
+   "f7f88d35cbf711fc6b11053a1fc6f188f6fa36bc044f12ecd16be274e8ad1bcf",
+   "dmidecode",
+   "VPD structure decoder",
+   "",
+   false
+  ],
+  [
+   "/usr/sbin/wipefs",
+   "394778213a32c706ba9ae7ae01d17931855f07c97fe942687bf36c9d8589d000",
+   "util-linux",
+   "wipe a signature from a device",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/zic",
+   "a6527923eb9a15a213aa1fbfbf7162965d2701db7c4153c8a1628751170a0fb7",
+   "glibc-common",
+   "Common binaries and locale data for glibc",
+   "",
+   true
+  ],
+  [
+   "/usr/sbin/zramctl",
+   "4f06002ef4945359e5b404371c40e716b87b5a6b433c1ab67ea9a140b3c1ca58",
+   "util-linux",
+   "set up and control zram devices",
+   "",
+   true
+  ]
+ ]
+}

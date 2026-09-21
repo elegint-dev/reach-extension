@@ -1,0 +1,46 @@
+{
+  "note": "Top values in the shape discovery.profile stores (fields.<name>.profile.top: [{ value, count }]), one field per shape the ladder previews against.",
+  "fields": {
+    "Image": {
+      "profile": {
+        "top": [
+          { "value": "C:\\Windows\\System32\\cmd.exe", "count": 40 },
+          { "value": "C:\\Windows\\System32\\svchost.exe", "count": 25 },
+          { "value": "C:\\Windows\\SysWOW64\\cmd.exe", "count": 10 },
+          { "value": "C:\\Program Files\\App\\app.exe", "count": 8 },
+          { "value": "C:\\Users\\alice\\AppData\\Local\\Temp\\evil.exe", "count": 2 },
+          { "value": "D:\\tools\\cmd.exe", "count": 1 }
+        ]
+      }
+    },
+    "userIdentity.arn": {
+      "profile": {
+        "top": [
+          { "value": "arn:aws:iam::123456789012:user/jdoe", "count": 30 },
+          { "value": "arn:aws:iam::123456789012:user/asmith", "count": 20 },
+          { "value": "arn:aws:sts::123456789012:assumed-role/AdminRole/session-1", "count": 12 },
+          { "value": "arn:aws:iam::999999999999:user/jdoe", "count": 3 }
+        ]
+      }
+    },
+    "url": {
+      "profile": {
+        "top": [
+          { "value": "https://evil.example.com/a/b/c.php?id=1", "count": 9 },
+          { "value": "https://evil.example.com/login", "count": 6 },
+          { "value": "https://good.example.org/", "count": 5 }
+        ]
+      }
+    },
+    "src_ip": {
+      "profile": {
+        "top": [
+          { "value": "10.0.5.5", "count": 50 },
+          { "value": "10.0.9.1", "count": 20 },
+          { "value": "10.1.0.1", "count": 10 },
+          { "value": "192.168.1.1", "count": 5 }
+        ]
+      }
+    }
+  }
+}

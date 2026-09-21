@@ -1,0 +1,488 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "mscs-vnet-flow",
+  "name": "Azure virtual network flow logs",
+  "pack_version": "0.1.0",
+  "description": "Azure Network Watcher virtual network flow logs: one JSON record per collection interval, holding many flow tuples grouped by the ACL and rule that evaluated them, each tuple a 5-tuple plus direction, state, encryption and throughput.",
+  "source": "Microsoft Learn's Virtual Network Flow Logs page (the Log format and Sample log record sections); field names confirmed against the vendor's own published sample record as indexed.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "mscs_vnet_flow",
+    "label": "Azure virtual network flow logs",
+    "description": "Layer 4 IP flow records for a virtual network: the network security group or Virtual Network Manager rule that evaluated each flow, its 5-tuple, direction, lifecycle state, encryption status and packet/byte counts.",
+    "tags": [
+      "network",
+      "azure",
+      "flow"
+    ],
+    "discriminator": "event_category"
+  },
+  "concepts": {
+    "event_time": {
+      "label": "Record time",
+      "type": "event_time",
+      "description": "When Azure Network Watcher wrote this record, in UTC. Aggregates flow tuples collected over roughly the previous minute; later than any single flowTimestamp inside it.",
+      "hazards": [
+        "tuple_time_order"
+      ]
+    },
+    "flow_time": {
+      "label": "Flow tuple timestamp",
+      "type": "event_time",
+      "description": "When one flow tuple inside the record occurred, distinct from the record's own publish time.",
+      "hazards": [
+        "tuple_time_order",
+        "time_basis"
+      ]
+    },
+    "event_category": {
+      "label": "Record category",
+      "type": "record_type",
+      "description": "Which kind of Azure Monitor diagnostic record this is. Every virtual network flow log record carries the fixed value FlowLogFlowEvent in both the category and operationName columns.",
+      "role": "event_name"
+    },
+    "flow_log_version": {
+      "label": "Flow log schema version",
+      "type": "version",
+      "description": "The flow log record schema version; decides which fields and which flowTuples layout (13 comma fields) apply."
+    },
+    "flow_log_id": {
+      "label": "FlowLog resource GUID",
+      "type": "identifier",
+      "description": "The resource GUID of the FlowLog resource that produced this record.",
+      "role": "identifier",
+      "hazards": [
+        "guid_lookalikes"
+      ]
+    },
+    "flow_log_resource_id": {
+      "label": "FlowLog resource id",
+      "type": "resource_id",
+      "description": "The ARM resource id of the FlowLog resource itself, under a Network Watcher's flowLogs collection.",
+      "hazards": [
+        "lookalike_resource_ids"
+      ]
+    },
+    "target_resource_id": {
+      "label": "Target resource id",
+      "type": "resource_id",
+      "description": "The ARM resource id of the virtual network, subnet or NIC the FlowLog is attached to, whose traffic this record describes.",
+      "hazards": [
+        "lookalike_resource_ids"
+      ]
+    },
+    "interface_mac": {
+      "label": "Interface MAC address",
+      "type": "identifier",
+      "description": "The MAC address of the network interface where Azure captured the flow, written as 12 hex characters with no separators.",
+      "role": "identifier",
+      "hazards": [
+        "mac_no_separators"
+      ]
+    },
+    "acl_id": {
+      "label": "Evaluating ACL id",
+      "type": "identifier",
+      "description": "The id of the network security group or Azure Virtual Network Manager security-admin configuration that evaluated this traffic.",
+      "role": "identifier",
+      "hazards": [
+        "guid_lookalikes"
+      ]
+    },
+    "rule_name": {
+      "label": "Rule name",
+      "type": "identifier",
+      "description": "The name of the NSG or Virtual Network Manager rule that allowed or denied the traffic; can also be a platform-generated name for traffic the Azure platform itself handled.",
+      "role": "identifier"
+    },
+    "source_ip": {
+      "label": "Source address",
+      "type": "source_ip",
+      "description": "The address the flow's packets carried as the source.",
+      "role": "ip",
+      "hazards": [
+        "nat_vpn"
+      ]
+    },
+    "dest_ip": {
+      "label": "Destination address",
+      "type": "identifier",
+      "description": "The address the flow's packets carried as the destination.",
+      "role": "ip",
+      "hazards": [
+        "nat_vpn"
+      ]
+    },
+    "source_port": {
+      "label": "Source port",
+      "type": "identifier",
+      "description": "The source transport-layer port of the flow.",
+      "role": "identifier"
+    },
+    "dest_port": {
+      "label": "Destination port",
+      "type": "identifier",
+      "description": "The destination transport-layer port of the flow, usually the more useful of the pair for spotting a service.",
+      "role": "identifier"
+    },
+    "protocol": {
+      "label": "Protocol",
+      "type": "enum",
+      "description": "The flow's Layer 4 protocol, an IANA protocol number.",
+      "role": "enum"
+    },
+    "flow_direction": {
+      "label": "Flow direction",
+      "type": "enum",
+      "description": "Whether the flow was inbound or outbound through the monitored interface.",
+      "role": "enum"
+    },
+    "flow_state": {
+      "label": "Flow state",
+      "type": "enum",
+      "description": "The tuple's position in the flow's lifecycle: begin, continuing, end or deny.",
+      "role": "enum",
+      "hazards": [
+        "aggregate_counts"
+      ]
+    },
+    "flow_encryption": {
+      "label": "Flow encryption status",
+      "type": "enum",
+      "description": "Whether the platform encrypted this flow and, if not, why.",
+      "role": "enum"
+    },
+    "packets_sent": {
+      "label": "Packets sent",
+      "type": "count",
+      "description": "Packets sent from source to destination since the tuple's last update.",
+      "role": "count",
+      "hazards": [
+        "aggregate_counts"
+      ]
+    },
+    "bytes_sent": {
+      "label": "Bytes sent",
+      "type": "count",
+      "description": "Packet bytes (header and payload) sent from source to destination since the tuple's last update.",
+      "role": "count",
+      "hazards": [
+        "aggregate_counts"
+      ]
+    },
+    "packets_received": {
+      "label": "Packets received",
+      "type": "count",
+      "description": "Packets sent from destination to source since the tuple's last update.",
+      "role": "count",
+      "hazards": [
+        "aggregate_counts"
+      ]
+    },
+    "bytes_received": {
+      "label": "Bytes received",
+      "type": "count",
+      "description": "Packet bytes (header and payload) sent from destination to source since the tuple's last update.",
+      "role": "count",
+      "hazards": [
+        "aggregate_counts"
+      ]
+    }
+  },
+  "containers": {
+    "mscs:vnet:flow": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Azure virtual network flow logs as indexed in the dev Splunk: one event per flow log record, the records[] wrapper stripped at index time.",
+      "note": "flowRecords.flows{} and its flowGroups{} nest an array of ACLs and an array of rules per ACL; flowTuples{} nests one object per flow tuple. The vendor's own wire format documents each tuple as a 13-field comma-separated string (Log format section); this dev index instead holds one JSON object per tuple with the same 13 fields, named. Whether a production TA lands the comma string as-is (needing a delimited-field transform to reach these names) or reshapes it the same way was not found in this repository."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "time",
+      "concept": "event_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the flow log's JSON record; Splunk's JSON field extraction flattens a nested object to a dotted name and an array of objects to name{}.field. The dev index's own record has no records[] wrapper around it (confirmed live), matching the props.conf [mscs:vnet:flow] LINE_BREAKER/SEDCMD unwrap the vendor sample's provenance describes (Microsoft Learn, 'Virtual Network Flow Logs - Azure Network Watcher', https://learn.microsoft.com/en-us/azure/network-watcher/vnet-flow-logs-overview)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowLogVersion",
+      "concept": "flow_log_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the flow log's JSON record; Splunk's JSON field extraction flattens a nested object to a dotted name and an array of objects to name{}.field. The dev index's own record has no records[] wrapper around it (confirmed live), matching the props.conf [mscs:vnet:flow] LINE_BREAKER/SEDCMD unwrap the vendor sample's provenance describes (Microsoft Learn, 'Virtual Network Flow Logs - Azure Network Watcher', https://learn.microsoft.com/en-us/azure/network-watcher/vnet-flow-logs-overview)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowLogGUID",
+      "concept": "flow_log_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the flow log's JSON record; Splunk's JSON field extraction flattens a nested object to a dotted name and an array of objects to name{}.field. The dev index's own record has no records[] wrapper around it (confirmed live), matching the props.conf [mscs:vnet:flow] LINE_BREAKER/SEDCMD unwrap the vendor sample's provenance describes (Microsoft Learn, 'Virtual Network Flow Logs - Azure Network Watcher', https://learn.microsoft.com/en-us/azure/network-watcher/vnet-flow-logs-overview)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "macAddress",
+      "concept": "interface_mac",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the flow log's JSON record; Splunk's JSON field extraction flattens a nested object to a dotted name and an array of objects to name{}.field. The dev index's own record has no records[] wrapper around it (confirmed live), matching the props.conf [mscs:vnet:flow] LINE_BREAKER/SEDCMD unwrap the vendor sample's provenance describes (Microsoft Learn, 'Virtual Network Flow Logs - Azure Network Watcher', https://learn.microsoft.com/en-us/azure/network-watcher/vnet-flow-logs-overview)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "category",
+      "concept": "event_category",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the flow log's JSON record; Splunk's JSON field extraction flattens a nested object to a dotted name and an array of objects to name{}.field. The dev index's own record has no records[] wrapper around it (confirmed live), matching the props.conf [mscs:vnet:flow] LINE_BREAKER/SEDCMD unwrap the vendor sample's provenance describes (Microsoft Learn, 'Virtual Network Flow Logs - Azure Network Watcher', https://learn.microsoft.com/en-us/azure/network-watcher/vnet-flow-logs-overview)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowLogResourceID",
+      "concept": "flow_log_resource_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the flow log's JSON record; Splunk's JSON field extraction flattens a nested object to a dotted name and an array of objects to name{}.field. The dev index's own record has no records[] wrapper around it (confirmed live), matching the props.conf [mscs:vnet:flow] LINE_BREAKER/SEDCMD unwrap the vendor sample's provenance describes (Microsoft Learn, 'Virtual Network Flow Logs - Azure Network Watcher', https://learn.microsoft.com/en-us/azure/network-watcher/vnet-flow-logs-overview)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "targetResourceID",
+      "concept": "target_resource_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the flow log's JSON record; Splunk's JSON field extraction flattens a nested object to a dotted name and an array of objects to name{}.field. The dev index's own record has no records[] wrapper around it (confirmed live), matching the props.conf [mscs:vnet:flow] LINE_BREAKER/SEDCMD unwrap the vendor sample's provenance describes (Microsoft Learn, 'Virtual Network Flow Logs - Azure Network Watcher', https://learn.microsoft.com/en-us/azure/network-watcher/vnet-flow-logs-overview)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "operationName",
+      "concept": "event_category",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the flow log's JSON record; Splunk's JSON field extraction flattens a nested object to a dotted name and an array of objects to name{}.field. The dev index's own record has no records[] wrapper around it (confirmed live), matching the props.conf [mscs:vnet:flow] LINE_BREAKER/SEDCMD unwrap the vendor sample's provenance describes (Microsoft Learn, 'Virtual Network Flow Logs - Azure Network Watcher', https://learn.microsoft.com/en-us/azure/network-watcher/vnet-flow-logs-overview)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.aclID",
+      "concept": "acl_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the flow log's JSON record; Splunk's JSON field extraction flattens a nested object to a dotted name and an array of objects to name{}.field. The dev index's own record has no records[] wrapper around it (confirmed live), matching the props.conf [mscs:vnet:flow] LINE_BREAKER/SEDCMD unwrap the vendor sample's provenance describes (Microsoft Learn, 'Virtual Network Flow Logs - Azure Network Watcher', https://learn.microsoft.com/en-us/azure/network-watcher/vnet-flow-logs-overview)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.flowGroups{}.rule",
+      "concept": "rule_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the flow log's JSON record; Splunk's JSON field extraction flattens a nested object to a dotted name and an array of objects to name{}.field. The dev index's own record has no records[] wrapper around it (confirmed live), matching the props.conf [mscs:vnet:flow] LINE_BREAKER/SEDCMD unwrap the vendor sample's provenance describes (Microsoft Learn, 'Virtual Network Flow Logs - Azure Network Watcher', https://learn.microsoft.com/en-us/azure/network-watcher/vnet-flow-logs-overview)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.flowGroups{}.flowTuples{}.flowTimestamp",
+      "concept": "flow_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the JSON record; the dev index's raw flowTuples array holds one JSON object per tuple (flowTimestamp, srcIp, destIp, srcPort, destPort, protocol, flowDirection, flowState, flowEncryption, packetsSent, bytesSent, packetsReceived, bytesReceived), confirmed live against the dev Splunk. The vendor page documents this same 13-item order as a comma-separated string, not a JSON object; whether a production Splunk index of the real Azure export uses this same object shape or needs a delimited-field transform to reach it is not verified here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.flowGroups{}.flowTuples{}.srcIp",
+      "concept": "source_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the JSON record; the dev index's raw flowTuples array holds one JSON object per tuple (flowTimestamp, srcIp, destIp, srcPort, destPort, protocol, flowDirection, flowState, flowEncryption, packetsSent, bytesSent, packetsReceived, bytesReceived), confirmed live against the dev Splunk. The vendor page documents this same 13-item order as a comma-separated string, not a JSON object; whether a production Splunk index of the real Azure export uses this same object shape or needs a delimited-field transform to reach it is not verified here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.flowGroups{}.flowTuples{}.destIp",
+      "concept": "dest_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the JSON record; the dev index's raw flowTuples array holds one JSON object per tuple (flowTimestamp, srcIp, destIp, srcPort, destPort, protocol, flowDirection, flowState, flowEncryption, packetsSent, bytesSent, packetsReceived, bytesReceived), confirmed live against the dev Splunk. The vendor page documents this same 13-item order as a comma-separated string, not a JSON object; whether a production Splunk index of the real Azure export uses this same object shape or needs a delimited-field transform to reach it is not verified here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.flowGroups{}.flowTuples{}.srcPort",
+      "concept": "source_port",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the JSON record; the dev index's raw flowTuples array holds one JSON object per tuple (flowTimestamp, srcIp, destIp, srcPort, destPort, protocol, flowDirection, flowState, flowEncryption, packetsSent, bytesSent, packetsReceived, bytesReceived), confirmed live against the dev Splunk. The vendor page documents this same 13-item order as a comma-separated string, not a JSON object; whether a production Splunk index of the real Azure export uses this same object shape or needs a delimited-field transform to reach it is not verified here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.flowGroups{}.flowTuples{}.destPort",
+      "concept": "dest_port",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the JSON record; the dev index's raw flowTuples array holds one JSON object per tuple (flowTimestamp, srcIp, destIp, srcPort, destPort, protocol, flowDirection, flowState, flowEncryption, packetsSent, bytesSent, packetsReceived, bytesReceived), confirmed live against the dev Splunk. The vendor page documents this same 13-item order as a comma-separated string, not a JSON object; whether a production Splunk index of the real Azure export uses this same object shape or needs a delimited-field transform to reach it is not verified here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.flowGroups{}.flowTuples{}.protocol",
+      "concept": "protocol",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the JSON record; the dev index's raw flowTuples array holds one JSON object per tuple (flowTimestamp, srcIp, destIp, srcPort, destPort, protocol, flowDirection, flowState, flowEncryption, packetsSent, bytesSent, packetsReceived, bytesReceived), confirmed live against the dev Splunk. The vendor page documents this same 13-item order as a comma-separated string, not a JSON object; whether a production Splunk index of the real Azure export uses this same object shape or needs a delimited-field transform to reach it is not verified here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.flowGroups{}.flowTuples{}.flowDirection",
+      "concept": "flow_direction",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the JSON record; the dev index's raw flowTuples array holds one JSON object per tuple (flowTimestamp, srcIp, destIp, srcPort, destPort, protocol, flowDirection, flowState, flowEncryption, packetsSent, bytesSent, packetsReceived, bytesReceived), confirmed live against the dev Splunk. The vendor page documents this same 13-item order as a comma-separated string, not a JSON object; whether a production Splunk index of the real Azure export uses this same object shape or needs a delimited-field transform to reach it is not verified here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.flowGroups{}.flowTuples{}.flowState",
+      "concept": "flow_state",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the JSON record; the dev index's raw flowTuples array holds one JSON object per tuple (flowTimestamp, srcIp, destIp, srcPort, destPort, protocol, flowDirection, flowState, flowEncryption, packetsSent, bytesSent, packetsReceived, bytesReceived), confirmed live against the dev Splunk. The vendor page documents this same 13-item order as a comma-separated string, not a JSON object; whether a production Splunk index of the real Azure export uses this same object shape or needs a delimited-field transform to reach it is not verified here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.flowGroups{}.flowTuples{}.flowEncryption",
+      "concept": "flow_encryption",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the JSON record; the dev index's raw flowTuples array holds one JSON object per tuple (flowTimestamp, srcIp, destIp, srcPort, destPort, protocol, flowDirection, flowState, flowEncryption, packetsSent, bytesSent, packetsReceived, bytesReceived), confirmed live against the dev Splunk. The vendor page documents this same 13-item order as a comma-separated string, not a JSON object; whether a production Splunk index of the real Azure export uses this same object shape or needs a delimited-field transform to reach it is not verified here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.flowGroups{}.flowTuples{}.packetsSent",
+      "concept": "packets_sent",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the JSON record; the dev index's raw flowTuples array holds one JSON object per tuple (flowTimestamp, srcIp, destIp, srcPort, destPort, protocol, flowDirection, flowState, flowEncryption, packetsSent, bytesSent, packetsReceived, bytesReceived), confirmed live against the dev Splunk. The vendor page documents this same 13-item order as a comma-separated string, not a JSON object; whether a production Splunk index of the real Azure export uses this same object shape or needs a delimited-field transform to reach it is not verified here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.flowGroups{}.flowTuples{}.bytesSent",
+      "concept": "bytes_sent",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the JSON record; the dev index's raw flowTuples array holds one JSON object per tuple (flowTimestamp, srcIp, destIp, srcPort, destPort, protocol, flowDirection, flowState, flowEncryption, packetsSent, bytesSent, packetsReceived, bytesReceived), confirmed live against the dev Splunk. The vendor page documents this same 13-item order as a comma-separated string, not a JSON object; whether a production Splunk index of the real Azure export uses this same object shape or needs a delimited-field transform to reach it is not verified here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.flowGroups{}.flowTuples{}.packetsReceived",
+      "concept": "packets_received",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the JSON record; the dev index's raw flowTuples array holds one JSON object per tuple (flowTimestamp, srcIp, destIp, srcPort, destPort, protocol, flowDirection, flowState, flowEncryption, packetsSent, bytesSent, packetsReceived, bytesReceived), confirmed live against the dev Splunk. The vendor page documents this same 13-item order as a comma-separated string, not a JSON object; whether a production Splunk index of the real Azure export uses this same object shape or needs a delimited-field transform to reach it is not verified here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vnet:flow",
+      "column": "flowRecords.flows{}.flowGroups{}.flowTuples{}.bytesReceived",
+      "concept": "bytes_received",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed from the JSON record; the dev index's raw flowTuples array holds one JSON object per tuple (flowTimestamp, srcIp, destIp, srcPort, destPort, protocol, flowDirection, flowState, flowEncryption, packetsSent, bytesSent, packetsReceived, bytesReceived), confirmed live against the dev Splunk. The vendor page documents this same 13-item order as a comma-separated string, not a JSON object; whether a production Splunk index of the real Azure export uses this same object shape or needs a delimited-field transform to reach it is not verified here."
+      }
+    }
+  ],
+  "hazards": {
+    "tuple_time_order": {
+      "text": "The record's own time is publish time, not event time: Azure batches roughly a minute of flow tuples before writing the record, so every flowTimestamp inside can be up to about 60 seconds earlier than the record's time."
+    },
+    "guid_lookalikes": {
+      "text": "flowLogGUID (the FlowLog resource itself) and aclID (the NSG or Virtual Network Manager config evaluating the traffic) are both bare GUIDs with nothing in the string to tell them apart out of context."
+    },
+    "lookalike_resource_ids": {
+      "text": "flowLogResourceID (the FlowLog resource) and targetResourceID (the resource the FlowLog watches) are both full ARM resource id strings and easy to swap; the sample record even cases them differently (upper-case SUBSCRIPTIONS/RESOURCEGROUPS on one, lower-case on the other), so a case-sensitive join can silently miss."
+    },
+    "mac_no_separators": {
+      "text": "macAddress is 12 hex characters with no colons or dashes (112233445566); normalise before comparing to a colon-separated MAC from another source."
+    },
+    "aggregate_counts": {
+      "text": "Continuing (C) and End (E) tuples carry packet and byte counts aggregated since the flow's previous tuple, not the flow's running total. Begin (B) tuples carry zero counts in the vendor's own sample record, though the vendor's separate bandwidth-calculation example shows a Begin tuple with the four count fields empty instead of zero."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

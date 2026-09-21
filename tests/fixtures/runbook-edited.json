@@ -1,0 +1,27 @@
+{
+  "format": "reach-runbook",
+  "version": 1,
+  "id": "sentinel-rules:name:gitlab bruteforce attempts",
+  "title": "GitLab - Brute-force Attempts",
+  "rule": {
+    "platform": "sentinel",
+    "name": "GitLab - Brute-force Attempts",
+    "keys": [{ "source": "sentinel-rules", "by": "name", "value": "gitlab bruteforce attempts" }]
+  },
+  "seeded_from": { "source": "sentinel-rules", "id": "8ed6b4b3-2c33-4cc6-b7d0-2e3f7e7a0000", "url": "https://github.com/Azure/Azure-Sentinel/blob/master/Solutions/GitLab/Analytic%20Rules/GitLab%20-%20Brute-force%20Attempts.yaml", "label": "seeded from Sentinel analytic rules", "ref": "master" },
+  "description": "Identifies brute-force attempts against GitLab accounts.",
+  "techniques": ["T1110"],
+  "steps": [
+    { "id": "confirm", "kind": "confirm", "question": "Does the row match what the rule looks for?", "why": "Identifies brute-force attempts against GitLab accounts.", "pivot": null },
+    { "id": "src", "kind": "pivot", "question": "Every sign-in from the source address in the last day", "why": "A password spray shows as many accounts from one address.", "pivot": { "packId": "reach-sentinel-samples", "edge": "sentinel_signin_by_ip", "container": "SigninLogs", "type": "source_ip", "binds": { "value": "IPAddress" } } },
+    { "id": "vpn", "kind": "check", "question": "Is the address on the corporate VPN egress list?", "why": "The VPN egress is the usual benign case: one address, many users.", "pivot": null },
+    { "id": "close", "kind": "close", "question": "Hold the account, or mark the address benign?", "why": null, "pivot": null }
+  ],
+  "benign_when": [{ "text": "The source is a corporate VPN egress address." }, { "text": "The account is a load-test service account during a scheduled run." }],
+  "escalate_when": [{ "text": "Any success after the failures from the same address." }],
+  "notes": "Ask the platform team for the egress list before holding anything.",
+  "origin": "edited",
+  "created": 1758300000000,
+  "updated": 1758400000000,
+  "edited_at": 1758400000000
+}

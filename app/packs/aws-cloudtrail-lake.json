@@ -1,0 +1,839 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "aws-cloudtrail-lake",
+  "name": "AWS CloudTrail Lake query results",
+  "pack_version": "0.1.0",
+  "description": "AWS CloudTrail records surfaced through CloudTrail Lake's SQL query API: one event per API call, console action or service event, with the caller (userIdentity), the operation (eventSource plus eventName), where it came from, the request and response, and the outcome (errorCode). Landed by the Splunk Add-on for AWS's CloudTrail Lake input, one Lake event data store query at a time.",
+  "source": "CloudTrail record-contents and userIdentity reference pages; AWS API references for InstanceState, User, StopInstances and UpdateTrail; the Splunk Add-on for AWS CloudTrail Lake input docs",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "aws_cloudtrail_lake",
+    "label": "AWS CloudTrail Lake query results",
+    "description": "AWS CloudTrail records surfaced by a CloudTrail Lake SQL query: one event per API call, console action or service event, with the caller, the operation, where it came from, the request and response, and the outcome.",
+    "tags": [
+      "aws",
+      "cloud",
+      "audit"
+    ],
+    "discriminator": "event_name"
+  },
+  "concepts": {
+    "event_version": {
+      "label": "Event version",
+      "type": "version",
+      "description": "The CloudTrail record format's major and minor version; a higher minor version can add fields, a higher major version can remove or reshape one.",
+      "role": "version"
+    },
+    "event_time": {
+      "label": "Event time",
+      "type": "event_time",
+      "description": "When the recorded action completed, timestamped by the AWS host that served the API endpoint, in UTC.",
+      "role": "timestamp"
+    },
+    "event_source": {
+      "label": "Event source",
+      "type": "event_source",
+      "description": "The AWS service the request went to, as its endpoint hostname, for example ec2.amazonaws.com.",
+      "role": "enum"
+    },
+    "event_name": {
+      "label": "Event name",
+      "type": "record_type",
+      "description": "The API action that was called; the field that names which kind of record this is.",
+      "role": "event_name"
+    },
+    "event_type": {
+      "label": "Event type",
+      "type": "enum",
+      "description": "One fixed word classifying how the record was generated: an API call, a console action, a console sign-in, a service-generated event or a VPC endpoint network event.",
+      "role": "enum"
+    },
+    "event_category": {
+      "label": "Event category",
+      "type": "enum",
+      "description": "Whether this is a Management, Data or NetworkActivity event; used to filter LookupEvents calls.",
+      "role": "enum"
+    },
+    "event_id": {
+      "label": "Event id",
+      "type": "event_id",
+      "description": "A GUID CloudTrail generates to uniquely identify this record.",
+      "role": "event_id"
+    },
+    "request_id": {
+      "label": "Request id",
+      "type": "request_id",
+      "description": "The id the called service assigned to the request. Also appears inside responseElements.requestId on the services in this sample.",
+      "role": "identifier",
+      "hazards": [
+        "lookalike_ids"
+      ]
+    },
+    "management_event": {
+      "label": "Management event",
+      "type": "flag",
+      "description": "True JSON boolean marking a management event; present only from eventVersion 1.06 on for API call, console action, console sign-in and service event records.",
+      "role": "bool"
+    },
+    "read_only": {
+      "label": "Read only",
+      "type": "flag",
+      "description": "True JSON boolean: whether the called operation only reads state (true) or changes it (false).",
+      "role": "bool"
+    },
+    "recipient_account_id": {
+      "label": "Recipient account id",
+      "type": "account_id",
+      "description": "The account that received this event; differs from the caller's account on cross-account resource access.",
+      "role": "identifier"
+    },
+    "aws_region": {
+      "label": "AWS region",
+      "type": "region",
+      "description": "The AWS region the request was made in.",
+      "role": "enum"
+    },
+    "session_credential_from_console": {
+      "label": "Session credential from console",
+      "type": "flag",
+      "description": "String \"true\" or \"false\", not a JSON boolean, marking whether the call originated from a console session; shown only when true.",
+      "role": "bool",
+      "hazards": [
+        "string_not_bool"
+      ]
+    },
+    "identity_type": {
+      "label": "Identity type",
+      "type": "enum",
+      "description": "What kind of principal made the call: Root, IAMUser, AssumedRole, Role, FederatedUser and the other values the userIdentity page lists.",
+      "role": "enum"
+    },
+    "principal_id": {
+      "label": "Principal id",
+      "type": "user_id",
+      "description": "A unique id for the calling principal; for temporary credentials it includes the session name.",
+      "role": "user_id"
+    },
+    "principal_arn": {
+      "label": "Principal ARN",
+      "type": "principal",
+      "description": "The full ARN of the principal that made the call.",
+      "role": "user_id"
+    },
+    "caller_account_id": {
+      "label": "Caller account id",
+      "type": "account_id",
+      "description": "The account that owns the entity that granted the calling permissions.",
+      "role": "identifier"
+    },
+    "access_key_id": {
+      "label": "Access key id",
+      "type": "access_key",
+      "description": "The access key id that signed the request; may be blank for security reasons.",
+      "role": "identifier"
+    },
+    "user_name": {
+      "label": "User name",
+      "type": "user_name",
+      "description": "The friendly name of the calling identity, present for IAMUser callers and Root callers with an account alias.",
+      "role": "user_id"
+    },
+    "session_mfa_authenticated": {
+      "label": "Session MFA authenticated",
+      "type": "flag",
+      "description": "String \"true\" or \"false\", not a JSON boolean: whether the session's credentials were also MFA-authenticated.",
+      "role": "bool",
+      "hazards": [
+        "string_not_bool"
+      ]
+    },
+    "session_creation_date": {
+      "label": "Session creation date",
+      "type": "event_time",
+      "description": "When temporary session credentials were issued, in ISO 8601 basic notation.",
+      "role": "timestamp"
+    },
+    "source_ip": {
+      "label": "Source IP address",
+      "type": "source_ip",
+      "description": "The address the request came from; a service DNS name instead of an address when an AWS service made the call on the principal's behalf.",
+      "role": "ip"
+    },
+    "user_agent": {
+      "label": "User agent",
+      "type": "user_agent",
+      "description": "The client that made the request: the AWS CLI, an SDK, the console or a calling service.",
+      "role": "other"
+    },
+    "tls_version": {
+      "label": "TLS version",
+      "type": "version",
+      "description": "The TLS protocol version the connection used.",
+      "role": "version"
+    },
+    "tls_cipher_suite": {
+      "label": "TLS cipher suite",
+      "type": "text",
+      "description": "The negotiated TLS cipher suite.",
+      "role": "other"
+    },
+    "tls_client_host_header": {
+      "label": "TLS client host header",
+      "type": "domain",
+      "description": "The Host header the client sent, typically the service endpoint's FQDN.",
+      "role": "domain"
+    },
+    "response_elements": {
+      "label": "Response elements",
+      "type": "raw_object",
+      "description": "What the call returned as a nested object; null for read-only or failed calls, and per-API in shape like requestParameters.",
+      "role": "other"
+    },
+    "target_user_name": {
+      "label": "Target user name",
+      "type": "user_name",
+      "description": "The IAM user name a request names as what it acts on, from requestParameters.userName; not the caller.",
+      "role": "user_id"
+    },
+    "created_user_name": {
+      "label": "Created user name",
+      "type": "user_name",
+      "description": "The IAM user name CreateUser just created, echoed back in responseElements.user.userName.",
+      "role": "user_id"
+    },
+    "instance_id": {
+      "label": "Instance id",
+      "type": "resource_id",
+      "description": "The EC2 instance id(s) a call names, in requestParameters.instancesSet.items and echoed in responseElements.instancesSet.items.",
+      "role": "identifier",
+      "hazards": [
+        "request_response_echo"
+      ]
+    },
+    "instance_state_code": {
+      "label": "Instance state code",
+      "type": "enum",
+      "description": "EC2's numeric instance state code (0 pending to 80 stopped); the binding that carries this concept says whether it is the state before or after the call.",
+      "role": "enum"
+    },
+    "instance_state_name": {
+      "label": "Instance state name",
+      "type": "enum",
+      "description": "EC2's instance state name matching instance_state_code; the binding that carries this concept says whether it is before or after the call.",
+      "role": "enum"
+    },
+    "stop_force": {
+      "label": "Stop force",
+      "type": "flag",
+      "description": "Whether StopInstances was asked to force the stop without a clean OS shutdown; defaults to false when absent.",
+      "role": "bool"
+    },
+    "trail_is_multi_region": {
+      "label": "Trail is multi region",
+      "type": "flag",
+      "description": "Whether the trail UpdateTrail is acting on applies to all regions rather than just its home region.",
+      "role": "bool"
+    },
+    "trail_name": {
+      "label": "Trail name",
+      "type": "text",
+      "description": "The trail name or trail ARN UpdateTrail is acting on.",
+      "role": "other"
+    },
+    "created_user_arn": {
+      "label": "Created user ARN",
+      "type": "principal",
+      "description": "The ARN CreateUser assigned the new IAM user, in responseElements.user.arn.",
+      "role": "user_id"
+    },
+    "created_user_create_date": {
+      "label": "Created user create date",
+      "type": "event_time",
+      "description": "When the new IAM user was created, in responseElements.user.createDate.",
+      "role": "timestamp",
+      "hazards": [
+        "time_format_differs"
+      ]
+    },
+    "created_user_path": {
+      "label": "Created user path",
+      "type": "text",
+      "description": "The IAM path the new user was created under, in responseElements.user.path.",
+      "role": "other"
+    },
+    "created_user_id": {
+      "label": "Created user id",
+      "type": "user_id",
+      "description": "The stable id CreateUser assigned the new IAM user, in responseElements.user.userId; distinct from the caller's own principalId.",
+      "role": "user_id",
+      "hazards": [
+        "lookalike_ids"
+      ]
+    },
+    "error_code": {
+      "label": "Error code",
+      "type": "outcome",
+      "description": "The AWS exception name when the call failed, for example TrailNotFoundException; not a numeric code despite the field name.",
+      "role": "enum"
+    },
+    "error_message": {
+      "label": "Error message",
+      "type": "text",
+      "description": "The human-readable error text when the call failed.",
+      "role": "other"
+    }
+  },
+  "containers": {
+    "aws:cloudtrail:lake": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "CloudTrail Lake query results as the Splunk Add-on for AWS's CloudTrail Lake input lands them: one ordinary CloudTrail event record per query result row, the same JSON shape CloudTrail itself writes rather than the S3 trail log file's wrapping Records array.",
+      "tags": [
+        "aws",
+        "cloudtrail",
+        "lake"
+      ],
+      "note": "The Splunk Add-on for AWS's CloudTrail Lake input writes one ordinary CloudTrail event record per Lake query result row. props.conf's [aws:cloudtrail:lake] stanza carries no REPORT- or FIELDALIAS- of its own (source: AWS CloudTrail User Guide, 'CloudTrail log file examples', https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-log-file-examples.html), so every field here comes from Splunk's automatic JSON extraction dot-flattening a nested key at search time. None of the CIM aliases the S3-delivered aws:cloudtrail sourcetype's TA stanza adds (src, src_ip, signature, dvc, app and the rest) exist on this sourcetype.",
+      "hazards": [
+        "query_window_basis"
+      ]
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "eventVersion",
+      "concept": "event_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "eventTime",
+      "concept": "event_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "eventSource",
+      "concept": "event_source",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "eventName",
+      "concept": "event_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "eventType",
+      "concept": "event_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "eventCategory",
+      "concept": "event_category",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "eventID",
+      "concept": "event_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "requestID",
+      "concept": "request_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "managementEvent",
+      "concept": "management_event",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "readOnly",
+      "concept": "read_only",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "recipientAccountId",
+      "concept": "recipient_account_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "awsRegion",
+      "concept": "aws_region",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "sessionCredentialFromConsole",
+      "concept": "session_credential_from_console",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "userIdentity.type",
+      "concept": "identity_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "userIdentity.principalId",
+      "concept": "principal_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "userIdentity.arn",
+      "concept": "principal_arn",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "userIdentity.accountId",
+      "concept": "caller_account_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "userIdentity.accessKeyId",
+      "concept": "access_key_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "userIdentity.userName",
+      "concept": "user_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "userIdentity.sessionContext.attributes.mfaAuthenticated",
+      "concept": "session_mfa_authenticated",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "userIdentity.sessionContext.attributes.creationDate",
+      "concept": "session_creation_date",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "sourceIPAddress",
+      "concept": "source_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "userAgent",
+      "concept": "user_agent",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "tlsDetails.tlsVersion",
+      "concept": "tls_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "tlsDetails.cipherSuite",
+      "concept": "tls_cipher_suite",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "tlsDetails.clientProvidedHostHeader",
+      "concept": "tls_client_host_header",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "requestParameters.userName",
+      "concept": "target_user_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "requestParameters.instancesSet.items{}.instanceId",
+      "concept": "instance_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "requestParameters.force",
+      "concept": "stop_force",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "requestParameters.isMultiRegionTrail",
+      "concept": "trail_is_multi_region",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "requestParameters.name",
+      "concept": "trail_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "responseElements",
+      "concept": "response_elements",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "responseElements.instancesSet.items{}.instanceId",
+      "concept": "instance_id",
+      "note": "echoed back in the response, the same id(s) named in the request",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "responseElements.instancesSet.items{}.currentState.code",
+      "concept": "instance_state_code",
+      "note": "the instance's state after this call",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "responseElements.instancesSet.items{}.currentState.name",
+      "concept": "instance_state_name",
+      "note": "the instance's state after this call",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "responseElements.instancesSet.items{}.previousState.code",
+      "concept": "instance_state_code",
+      "note": "the instance's state before this call",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "responseElements.instancesSet.items{}.previousState.name",
+      "concept": "instance_state_name",
+      "note": "the instance's state before this call",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "responseElements.requestId",
+      "concept": "request_id",
+      "note": "on the EC2 examples this equals the top-level requestID; not documented as always equal",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "responseElements.user.arn",
+      "concept": "created_user_arn",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "responseElements.user.createDate",
+      "concept": "created_user_create_date",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "responseElements.user.path",
+      "concept": "created_user_path",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "responseElements.user.userId",
+      "concept": "created_user_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "responseElements.user.userName",
+      "concept": "created_user_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "errorCode",
+      "concept": "error_code",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail:lake",
+      "column": "errorMessage",
+      "concept": "error_message",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Lake query result as JSON; automatic JSON field extraction dot-flattens nested objects to dotted field names."
+      }
+    }
+  ],
+  "hazards": {
+    "lookalike_ids": {
+      "text": "eventID, requestID and responseElements.requestId are not the same thing: eventID is CloudTrail's own record id, while requestID and responseElements.requestId are both the calling service's own request id and were byte-identical in the StartInstances and StopInstances samples, though CloudTrail does not state that this always holds. userIdentity.principalId (the caller) and responseElements.user.userId (a user CreateUser just made) are both principal-style ids and are easy to swap when reading a CreateUser record."
+    },
+    "string_not_bool": {
+      "text": "sessionCredentialFromConsole and userIdentity.sessionContext.attributes.mfaAuthenticated are the strings true and false, not JSON booleans, unlike managementEvent and readOnly. A boolean-typed comparison silently fails to match them."
+    },
+    "time_format_differs": {
+      "text": "responseElements.user.createDate reads Jul 19, 2023 9:25:09 PM in this sample, not ISO 8601, unlike eventTime and userIdentity.sessionContext.attributes.creationDate. Parse it separately or a time join breaks silently."
+    },
+    "request_response_echo": {
+      "text": "requestParameters.instancesSet.items{}.instanceId and responseElements.instancesSet.items{}.instanceId name the same instances on StartInstances and StopInstances; a count of distinct instance ids across both columns double counts unless de-duplicated."
+    },
+    "query_window_basis": {
+      "text": "The Splunk Lake input queries eventTime within a since/until window against the Lake event data store each poll. A record CloudTrail delivers late for a window already queried (the record-contents page's addendum/DELIVERY_DELAY case) is missed rather than caught on the next poll, since the poll windows on eventTime, not on when CloudTrail wrote the record.",
+      "level": "note"
+    }
+  },
+  "edges": [],
+  "templates": []
+}

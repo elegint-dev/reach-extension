@@ -1,0 +1,1131 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "okta",
+  "name": "Okta System Log",
+  "pack_version": "0.1.0",
+  "description": "Okta System Log events: who did what, from where, to which target, and how it came out. One feed for the OktaIM2:log sourcetype (Splunk_TA_okta_identity_cloud) and Okta_CL (Sentinel's Okta Single Sign-On solution).",
+  "source": "Okta System Log LogEvent schema (okta-management-openapi-spec); Splunk_TA_okta_identity_cloud field extraction; the Okta SSO solution's OktaSSO.yaml parser",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "okta_system_log",
+    "label": "Okta System Log",
+    "description": "Okta's System Log: one record per identity event, sign-ins, MFA, admin actions and Okta's own threat detections, with the actor, client, outcome and any target it names.",
+    "tags": [
+      "identity",
+      "okta",
+      "authentication"
+    ],
+    "discriminator": "event_type"
+  },
+  "concepts": {
+    "event_id": {
+      "label": "Event id",
+      "type": "event_id",
+      "description": "A unique identifier for one System Log event."
+    },
+    "event_time": {
+      "label": "Published time",
+      "type": "event_time",
+      "description": "When the event was published to the System Log.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ]
+    },
+    "event_type": {
+      "label": "Event type",
+      "type": "record_type",
+      "description": "The published event type, for example user.session.start. Okta's own catalog names every value; it is the field to filter the System Log on."
+    },
+    "legacy_event_type": {
+      "label": "Legacy event type",
+      "type": "record_type",
+      "description": "The matching Events API objectType value, kept for backward compatibility with queries written against the older API."
+    },
+    "log_version": {
+      "label": "Log schema version",
+      "type": "version",
+      "description": "The System Log schema version the event was published under."
+    },
+    "severity": {
+      "label": "Severity",
+      "type": "enum",
+      "description": "How severe Okta rates the event: DEBUG, INFO, WARN or ERROR."
+    },
+    "display_message": {
+      "label": "Display message",
+      "type": "text",
+      "description": "A human-readable summary of the event, the same text the Admin Console shows."
+    },
+    "actor_id": {
+      "label": "Actor id",
+      "type": "user_id",
+      "description": "The actor's own id: a user id, or an IP address string when the actor is unauthenticated."
+    },
+    "actor_type": {
+      "label": "Actor type",
+      "type": "enum",
+      "description": "What kind of entity the actor is, for example User or IP address."
+    },
+    "actor_alternate_id": {
+      "label": "Actor alternate id",
+      "type": "principal",
+      "description": "The actor's human-readable identifier, usually the email address that signed in.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "actor_display_name": {
+      "label": "Actor display name",
+      "type": "user_name",
+      "description": "The actor's display name."
+    },
+    "user_agent": {
+      "label": "User agent",
+      "type": "user_agent",
+      "description": "The raw HTTP User-Agent string of the client that triggered the event.",
+      "hazards": [
+        "ua_client_supplied"
+      ]
+    },
+    "client_os": {
+      "label": "Client OS",
+      "type": "text",
+      "description": "The operating system the client runs on, decoded from the user agent."
+    },
+    "client_browser": {
+      "label": "Client browser",
+      "type": "text",
+      "description": "The web browser the client used, decoded from the user agent."
+    },
+    "client_zone": {
+      "label": "Client network zone",
+      "type": "text",
+      "description": "The name of the Okta Network Zone the client's address maps to, when one matched."
+    },
+    "client_device": {
+      "label": "Client device",
+      "type": "text",
+      "description": "The kind of device the client operates from, for example Computer."
+    },
+    "client_id": {
+      "label": "Client id",
+      "type": "identifier",
+      "description": "For an OAuth request, the id of the OAuth client; for an SSWS token request, the id of the agent."
+    },
+    "source_ip": {
+      "label": "Client IP address",
+      "type": "source_ip",
+      "description": "The address the client's request came from.",
+      "hazards": [
+        "ip_shared"
+      ]
+    },
+    "client_city": {
+      "label": "Client city",
+      "type": "text",
+      "description": "The city Okta's geolocation maps the client address to."
+    },
+    "client_country": {
+      "label": "Client country",
+      "type": "region",
+      "description": "The country Okta's geolocation maps the client address to."
+    },
+    "client_state": {
+      "label": "Client state or region",
+      "type": "text",
+      "description": "The state or region Okta's geolocation maps the client address to."
+    },
+    "client_postal_code": {
+      "label": "Client postal code",
+      "type": "text",
+      "description": "The postal code Okta's geolocation maps the client address to."
+    },
+    "outcome_result": {
+      "label": "Outcome result",
+      "type": "outcome",
+      "description": "The result of the action: SUCCESS, FAILURE, ALLOW, DENY and the other LogOutcome values."
+    },
+    "outcome_reason": {
+      "label": "Outcome reason",
+      "type": "text",
+      "description": "Why the outcome landed where it did, for example INVALID_CREDENTIALS."
+    },
+    "target_id": {
+      "label": "Target id",
+      "type": "identifier",
+      "description": "The id of the entity the actor acted on. An event can carry more than one target."
+    },
+    "target_type": {
+      "label": "Target type",
+      "type": "enum",
+      "description": "What kind of entity a target is, for example AppInstance or AuthenticatorEnrollment."
+    },
+    "target_alternate_id": {
+      "label": "Target alternate id",
+      "type": "principal",
+      "description": "The target's human-readable identifier, when it has one."
+    },
+    "target_display_name": {
+      "label": "Target display name",
+      "type": "text",
+      "description": "The target's display name."
+    },
+    "transaction_type": {
+      "label": "Transaction type",
+      "type": "enum",
+      "description": "WEB for a request-driven transaction, JOB for an asynchronous task."
+    },
+    "transaction_id": {
+      "label": "Transaction id",
+      "type": "request_id",
+      "description": "Ties together every event one HTTP request or job produced."
+    },
+    "request_uri": {
+      "label": "Request URI",
+      "type": "text",
+      "description": "The URI path the request that triggered the event was made to, from debugContext."
+    },
+    "threat_suspected": {
+      "label": "Threat suspected",
+      "type": "flag",
+      "description": "Whether Okta ThreatInsight flagged the request as suspicious, from debugContext."
+    },
+    "debug_request_id": {
+      "label": "Debug request id",
+      "type": "request_id",
+      "description": "A request id carried in debugContext, distinct from transaction.id."
+    },
+    "authentication_step": {
+      "label": "Authentication step",
+      "type": "count",
+      "description": "The zero-based step number in the authentication pipeline. Currently always 0."
+    },
+    "session_id": {
+      "label": "Session id",
+      "type": "session_id",
+      "description": "A proxy for the actor's session id; every event in one sign-in session shares it."
+    },
+    "as_number": {
+      "label": "Autonomous system number",
+      "type": "identifier",
+      "description": "The autonomous system number the client's address routes through."
+    },
+    "as_org": {
+      "label": "Autonomous system org",
+      "type": "text",
+      "description": "The organisation that operates the autonomous system the client's address routes through."
+    },
+    "isp": {
+      "label": "ISP",
+      "type": "text",
+      "description": "The internet service provider Okta's IP intelligence attributes the client address to."
+    },
+    "security_domain": {
+      "label": "Security context domain",
+      "type": "domain",
+      "description": "The domain Okta's IP intelligence attributes the client address to."
+    },
+    "is_proxy": {
+      "label": "Client is a known proxy",
+      "type": "flag",
+      "description": "Whether Okta's IP intelligence flags the client address as a proxy."
+    },
+    "vendor_app": {
+      "label": "Vendor app",
+      "type": "enum",
+      "description": "The CIM app field the TA sets for every Okta System Log event; effectively a constant naming the vendor."
+    },
+    "tenant_domain": {
+      "label": "Okta tenant domain",
+      "type": "domain",
+      "description": "The CIM dest field: the org's own Okta domain, effectively constant per tenant."
+    }
+  },
+  "containers": {
+    "OktaIM2:log": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Okta System Log as Splunk_TA_okta_identity_cloud indexes it: the LogEvent JSON flattened to dotted field names, plus the TA's CIM aliases.",
+      "note": "actor, client, outcome and target are nested objects; target is an array (target{}.*)."
+    },
+    "Okta_CL": {
+      "platform": "sentinel",
+      "kind": "vendor",
+      "description": "The Okta Single Sign-On solution's raw ingest table: the same LogEvent fields, flattened to underscore-joined, type-suffixed column names (_s string, _d number, _b bool, _g guid).",
+      "note": "The solution also ships OktaV2_CL (a CCF connector with renamed columns) and an OktaSSO() parser function that unions both onto one shape; this pack binds the raw v1 table's own columns."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "uuid",
+      "concept": "event_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "published",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "eventType",
+      "concept": "event_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "version",
+      "concept": "log_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "severity",
+      "concept": "severity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "displayMessage",
+      "concept": "display_message",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "legacyEventType",
+      "concept": "legacy_event_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "actor.id",
+      "concept": "actor_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "actor.type",
+      "concept": "actor_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "actor.alternateId",
+      "concept": "actor_alternate_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "actor.displayName",
+      "concept": "actor_display_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "client.userAgent.rawUserAgent",
+      "concept": "user_agent",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "client.userAgent.os",
+      "concept": "client_os",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "client.userAgent.browser",
+      "concept": "client_browser",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "client.zone",
+      "concept": "client_zone",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "client.device",
+      "concept": "client_device",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "client.id",
+      "concept": "client_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "client.ipAddress",
+      "concept": "source_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "client.geographicalContext.city",
+      "concept": "client_city",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "client.geographicalContext.country",
+      "concept": "client_country",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "client.geographicalContext.state",
+      "concept": "client_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "client.geographicalContext.postalCode",
+      "concept": "client_postal_code",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "outcome.result",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "outcome.reason",
+      "concept": "outcome_reason",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "target{}.id",
+      "concept": "target_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "target{}.type",
+      "concept": "target_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "target{}.alternateId",
+      "concept": "target_alternate_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "target{}.displayName",
+      "concept": "target_display_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "transaction_type",
+      "concept": "transaction_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "transaction.id",
+      "concept": "transaction_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "debugContext.debugData.requestUri",
+      "concept": "request_uri",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "debugContext.debugData.threatSuspected",
+      "concept": "threat_suspected",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "debugContext.debugData.requestId",
+      "concept": "debug_request_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "authenticationContext.authenticationStep",
+      "concept": "authentication_step",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "authenticationContext.externalSessionId",
+      "concept": "session_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "securityContext.asNumber",
+      "concept": "as_number",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "securityContext.asOrg",
+      "concept": "as_org",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "securityContext.isp",
+      "concept": "isp",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "securityContext.domain",
+      "concept": "security_domain",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "securityContext.isProxy",
+      "concept": "is_proxy",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_okta_identity_cloud indexes the System Log event as JSON; INDEXED_EXTRACTIONS = json flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "user",
+      "concept": "actor_alternate_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The TA's CIM field aliases (props.conf/tags.conf) for Authentication and Change."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "src_user",
+      "concept": "actor_alternate_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The TA's CIM field aliases (props.conf/tags.conf) for Authentication and Change."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "src_ip",
+      "concept": "source_ip",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The TA's CIM field aliases (props.conf/tags.conf) for Authentication and Change."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "action",
+      "concept": "event_type",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The TA's CIM field aliases (props.conf/tags.conf) for Authentication and Change."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "app",
+      "concept": "vendor_app",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The TA's CIM field aliases (props.conf/tags.conf) for Authentication and Change."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "dest",
+      "concept": "tenant_domain",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The TA's CIM field aliases (props.conf/tags.conf) for Authentication and Change."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "signature",
+      "concept": "display_message",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The TA's CIM field aliases (props.conf/tags.conf) for Authentication and Change."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "result",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The TA's CIM field aliases (props.conf/tags.conf) for Authentication and Change."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:log",
+      "column": "reason",
+      "concept": "outcome_reason",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The TA's CIM field aliases (props.conf/tags.conf) for Authentication and Change."
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "actor_alternateId_s",
+      "concept": "actor_alternate_id",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "actor_displayName_s",
+      "concept": "actor_display_name",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "actor_id_s",
+      "concept": "actor_id",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "actor_type_s",
+      "concept": "actor_type",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "authenticationContext_authenticationStep_d",
+      "concept": "authentication_step",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "authenticationContext_externalSessionId_s",
+      "concept": "session_id",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "client_device_s",
+      "concept": "client_device",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "client_geographicalContext_city_s",
+      "concept": "client_city",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "client_geographicalContext_country_s",
+      "concept": "client_country",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "client_geographicalContext_postalCode_s",
+      "concept": "client_postal_code",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "client_geographicalContext_state_s",
+      "concept": "client_state",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "client_id_s",
+      "concept": "client_id",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "client_ipAddress_s",
+      "concept": "source_ip",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "client_userAgent_browser_s",
+      "concept": "client_browser",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "client_userAgent_os_s",
+      "concept": "client_os",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "client_userAgent_rawUserAgent_s",
+      "concept": "user_agent",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "client_zone_s",
+      "concept": "client_zone",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "displayMessage_s",
+      "concept": "display_message",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "eventType_s",
+      "concept": "event_type",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "legacyEventType_s",
+      "concept": "legacy_event_type",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "uuid_g",
+      "concept": "event_id",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "outcome_reason_s",
+      "concept": "outcome_reason",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "outcome_result_s",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "securityContext_asNumber_d",
+      "concept": "as_number",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "securityContext_asOrg_s",
+      "concept": "as_org",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "securityContext_domain_s",
+      "concept": "security_domain",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "securityContext_isp_s",
+      "concept": "isp",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "securityContext_isProxy_b",
+      "concept": "is_proxy",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "severity_s",
+      "concept": "severity",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "transaction_id_s",
+      "concept": "transaction_id",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "transaction_type_s",
+      "concept": "transaction_type",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "version_s",
+      "concept": "log_version",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "debugContext_debugData_s.requestUri",
+      "concept": "request_uri",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      },
+      "encoding": "json_string"
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "debugContext_debugData_s.threatSuspected",
+      "concept": "threat_suspected",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      },
+      "encoding": "json_string"
+    },
+    {
+      "platform": "sentinel",
+      "container": "Okta_CL",
+      "column": "debugContext_debugData_s.requestId",
+      "concept": "debug_request_id",
+      "provenance": {
+        "kind": "connector",
+        "statement": "Microsoft Sentinel Okta Single Sign-On solution, OktaSSO.yaml parser (Azure/Azure-Sentinel, Solutions/Okta Single Sign-On/Parsers), read 2026-09-18"
+      },
+      "encoding": "json_string"
+    }
+  ],
+  "hazards": {
+    "ip_shared": {
+      "text": "A NAT gateway, VPN exit or shared proxy can put many people behind one address; a match is a lead, not a link."
+    },
+    "ua_client_supplied": {
+      "text": "The client sets its own user agent string; trivially spoofed, useful for noticing change, not for attribution."
+    },
+    "names_not_stable": {
+      "text": "An alternate id is usually an email address; it survives a display-name change but not an email change."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

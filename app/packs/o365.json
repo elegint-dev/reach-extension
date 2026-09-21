@@ -1,0 +1,4353 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "o365",
+  "name": "Microsoft 365: management activity, Cloud App Security, message trace, service health",
+  "pack_version": "0.2.0",
+  "description": "Six Microsoft 365 sourcetypes: Office 365 Management Activity API audit records (ms:o365:management), Defender for Cloud Apps alerts (o365:cas:api), Exchange Online message trace (o365:graph:messagetrace), Entra ID directory metadata (o365:metadata), and Microsoft 365 service health issues and message center posts (o365:service:healthIssue, o365:service:updateMessage). Extended with three more sourcetypes: the raw (all-workload) Management Activity API feed (o365:management:activity), Microsoft Entra sign-in plus Office 365 Groups usage-activity report rows sharing one sourcetype (o365:graph:api), and the legacy Get-MessageTrace shape of Exchange Online message trace (o365:reporting:messagetrace).",
+  "source": "Office 365 Management Activity API schema; Microsoft Defender for Cloud Apps Alerts API; Microsoft Graph exchangeMessageTrace, user, serviceHealthIssue and serviceUpdateMessage resources; splunk_ta_o365 and Splunk_TA_microsoft-cloudservices field extraction read from this dev Splunk's own conf-props and conf-transforms. Microsoft Graph signIn resource; Microsoft Graph reportRoot getOffice365GroupsActivityDetail report; Exchange Online Get-MessageTrace cmdlet; observed columns read from this dev Splunk's own indexed data for all nine sourcetypes.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "o365",
+    "label": "Microsoft 365 activity and health",
+    "description": "Office 365 Management Activity API audit records, Defender for Cloud Apps alerts, Exchange Online message trace, Entra ID directory metadata, and Microsoft 365 service health and message center posts.",
+    "tags": [
+      "microsoft365",
+      "o365",
+      "identity",
+      "email",
+      "cloud-security"
+    ],
+    "discriminator": "mgmt_record_type"
+  },
+  "concepts": {
+    "mgmt_event_id": {
+      "label": "Audit record id",
+      "type": "event_id",
+      "description": "Unique identifier of this one audit record."
+    },
+    "mgmt_creation_time": {
+      "label": "Creation time",
+      "type": "event_time",
+      "description": "When the audit log record was generated, in UTC.",
+      "hazards": [
+        "time_no_zone",
+        "ids_look_alike_mgmt"
+      ]
+    },
+    "mgmt_record_type": {
+      "label": "Audit record type",
+      "type": "record_type",
+      "description": "Which AuditLogRecordType this record is; ms:o365:management carries only the AzureActiveDirectory workload's own two values (8, 9), o365:management:activity the full range across every workload."
+    },
+    "mgmt_operation": {
+      "label": "Operation",
+      "type": "text",
+      "description": "The name of the user or admin activity that produced this record, for example PasswordLogonInitialAuthUsingPassword or Add User."
+    },
+    "mgmt_org_id": {
+      "label": "Organization id",
+      "type": "account_id",
+      "description": "The Microsoft 365 tenant this record belongs to."
+    },
+    "mgmt_result_status": {
+      "label": "Result status",
+      "type": "outcome",
+      "description": "Whether the Operation succeeded, straight from the vendor's ResultStatus (or, on the CIM result field, defaulted to success when ResultStatus is absent).",
+      "hazards": [
+        "resultstatus_vocabulary_varies",
+        "resultstatus_sts_caveat"
+      ]
+    },
+    "mgmt_status_norm": {
+      "label": "CIM status",
+      "type": "outcome",
+      "description": "ResultStatus normalised to Splunk CIM's success/failure vocabulary by this dev Splunk's own o365_status_lookup."
+    },
+    "mgmt_user_key": {
+      "label": "User key",
+      "type": "identifier",
+      "description": "An alternative id for UserId; populated with the passport unique id (PUID) for SharePoint, OneDrive and Exchange events."
+    },
+    "mgmt_user_type": {
+      "label": "User type",
+      "type": "enum",
+      "description": "What kind of user performed the operation: regular user, admin, system, and so on."
+    },
+    "mgmt_workload": {
+      "label": "Workload",
+      "type": "event_source",
+      "description": "The Office 365 service the activity happened in, for example AzureActiveDirectory."
+    },
+    "mgmt_client_ip": {
+      "label": "Client IP",
+      "type": "source_ip",
+      "description": "The IPv4 or IPv6 address the activity was logged from. Null for Microsoft Entra ID events, which do not log an address here."
+    },
+    "mgmt_object_id": {
+      "label": "Object id",
+      "type": "resource_id",
+      "description": "The object the operation acted on; meaning depends on workload (a SharePoint/OneDrive path, an Exchange cmdlet's target, and so on). For this pack's AzureActiveDirectory records it is the account UPN the Operation was performed on."
+    },
+    "mgmt_user_id": {
+      "label": "User id (UPN)",
+      "type": "principal",
+      "description": "The UPN of the user who performed the Operation, for example my_name@my_domain_name. System accounts such as NT AUTHORITY\\SYSTEM also appear here."
+    },
+    "mgmt_azuread_event_type": {
+      "label": "Microsoft Entra event type",
+      "type": "enum",
+      "description": "The type of Microsoft Entra event this AzureActiveDirectory-workload record is.",
+      "hazards": [
+        "aadeventtype_int_undocumented"
+      ]
+    },
+    "mgmt_actor_id": {
+      "label": "Actor id",
+      "type": "identifier",
+      "description": "The id half of one Actor {ID,Type} pair: the user or service principal that performed the action, in the form its Type says."
+    },
+    "mgmt_actor_type": {
+      "label": "Actor id type",
+      "type": "enum",
+      "description": "What kind of identity Actor{}.ID is (a claim, a display name, a PUID, a service principal name, a UPN, or an opaque other id).",
+      "hazards": [
+        "identitytype_int_undocumented"
+      ]
+    },
+    "mgmt_actor_context_id": {
+      "label": "Actor context id",
+      "type": "account_id",
+      "description": "The tenant Actor{}.ID should be read within."
+    },
+    "mgmt_target_id": {
+      "label": "Target id",
+      "type": "identifier",
+      "description": "The id half of one Target {ID,Type} pair: an entity the Operation was performed on, in the form its Type says."
+    },
+    "mgmt_target_type": {
+      "label": "Target id type",
+      "type": "enum",
+      "description": "What kind of identity Target{}.ID is; same IdentityType vocabulary as Actor{}.Type.",
+      "hazards": [
+        "identitytype_int_undocumented"
+      ]
+    },
+    "mgmt_target_context_id": {
+      "label": "Target context id",
+      "type": "account_id",
+      "description": "The tenant Target{}.ID should be read within."
+    },
+    "mgmt_intersystems_id": {
+      "label": "Inter-systems id",
+      "type": "identifier",
+      "description": "A correlation id this pack's vendor pages do not define; present on change records in the sample (Actor/Target present) and absent from the two logon records."
+    },
+    "mgmt_intrasystem_id": {
+      "label": "Intra-system id",
+      "type": "identifier",
+      "description": "A second correlation id, alongside InterSystemsId, that this pack's vendor pages do not define."
+    },
+    "mgmt_login_status": {
+      "label": "Logon status",
+      "type": "outcome",
+      "description": "The OrgIdLogon.LoginStatus code for this logon; 0 is success, any other value a specific logon failure reason.",
+      "hazards": [
+        "ids_look_alike_mgmt"
+      ]
+    },
+    "mgmt_user_domain": {
+      "label": "User domain",
+      "type": "domain",
+      "description": "The tenant identity information (TII) domain for UserId."
+    },
+    "mgmt_client": {
+      "label": "Client",
+      "type": "text",
+      "description": "Details about the client device, OS and browser used for a logon event."
+    },
+    "mgmt_extended_properties": {
+      "label": "Extended properties",
+      "type": "raw_object",
+      "description": "A name/value bag of extra properties the Microsoft Entra event carries; this pack's sample uses it for a failed logon's LoginError text."
+    },
+    "mgmt_request_type": {
+      "label": "CIM request type",
+      "type": "enum",
+      "description": "A CIM-facing category calculated from source and Workload, not a vendor field.",
+      "hazards": [
+        "request_type_constructed"
+      ]
+    },
+    "mgmt_model_type": {
+      "label": "CIM data model type",
+      "type": "enum",
+      "description": "The Splunk CIM data model this operation maps to (auth, account, and so on), looked up by Operation and ResultStatus."
+    },
+    "mgmt_action": {
+      "label": "CIM action",
+      "type": "outcome",
+      "description": "The CIM action verb for this Operation (created, modified, success, failure, and so on), from the same model lookup."
+    },
+    "mgmt_change_type": {
+      "label": "CIM change type",
+      "type": "enum",
+      "description": "A coarse change-category tag from the model lookup; observed values in this dev Splunk are AAA and user."
+    },
+    "mgmt_object_category": {
+      "label": "CIM object category",
+      "type": "enum",
+      "description": "What kind of object the operation touched (user, group, and so on), from the model lookup."
+    },
+    "mgmt_object": {
+      "label": "CIM object",
+      "type": "resource_id",
+      "description": "The CIM object field: SourceFileName when present, else ObjectId."
+    },
+    "mgmt_object_path": {
+      "label": "CIM object path",
+      "type": "file_path",
+      "description": "ObjectId again, kept only when it is not the literal Not Available."
+    },
+    "mgmt_file_name": {
+      "label": "File name",
+      "type": "file_name",
+      "description": "SourceFileName, aliased to the CIM file_name field; not present in this pack's own sample."
+    },
+    "mgmt_file_path": {
+      "label": "File path",
+      "type": "file_path",
+      "description": "SourceRelativeUrl, aliased to the CIM file_path field; not present in this pack's own sample."
+    },
+    "mgmt_vendor_product": {
+      "label": "CIM vendor_product",
+      "type": "text",
+      "description": "A constant, Microsoft Cloud Services: followed by Workload."
+    },
+    "cas_alert_id": {
+      "label": "Alert id",
+      "type": "event_id",
+      "description": "The alert's own id, a 24-character hex string (a MongoDB-style ObjectId).",
+      "hazards": [
+        "ids_look_alike_cas",
+        "underscore_stripped"
+      ]
+    },
+    "cas_alert_type_id": {
+      "label": "Alert type identifier",
+      "type": "identifier",
+      "description": "An integer alert-type id, distinct from the alert's own _id despite the vendor page's property table describing _id with this same phrase.",
+      "hazards": [
+        "ids_look_alike_cas"
+      ]
+    },
+    "cas_alert_timestamp": {
+      "label": "Alert timestamp",
+      "type": "event_time",
+      "description": "When the alert was raised, epoch milliseconds.",
+      "hazards": [
+        "time_epoch_vs_iso"
+      ]
+    },
+    "cas_alert_title": {
+      "label": "Alert title",
+      "type": "text",
+      "description": "The title of the alert."
+    },
+    "cas_alert_description": {
+      "label": "Alert description",
+      "type": "text",
+      "description": "The alert's own description text."
+    },
+    "cas_alert_severity": {
+      "label": "Alert severity",
+      "type": "enum",
+      "description": "The alert's severity.",
+      "hazards": [
+        "severity_id_duplicate"
+      ]
+    },
+    "cas_alert_read_status": {
+      "label": "Read status",
+      "type": "enum",
+      "description": "Whether the alert is unread, read or archived."
+    },
+    "cas_alert_resolution_status": {
+      "label": "Resolution status",
+      "type": "enum",
+      "description": "The analyst's disposition of the alert: open, dismissed, resolved, or closed as false positive, benign or true positive."
+    },
+    "cas_alert_is_system": {
+      "label": "System alert flag",
+      "type": "flag",
+      "description": "Whether this is a built-in system alert (as opposed to a policy-rule alert)."
+    },
+    "cas_alert_stories": {
+      "label": "Risk category",
+      "type": "enum",
+      "description": "The risk category (story) this alert belongs to, for example threat detection or DLP."
+    },
+    "cas_alert_threat_score": {
+      "label": "Threat score",
+      "type": "count",
+      "description": "A numeric threat score Defender for Cloud Apps assigned the alert."
+    },
+    "cas_alert_comment": {
+      "label": "Analyst comment",
+      "type": "text",
+      "description": "A free-text comment an analyst left on the alert."
+    },
+    "cas_alert_handled_by": {
+      "label": "Handled by",
+      "type": "principal",
+      "description": "The analyst who closed or is handling the alert; not the alert's subject."
+    },
+    "cas_alert_resolve_time": {
+      "label": "Resolve time",
+      "type": "event_time",
+      "description": "When the alert was resolved, an ISO 8601 timestamp.",
+      "hazards": [
+        "time_epoch_vs_iso"
+      ]
+    },
+    "cas_alert_portal_url": {
+      "label": "Alert portal URL",
+      "type": "text",
+      "description": "The Defender for Cloud Apps portal link for this alert; also copied onto the CIM src and dest fields, which are not network endpoints here."
+    },
+    "cas_alert_context_id": {
+      "label": "Context id",
+      "type": "identifier",
+      "description": "An id this pack's vendor pages do not define; in the sample it matches the related device entity's id."
+    },
+    "cas_alert_app": {
+      "label": "CIM app",
+      "type": "text",
+      "description": "A constant, Microsoft Cloud App Security."
+    },
+    "cas_alert_signature": {
+      "label": "CIM signature",
+      "type": "text",
+      "description": "The alert title again, on the CIM signature field."
+    },
+    "cas_alert_cim_type": {
+      "label": "CIM type",
+      "type": "text",
+      "description": "A constant, event."
+    },
+    "cas_entity": {
+      "label": "Related entity",
+      "type": "raw_object",
+      "description": "One entity (a user, device, service, policy or tag) named by the alert; id and label identify it, type says which of the five."
+    },
+    "cas_entity_role": {
+      "label": "Entity role",
+      "type": "enum",
+      "description": "Whether this entity is the alert's Source or only Related."
+    },
+    "cas_entity_type_int": {
+      "label": "Entity type (integer)",
+      "type": "enum",
+      "description": "An undocumented integer form of entities[].type; use the string type field instead.",
+      "hazards": [
+        "entitytype_int_undocumented"
+      ]
+    },
+    "cas_entity_principal": {
+      "label": "Entity principal address",
+      "type": "principal",
+      "description": "The email address of an account entity."
+    },
+    "cas_entity_policy_type": {
+      "label": "Entity policy type",
+      "type": "enum",
+      "description": "For a policyRule entity, which kind of policy triggered it, for example ANOMALY_DETECTION."
+    },
+    "cas_entity_instance": {
+      "label": "Entity instance",
+      "type": "count",
+      "description": "An instance number on the source entity; 0 in this pack's sample."
+    },
+    "trace_id": {
+      "label": "Message trace id",
+      "type": "event_id",
+      "description": "The unique identifier for this message trace record."
+    },
+    "trace_message_id": {
+      "label": "Message-ID header",
+      "type": "identifier",
+      "description": "The message's own Message-ID header value; its format depends on the sending server."
+    },
+    "trace_received_time": {
+      "label": "Received time",
+      "type": "event_time",
+      "description": "When Exchange Online received the message, UTC.",
+      "hazards": [
+        "time_frac_seconds_missing"
+      ]
+    },
+    "trace_sender": {
+      "label": "Sender address",
+      "type": "principal",
+      "description": "The SMTP address the message was purportedly from."
+    },
+    "trace_recipient": {
+      "label": "Recipient address",
+      "type": "principal",
+      "description": "The SMTP address the message was addressed to."
+    },
+    "trace_subject": {
+      "label": "Subject",
+      "type": "text",
+      "description": "The message's subject line."
+    },
+    "trace_size": {
+      "label": "Message size",
+      "type": "count",
+      "description": "The size of the message in bytes."
+    },
+    "trace_from_ip": {
+      "label": "Source IP",
+      "type": "source_ip",
+      "description": "For an incoming message, the public IP address of the SMTP server that sent it."
+    },
+    "trace_to_ip": {
+      "label": "Destination IP",
+      "type": "text",
+      "description": "For an outgoing message, the resolved MX IP of the destination domain; blank for incoming mail.",
+      "hazards": [
+        "toip_blank_incoming"
+      ]
+    },
+    "trace_status": {
+      "label": "Delivery status",
+      "type": "enum",
+      "description": "The message's delivery status, for example delivered, pending or quarantined."
+    },
+    "trace_cim_action": {
+      "label": "CIM action",
+      "type": "outcome",
+      "description": "status normalised to a delivered/blocked/quarantined verb by this dev Splunk's own lookup."
+    },
+    "trace_recipient_count": {
+      "label": "Recipient count",
+      "type": "count",
+      "description": "Calculated as the literal 1 on every record.",
+      "hazards": [
+        "recipient_count_constant"
+      ]
+    },
+    "trace_recipient_domain": {
+      "label": "Recipient domain",
+      "type": "domain",
+      "description": "The domain half of recipientAddress, regex-extracted."
+    },
+    "trace_src_user_domain": {
+      "label": "Sender domain",
+      "type": "domain",
+      "description": "The domain half of senderAddress, regex-extracted."
+    },
+    "trace_vendor_product": {
+      "label": "CIM vendor_product",
+      "type": "text",
+      "description": "A constant, Microsoft Office 365 MessageTrace."
+    },
+    "meta_object_id": {
+      "label": "Directory object id",
+      "type": "user_id",
+      "description": "The user's Microsoft Entra ID directory object id: stable, opaque, and not aliased onto any CIM field here."
+    },
+    "meta_display_name": {
+      "label": "Display name",
+      "type": "user_name",
+      "description": "The name shown in the address book, usually first name plus family name."
+    },
+    "meta_upn": {
+      "label": "User principal name",
+      "type": "principal",
+      "description": "The user's sign-in name; also aliased onto the CIM user_id field here, so that CIM field is a readable UPN, not a stable id."
+    },
+    "meta_given_name": {
+      "label": "Given name",
+      "type": "user_name",
+      "description": "The user's first name."
+    },
+    "meta_surname": {
+      "label": "Surname",
+      "type": "user_name",
+      "description": "The user's family name."
+    },
+    "meta_mail": {
+      "label": "Mail address",
+      "type": "principal",
+      "description": "The user's SMTP address."
+    },
+    "meta_job_title": {
+      "label": "Job title",
+      "type": "text",
+      "description": "The user's job title."
+    },
+    "meta_mobile_phone": {
+      "label": "Mobile phone",
+      "type": "text",
+      "description": "The user's primary cell number."
+    },
+    "meta_business_phones": {
+      "label": "Business phones",
+      "type": "text",
+      "description": "The user's telephone numbers; documented as a collection but only one number can actually be set."
+    },
+    "meta_office_location": {
+      "label": "Office location",
+      "type": "text",
+      "description": "The user's office location string."
+    },
+    "meta_preferred_language": {
+      "label": "Preferred language",
+      "type": "text",
+      "description": "An RFC 4646 language tag, for example en-US."
+    },
+    "meta_vendor_product": {
+      "label": "CIM vendor_product",
+      "type": "text",
+      "description": "A constant, Microsoft Entra ID."
+    },
+    "svc_id": {
+      "label": "Issue or message id",
+      "type": "identifier",
+      "description": "The id of the service issue or service message, for example EX226792 or MC172851."
+    },
+    "svc_title": {
+      "label": "Title",
+      "type": "text",
+      "description": "The title of the issue or message."
+    },
+    "svc_start_time": {
+      "label": "Start time",
+      "type": "event_time",
+      "description": "The start time of the issue or message."
+    },
+    "svc_end_time": {
+      "label": "End time",
+      "type": "event_time",
+      "description": "The end time of the issue or message."
+    },
+    "svc_last_modified_time": {
+      "label": "Last modified time",
+      "type": "event_time",
+      "description": "The last time this post was edited; the field this dev Splunk's TIME_PREFIX indexes as _time.",
+      "hazards": [
+        "time_edit_not_incident"
+      ]
+    },
+    "svc_details": {
+      "label": "Additional details",
+      "type": "raw_object",
+      "description": "A name/value bag of extra details; observed keys are NotifyInApp (healthIssue) and ExternalLink (updateMessage)."
+    },
+    "health_classification": {
+      "label": "Classification",
+      "type": "enum",
+      "description": "Whether this is a service incident or a service advisory."
+    },
+    "health_origin": {
+      "label": "Origin",
+      "type": "enum",
+      "description": "Who reported the issue: Microsoft, a third party or the customer."
+    },
+    "health_status": {
+      "label": "Status",
+      "type": "enum",
+      "description": "The issue's current status in Microsoft's incident lifecycle, for example investigating or serviceRestored."
+    },
+    "health_is_resolved": {
+      "label": "Resolved flag",
+      "type": "flag",
+      "description": "Whether the issue is resolved."
+    },
+    "health_service": {
+      "label": "Affected service",
+      "type": "text",
+      "description": "The Microsoft 365 service the issue affects, for example Exchange Online."
+    },
+    "health_feature": {
+      "label": "Affected feature",
+      "type": "text",
+      "description": "The specific feature of the service the issue affects."
+    },
+    "health_feature_group": {
+      "label": "Feature group",
+      "type": "text",
+      "description": "The feature group the affected feature belongs to."
+    },
+    "health_impact_description": {
+      "label": "Impact description",
+      "type": "text",
+      "description": "A description of how the issue affects users."
+    },
+    "health_posts": {
+      "label": "Status posts",
+      "type": "raw_object",
+      "description": "The issue's collection of historical status posts: when each was created, its type, and its HTML content."
+    },
+    "msg_category": {
+      "label": "Message category",
+      "type": "enum",
+      "description": "The service message's category: fix an issue, plan for a change, or stay informed."
+    },
+    "msg_severity": {
+      "label": "Message severity",
+      "type": "enum",
+      "description": "The severity of the service message."
+    },
+    "msg_is_major_change": {
+      "label": "Major change flag",
+      "type": "flag",
+      "description": "Whether the message describes a major update to the service."
+    },
+    "msg_services": {
+      "label": "Affected services",
+      "type": "text",
+      "description": "The services this message affects."
+    },
+    "msg_tags": {
+      "label": "Tags",
+      "type": "text",
+      "description": "Free-text tags the posting team attached, for example whether the message covers a new feature."
+    },
+    "msg_action_required_by": {
+      "label": "Action required by",
+      "type": "event_time",
+      "description": "The deadline for any required action; null when there is none."
+    },
+    "msg_expiry_time": {
+      "label": "Expiry time",
+      "type": "event_time",
+      "description": "When the message expires from the message center; null when it does not."
+    },
+    "msg_body": {
+      "label": "Message body",
+      "type": "raw_object",
+      "description": "The message's HTML body and its content type."
+    },
+    "msg_view_point": {
+      "label": "Viewpoint",
+      "type": "flag",
+      "description": "Per-user read, archived and favorite state for the message; null when read with application permissions, as this pack's sample is."
+    },
+    "mgmt_alert_id": {
+      "label": "Alert id",
+      "type": "event_id",
+      "description": "The id of the security or compliance alert this record reports on."
+    },
+    "mgmt_alert_type": {
+      "label": "Alert type",
+      "type": "enum",
+      "description": "Whether the alert was raised by a system detection or a custom alert policy, for example System."
+    },
+    "mgmt_severity": {
+      "label": "Alert severity",
+      "type": "enum",
+      "description": "The severity Microsoft assigned the alert, for example Informational, Low, Medium or High."
+    },
+    "mgmt_policy_id": {
+      "label": "Policy id",
+      "type": "identifier",
+      "description": "The id of the alert or DLP policy that triggered this record."
+    },
+    "mgmt_subject": {
+      "label": "Subject",
+      "type": "text",
+      "description": "The subject line of the mail item the operation acted on."
+    },
+    "mgmt_device_id": {
+      "label": "Device id",
+      "type": "identifier",
+      "description": "The Microsoft Entra device id of the client, present only for a registered or domain-joined device."
+    },
+    "mgmt_client_app_id": {
+      "label": "Client app id",
+      "type": "app_id",
+      "description": "The original caller's service or protocol identifier for the request."
+    },
+    "mgmt_user_agent": {
+      "label": "User agent",
+      "type": "user_agent",
+      "description": "The SharePoint client or browser string the operation was performed with."
+    },
+    "mgmt_site_url": {
+      "label": "Site URL",
+      "type": "text",
+      "description": "The URL of the SharePoint site the accessed file or folder is in."
+    },
+    "signin_id": {
+      "label": "Sign-in id",
+      "type": "event_id",
+      "description": "Unique id representing this sign-in activity.",
+      "hazards": [
+        "signin_ids_look_alike"
+      ]
+    },
+    "signin_time": {
+      "label": "Sign-in time",
+      "type": "event_time",
+      "description": "Date and time (UTC) the sign-in was initiated.",
+      "hazards": [
+        "signin_time_vs_timestamp"
+      ]
+    },
+    "signin_app_id": {
+      "label": "Application id",
+      "type": "app_id",
+      "description": "GUID of the application the user signed in to."
+    },
+    "signin_app_name": {
+      "label": "Application name",
+      "type": "text",
+      "description": "The app's display name in the Microsoft Entra admin center."
+    },
+    "signin_client_app": {
+      "label": "Client app used",
+      "type": "enum",
+      "description": "The client used for the sign-in: modern clients report Browser or modern clients; legacy protocols report Exchange ActiveSync, IMAP, MAPI, SMTP, POP or other clients."
+    },
+    "signin_conditional_access_status": {
+      "label": "Conditional access status",
+      "type": "enum",
+      "description": "Status of an activated Conditional Access policy for this sign-in: success, failure or notApplied."
+    },
+    "signin_correlation_id": {
+      "label": "Correlation id",
+      "type": "identifier",
+      "description": "The request id the client sent when the sign-in was initiated."
+    },
+    "signin_ip": {
+      "label": "Sign-in IP",
+      "type": "source_ip",
+      "description": "IP address of the client used to sign in."
+    },
+    "signin_interactive": {
+      "label": "Interactive flag",
+      "type": "flag",
+      "description": "Whether the sign-in was interactive (a user present at a prompt)."
+    },
+    "signin_user_id": {
+      "label": "User id",
+      "type": "user_id",
+      "description": "Microsoft Entra object id of the user who signed in."
+    },
+    "signin_user_name": {
+      "label": "User display name",
+      "type": "user_name",
+      "description": "Display name of the user who signed in."
+    },
+    "signin_user_upn": {
+      "label": "User principal name",
+      "type": "principal",
+      "description": "UPN of the user who signed in; for guest users this is stored in the resolved, lower-case form rather than the #EXT# form the user object carries."
+    },
+    "signin_risk_level": {
+      "label": "Risk level",
+      "type": "enum",
+      "description": "Aggregated or per-sign-in Entra ID Protection risk level: none, low, medium, high or hidden (hidden means the tenant or user is not enrolled in ID Protection P2)."
+    },
+    "signin_risk_state": {
+      "label": "Risk state",
+      "type": "enum",
+      "description": "Status of the risky sign-in or the reason it was flagged, for example none, atRisk, confirmedCompromised or dismissed."
+    },
+    "signin_resource_id": {
+      "label": "Resource id",
+      "type": "resource_id",
+      "description": "Id of the resource the user signed in to."
+    },
+    "signin_resource_name": {
+      "label": "Resource name",
+      "type": "text",
+      "description": "Display name of the resource the user signed in to."
+    },
+    "signin_status": {
+      "label": "Sign-in status",
+      "type": "raw_object",
+      "description": "The nested signInStatus object: errorCode, failureReason and additionalDetails for a failed sign-in."
+    },
+    "signin_device": {
+      "label": "Device detail",
+      "type": "raw_object",
+      "description": "The nested deviceDetail object: device id, display name, operating system, browser and compliance/management flags."
+    },
+    "signin_location": {
+      "label": "Sign-in location",
+      "type": "raw_object",
+      "description": "The nested signInLocation object: city, state, country/region and geographic coordinates the sign-in was attributed to."
+    },
+    "usage_group_activity": {
+      "label": "Groups activity detail",
+      "type": "raw_object",
+      "description": "One row of the Office 365 Groups activity detail usage report: group identity, membership and per-workload (Exchange, SharePoint, Yammer) activity counters for the report period."
+    },
+    "trace_organization": {
+      "label": "Organization",
+      "type": "domain",
+      "description": "The tenant's default domain the message trace was run against."
+    }
+  },
+  "containers": {
+    "ms:o365:management": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Office 365 Management Activity API audit records, AzureActiveDirectory workload, as Splunk_TA_microsoft-cloudservices indexes them (kept for backward compatibility; the same sourcetype's Office 365 Management Activity API input on the newer Splunk Add-on for Microsoft Office 365 is o365:management:activity).",
+      "note": "Actor and Target are JSON arrays of {ID,Type} pairs; KV_MODE=json flattens each to a multivalued Actor{}.ID / Actor{}.Type pair of fields."
+    },
+    "o365:cas:api": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Alerts visible through the Microsoft Cloud App Security / Defender for Cloud Apps portal API, as splunk_ta_o365 indexes the /api/v1/alerts/ response: one alert object per line, unwrapped."
+    },
+    "o365:graph:messagetrace": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Exchange Online message trace records from the Microsoft Graph messageTraces endpoint, as splunk_ta_o365 indexes them: one exchangeMessageTrace object per line."
+    },
+    "o365:metadata": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Microsoft Entra ID directory user objects from the Graph /users endpoint, as splunk_ta_o365 indexes them for lookup enrichment: one user object per line.",
+      "note": "No time_field: this sourcetype carries no event time, only Splunk's own index time."
+    },
+    "o365:service:healthIssue": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Service health issues (incidents and advisories) from the Microsoft Graph serviceAnnouncement/issues endpoint, as splunk_ta_o365 indexes them."
+    },
+    "o365:service:updateMessage": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Service message center posts from the Microsoft Graph serviceAnnouncement/messages endpoint, as splunk_ta_o365 indexes them."
+    },
+    "o365:management:activity": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Office 365 Management Activity API audit records, all workloads, as the Splunk Add-on for Microsoft Office 365 indexes the raw JSON (no CIM field mapping): the same feed ms:o365:management carries for the AzureActiveDirectory workload only, here across every RecordType (Exchange, SharePoint, Yammer, Teams, SecurityComplianceCenter, Power Platform and more).",
+      "note": "534 distinct keys observed in this dev Splunk across the sampled RecordType values; most are workload- or operation-specific parameters (mail rule conditions, DLP policy rule detail, admin cmdlet parameters) and are not bound here."
+    },
+    "o365:graph:api": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Microsoft Graph API pulls landed on one generic sourcetype by the Splunk Add-on for Microsoft Office 365: Microsoft Entra sign-in activity (the signIn resource) and, in this dev Splunk's seed, Office 365 Groups usage-activity report rows (reportRoot: getOffice365GroupsActivityDetail). The two record shapes share no fields; which one a record is shows in whether id/createdDateTime/userId or Group Id/Report Period is present."
+    },
+    "o365:reporting:messagetrace": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Exchange Online message trace records from the Get-MessageTrace cmdlet / reporting web service, as splunk_ta_o365 indexes them under the PascalCase column names the older reporting API used; the same data o365:graph:messagetrace carries from the newer Graph messageTraces endpoint."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "Id",
+      "concept": "mgmt_event_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "CreationTime",
+      "concept": "mgmt_creation_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "RecordType",
+      "concept": "mgmt_record_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "Operation",
+      "concept": "mgmt_operation",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "OrganizationId",
+      "concept": "mgmt_org_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "ResultStatus",
+      "concept": "mgmt_result_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "result",
+      "concept": "mgmt_result_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "if(isnull(ResultStatus),\"success\",ResultStatus)"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "status",
+      "concept": "mgmt_status_norm",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "o365_status_lookup ResultStatus OUTPUT status"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "UserKey",
+      "concept": "mgmt_user_key",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "UserType",
+      "concept": "mgmt_user_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "Workload",
+      "concept": "mgmt_workload",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "dvc",
+      "concept": "mgmt_workload",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Workload as dvc"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "ClientIP",
+      "concept": "mgmt_client_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "src",
+      "concept": "mgmt_client_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "ClientIP as src"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "src_ip",
+      "concept": "mgmt_client_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "ClientIP as src_ip"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "ObjectId",
+      "concept": "mgmt_object_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "object_id",
+      "concept": "mgmt_object_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "ObjectId as object_id"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "dest",
+      "concept": "mgmt_object_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "ObjectId as dest"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "UserId",
+      "concept": "mgmt_user_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "user",
+      "concept": "mgmt_user_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "UserId as user"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "src_user",
+      "concept": "mgmt_user_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "UserId as src_user"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "AzureActiveDirectoryEventType",
+      "concept": "mgmt_azuread_event_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "Actor{}.ID",
+      "concept": "mgmt_actor_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json flattens a JSON array of {ID,Type} objects into multivalued Actor{}.ID / Actor{}.Type fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "Actor{}.Type",
+      "concept": "mgmt_actor_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json flattens a JSON array of {ID,Type} objects into multivalued Actor{}.ID / Actor{}.Type fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "ActorContextId",
+      "concept": "mgmt_actor_context_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "Target{}.ID",
+      "concept": "mgmt_target_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json flattens a JSON array of {ID,Type} objects into multivalued Target{}.ID / Target{}.Type fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "Target{}.Type",
+      "concept": "mgmt_target_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json flattens a JSON array of {ID,Type} objects into multivalued Target{}.ID / Target{}.Type fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "TargetContextId",
+      "concept": "mgmt_target_context_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "InterSystemsId",
+      "concept": "mgmt_intersystems_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "IntraSystemId",
+      "concept": "mgmt_intrasystem_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "LoginStatus",
+      "concept": "mgmt_login_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "UserDomain",
+      "concept": "mgmt_user_domain",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "Client",
+      "concept": "mgmt_client",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_microsoft-cloudservices indexes the audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "app",
+      "concept": "mgmt_client",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "Client as app"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "ExtendedProperties{}.Name",
+      "concept": "mgmt_extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json flattens a JSON array of {ID,Type} objects into multivalued ExtendedProperties{}.ID / ExtendedProperties{}.Type fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "ExtendedProperties{}.Value",
+      "concept": "mgmt_extended_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "KV_MODE=json flattens a JSON array of {ID,Type} objects into multivalued ExtendedProperties{}.ID / ExtendedProperties{}.Type fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "request_type",
+      "concept": "mgmt_request_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "case(match(source,\"ServiceComms/Messages\"),\"operational_messages\", match(source,\"ServiceComms/HistoricalStatus\"),\"historical_status\", match(source,\"ServiceComms/CurrentStatus\"),\"current_status\", match(source,\"activity/feed/Audit\"),\"audit_\"+Workload)"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "model_type",
+      "concept": "mgmt_model_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "o365_model_lookup Operation,ResultStatus OUTPUTNEW model_type, action, change_type, object_category (falls back to o365_model_operation_only_lookup keyed on Operation alone)"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "o365_audit_model_type",
+      "concept": "mgmt_model_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "same lookup, output aliased to o365_audit_model_type"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "action",
+      "concept": "mgmt_action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "o365_model_lookup / o365_model_operation_only_lookup, action column"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "change_type",
+      "concept": "mgmt_change_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "o365_model_lookup / o365_model_operation_only_lookup, change_type column"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "object_category",
+      "concept": "mgmt_object_category",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "o365_model_lookup / o365_model_operation_only_lookup, object_category column"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "object",
+      "concept": "mgmt_object",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "if(isnull(SourceFileName),ObjectId,SourceFileName)"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "object_path",
+      "concept": "mgmt_object_path",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "case(ObjectId!=\"Not Available\", ObjectId)"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "file_name",
+      "concept": "mgmt_file_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "SourceFileName as file_name"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "file_path",
+      "concept": "mgmt_file_path",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "SourceRelativeUrl as file_path"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:o365:management",
+      "column": "vendor_product",
+      "concept": "mgmt_vendor_product",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "\"Microsoft Cloud Services:\".Workload"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "_id",
+      "concept": "cas_alert_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/defender-cloud-apps/api-alerts",
+          "title": "Alerts API - Microsoft Defender for Cloud Apps",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "id",
+      "concept": "cas_alert_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk's JSON extraction strips the leading underscore from _id; confirmed in the dev index that id equals _id's value."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "idValue",
+      "concept": "cas_alert_type_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/defender-cloud-apps/api-alerts",
+          "title": "Alerts API - Microsoft Defender for Cloud Apps",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "timestamp",
+      "concept": "cas_alert_timestamp",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/defender-cloud-apps/api-alerts",
+          "title": "Alerts API - Microsoft Defender for Cloud Apps",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "title",
+      "concept": "cas_alert_title",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/defender-cloud-apps/api-alerts",
+          "title": "Alerts API - Microsoft Defender for Cloud Apps",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "description",
+      "concept": "cas_alert_description",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/defender-cloud-apps/api-alerts",
+          "title": "Alerts API - Microsoft Defender for Cloud Apps",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "severityValue",
+      "concept": "cas_alert_severity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/defender-cloud-apps/api-alerts",
+          "title": "Alerts API - Microsoft Defender for Cloud Apps",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "severity",
+      "concept": "cas_alert_severity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "case(isnotnull(isSystemAlert), case(severityValue=\"0\",\"low\", severityValue=\"1\",\"medium\", severityValue=\"2\",\"high\", severityValue=\"3\",\"informational\"))"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "severity_id",
+      "concept": "cas_alert_severity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "case(isnotnull(isSystemAlert), severityValue, ...)"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "statusValue",
+      "concept": "cas_alert_read_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/defender-cloud-apps/api-alerts",
+          "title": "Alerts API - Microsoft Defender for Cloud Apps",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "resolutionStatusValue",
+      "concept": "cas_alert_resolution_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/defender-cloud-apps/api-alerts",
+          "title": "Alerts API - Microsoft Defender for Cloud Apps",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "isSystemAlert",
+      "concept": "cas_alert_is_system",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/defender-cloud-apps/api-alerts",
+          "title": "Alerts API - Microsoft Defender for Cloud Apps",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "stories{}",
+      "concept": "cas_alert_stories",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/defender-cloud-apps/api-alerts",
+          "title": "Alerts API - Microsoft Defender for Cloud Apps",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "threatScore",
+      "concept": "cas_alert_threat_score",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "comment",
+      "concept": "cas_alert_comment",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "handledByUser",
+      "concept": "cas_alert_handled_by",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/defender-cloud-apps/api-alerts",
+          "title": "Alerts API - Microsoft Defender for Cloud Apps",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "user",
+      "concept": "cas_alert_handled_by",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "case(isnotnull(isSystemAlert), handledByUser)"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "resolveTime",
+      "concept": "cas_alert_resolve_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "URL",
+      "concept": "cas_alert_portal_url",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "dest",
+      "concept": "cas_alert_portal_url",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "case(isnotnull(isSystemAlert), URL)"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "src",
+      "concept": "cas_alert_portal_url",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "case(isnotnull(isSystemAlert), URL, isnotnull(policyType), \"Cloud App Discovery Policy\")"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "contextId",
+      "concept": "cas_alert_context_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "app",
+      "concept": "cas_alert_app",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "\"Microsoft Cloud App Security\""
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "signature",
+      "concept": "cas_alert_signature",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "case(isnotnull(isSystemAlert), title, isnotnull(policyType), displayName)"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "type",
+      "concept": "cas_alert_cim_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "\"event\""
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "entities{}.id",
+      "concept": "cas_entity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/defender-cloud-apps/api-alerts-list",
+          "title": "List - Alerts API - Microsoft Defender for Cloud Apps",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "entities{}.label",
+      "concept": "cas_entity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/defender-cloud-apps/api-alerts-list",
+          "title": "List - Alerts API - Microsoft Defender for Cloud Apps",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "entities{}.type",
+      "concept": "cas_entity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/defender-cloud-apps/api-alerts-list",
+          "title": "List - Alerts API - Microsoft Defender for Cloud Apps",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "entities{}.entityRole",
+      "concept": "cas_entity_role",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "entities{}.entityType",
+      "concept": "cas_entity_type_int",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "entities{}.pa",
+      "concept": "cas_entity_principal",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "entities{}.policyType",
+      "concept": "cas_entity_policy_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:cas:api",
+      "column": "entities{}.inst",
+      "concept": "cas_entity_instance",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each alert object from the API's data[] array with json.dumps(); KV_MODE=json extracts each key as a field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "id",
+      "concept": "trace_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the Graph response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/exchangemessagetrace?view=graph-rest-1.0",
+          "title": "exchangeMessageTrace resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "internal_message_id",
+      "concept": "trace_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "id AS internal_message_id"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "messageId",
+      "concept": "trace_message_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the Graph response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/exchangemessagetrace?view=graph-rest-1.0",
+          "title": "exchangeMessageTrace resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "message_id",
+      "concept": "trace_message_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "messageId AS message_id"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "receivedDateTime",
+      "concept": "trace_received_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the Graph response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/exchangemessagetrace?view=graph-rest-1.0",
+          "title": "exchangeMessageTrace resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "senderAddress",
+      "concept": "trace_sender",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the Graph response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/exchangemessagetrace?view=graph-rest-1.0",
+          "title": "exchangeMessageTrace resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "src_user",
+      "concept": "trace_sender",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "senderAddress AS src_user"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "recipientAddress",
+      "concept": "trace_recipient",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the Graph response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/exchangemessagetrace?view=graph-rest-1.0",
+          "title": "exchangeMessageTrace resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "recipient",
+      "concept": "trace_recipient",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "recipientAddress AS recipient"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "subject",
+      "concept": "trace_subject",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the Graph response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/exchangemessagetrace?view=graph-rest-1.0",
+          "title": "exchangeMessageTrace resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "size",
+      "concept": "trace_size",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the Graph response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/exchangemessagetrace?view=graph-rest-1.0",
+          "title": "exchangeMessageTrace resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "fromIP",
+      "concept": "trace_from_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the Graph response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/exchangemessagetrace?view=graph-rest-1.0",
+          "title": "exchangeMessageTrace resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "src",
+      "concept": "trace_from_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "fromIP AS src"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "toIP",
+      "concept": "trace_to_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the Graph response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/exchangemessagetrace?view=graph-rest-1.0",
+          "title": "exchangeMessageTrace resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "dest",
+      "concept": "trace_to_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "if(toIP!=\"\", toIP, null())"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "status",
+      "concept": "trace_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the Graph response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/exchangemessagetrace?view=graph-rest-1.0",
+          "title": "exchangeMessageTrace resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "status_code",
+      "concept": "trace_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "status AS status_code"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "action",
+      "concept": "trace_cim_action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "splunk_ta_o365_cim_graph_messagetrace_action status OUTPUT action"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "recipient_count",
+      "concept": "trace_recipient_count",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "\"1\""
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "recipient_domain",
+      "concept": "trace_recipient_domain",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "REPORT extract_graph_messagetrace_recipient_domain"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "src_user_domain",
+      "concept": "trace_src_user_domain",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "REPORT extract_graph_messagetrace_src_user_domain"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:messagetrace",
+      "column": "vendor_product",
+      "concept": "trace_vendor_product",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "\"Microsoft Office 365 MessageTrace\""
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:metadata",
+      "column": "id",
+      "concept": "meta_object_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the /v1.0/users response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0",
+          "title": "user resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:metadata",
+      "column": "displayName",
+      "concept": "meta_display_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the /v1.0/users response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0",
+          "title": "user resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:metadata",
+      "column": "user",
+      "concept": "meta_display_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "if(match(source,\"^ms_eid_users:tenant_id:.*\"), displayName, null())"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:metadata",
+      "column": "userPrincipalName",
+      "concept": "meta_upn",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the /v1.0/users response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0",
+          "title": "user resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:metadata",
+      "column": "user_id",
+      "concept": "meta_upn",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "if(match(source,\"^ms_eid_users:tenant_id:.*\"), userPrincipalName, null())"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:metadata",
+      "column": "givenName",
+      "concept": "meta_given_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the /v1.0/users response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0",
+          "title": "user resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:metadata",
+      "column": "surname",
+      "concept": "meta_surname",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the /v1.0/users response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0",
+          "title": "user resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:metadata",
+      "column": "mail",
+      "concept": "meta_mail",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the /v1.0/users response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0",
+          "title": "user resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:metadata",
+      "column": "jobTitle",
+      "concept": "meta_job_title",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the /v1.0/users response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0",
+          "title": "user resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:metadata",
+      "column": "mobilePhone",
+      "concept": "meta_mobile_phone",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the /v1.0/users response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0",
+          "title": "user resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:metadata",
+      "column": "businessPhones{}",
+      "concept": "meta_business_phones",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the /v1.0/users response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0",
+          "title": "user resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:metadata",
+      "column": "officeLocation",
+      "concept": "meta_office_location",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the /v1.0/users response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0",
+          "title": "user resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:metadata",
+      "column": "preferredLanguage",
+      "concept": "meta_preferred_language",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the /v1.0/users response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0",
+          "title": "user resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:metadata",
+      "column": "vendor_product",
+      "concept": "meta_vendor_product",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "\"Microsoft Entra ID\""
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "id",
+      "concept": "svc_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "title",
+      "concept": "svc_title",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "startDateTime",
+      "concept": "svc_start_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "endDateTime",
+      "concept": "svc_end_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "lastModifiedDateTime",
+      "concept": "svc_last_modified_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "details{}.name",
+      "concept": "svc_details",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "details{}.value",
+      "concept": "svc_details",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "classification",
+      "concept": "health_classification",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "origin",
+      "concept": "health_origin",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "status",
+      "concept": "health_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "isResolved",
+      "concept": "health_is_resolved",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "service",
+      "concept": "health_service",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "feature",
+      "concept": "health_feature",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "featureGroup",
+      "concept": "health_feature_group",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "impactDescription",
+      "concept": "health_impact_description",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "posts{}.createdDateTime",
+      "concept": "health_posts",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "posts{}.postType",
+      "concept": "health_posts",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "posts{}.description.content",
+      "concept": "health_posts",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:healthIssue",
+      "column": "posts{}.description.contentType",
+      "concept": "health_posts",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/servicehealthissue?view=graph-rest-1.0",
+          "title": "serviceHealthIssue resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "id",
+      "concept": "svc_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "title",
+      "concept": "svc_title",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "startDateTime",
+      "concept": "svc_start_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "endDateTime",
+      "concept": "svc_end_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "lastModifiedDateTime",
+      "concept": "svc_last_modified_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "details{}.name",
+      "concept": "svc_details",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "details{}.value",
+      "concept": "svc_details",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "category",
+      "concept": "msg_category",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "severity",
+      "concept": "msg_severity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "isMajorChange",
+      "concept": "msg_is_major_change",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "services{}",
+      "concept": "msg_services",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "tags{}",
+      "concept": "msg_tags",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "actionRequiredByDateTime",
+      "concept": "msg_action_required_by",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "expiryDateTime",
+      "concept": "msg_expiry_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "body.content",
+      "concept": "msg_body",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "body.contentType",
+      "concept": "msg_body",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:service:updateMessage",
+      "column": "viewPoint",
+      "concept": "msg_view_point",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 writes each value[] element from the endpoint's response with json.dumps(); KV_MODE=json extracts each key as a field.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/serviceupdatemessage?view=graph-rest-1.0",
+          "title": "serviceUpdateMessage resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "Id",
+      "concept": "mgmt_event_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "CreationTime",
+      "concept": "mgmt_creation_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "RecordType",
+      "concept": "mgmt_record_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "Operation",
+      "concept": "mgmt_operation",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "OrganizationId",
+      "concept": "mgmt_org_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "ResultStatus",
+      "concept": "mgmt_result_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "UserKey",
+      "concept": "mgmt_user_key",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "UserType",
+      "concept": "mgmt_user_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "Workload",
+      "concept": "mgmt_workload",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "ClientIP",
+      "concept": "mgmt_client_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "ObjectId",
+      "concept": "mgmt_object_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "UserId",
+      "concept": "mgmt_user_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "AzureActiveDirectoryEventType",
+      "concept": "mgmt_azuread_event_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "Actor{}.ID",
+      "concept": "mgmt_actor_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "Actor{}.Type",
+      "concept": "mgmt_actor_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "ActorContextId",
+      "concept": "mgmt_actor_context_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "Target{}.ID",
+      "concept": "mgmt_target_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "Target{}.Type",
+      "concept": "mgmt_target_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "TargetContextId",
+      "concept": "mgmt_target_context_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "InterSystemsId",
+      "concept": "mgmt_intersystems_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "IntraSystemId",
+      "concept": "mgmt_intrasystem_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "SrcUserDomain",
+      "concept": "mgmt_user_domain",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "vendor_product",
+      "concept": "mgmt_vendor_product",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "action",
+      "concept": "mgmt_action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "change_type",
+      "concept": "mgmt_change_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "object_category",
+      "concept": "mgmt_object_category",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "object",
+      "concept": "mgmt_object",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "object_path",
+      "concept": "mgmt_object_path",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "file_name",
+      "concept": "mgmt_file_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "file_path",
+      "concept": "mgmt_file_path",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "AlertId",
+      "concept": "mgmt_alert_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "AlertType",
+      "concept": "mgmt_alert_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "Severity",
+      "concept": "mgmt_severity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "PolicyId",
+      "concept": "mgmt_policy_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "Subject",
+      "concept": "mgmt_subject",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "DeviceId",
+      "concept": "mgmt_device_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "ClientAppId",
+      "concept": "mgmt_client_app_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "UserAgent",
+      "concept": "mgmt_user_agent",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:management:activity",
+      "column": "SiteUrl",
+      "concept": "mgmt_site_url",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Management Activity API audit record's JSON with KV_MODE=json; each key becomes a field of the same name.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/office/office-365-management-api/office-365-management-activity-api-schema",
+          "title": "Office 365 Management Activity API schema",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "id",
+      "concept": "signin_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "createdDateTime",
+      "concept": "signin_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "appId",
+      "concept": "signin_app_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "appDisplayName",
+      "concept": "signin_app_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "clientAppUsed",
+      "concept": "signin_client_app",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "conditionalAccessStatus",
+      "concept": "signin_conditional_access_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "correlationId",
+      "concept": "signin_correlation_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "ipAddress",
+      "concept": "signin_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "isInteractive",
+      "concept": "signin_interactive",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "userId",
+      "concept": "signin_user_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "userDisplayName",
+      "concept": "signin_user_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "userPrincipalName",
+      "concept": "signin_user_upn",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "riskLevelAggregated",
+      "concept": "signin_risk_level",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "riskLevelDuringSignIn",
+      "concept": "signin_risk_level",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "riskState",
+      "concept": "signin_risk_state",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "riskDetail",
+      "concept": "signin_risk_state",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "resourceId",
+      "concept": "signin_resource_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "resourceDisplayName",
+      "concept": "signin_resource_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "status.errorCode",
+      "concept": "signin_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "status.failureReason",
+      "concept": "signin_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "status.additionalDetails",
+      "concept": "signin_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "deviceDetail.deviceId",
+      "concept": "signin_device",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "deviceDetail.displayName",
+      "concept": "signin_device",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "deviceDetail.operatingSystem",
+      "concept": "signin_device",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "deviceDetail.browser",
+      "concept": "signin_device",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "deviceDetail.isCompliant",
+      "concept": "signin_device",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "deviceDetail.isManaged",
+      "concept": "signin_device",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "location.city",
+      "concept": "signin_location",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "location.state",
+      "concept": "signin_location",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "location.countryOrRegion",
+      "concept": "signin_location",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "location.geoCoordinates.latitude",
+      "concept": "signin_location",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "location.geoCoordinates.longitude",
+      "concept": "signin_location",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Group Id",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Group Display Name",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Group Type",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Member Count",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "External Member Count",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Is Deleted",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Owner Principal Name",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Last Activity Date",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Report Period",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Report Refresh Date",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Exchange Received Email Count",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Exchange Mailbox Storage Used (Byte)",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Exchange Mailbox Total Item Count",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "SharePoint Active File Count",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "SharePoint Total File Count",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "SharePoint Site Storage Used (Byte)",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Yammer Posted Message Count",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Yammer Read Message Count",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:graph:api",
+      "column": "Yammer Liked Message Count",
+      "concept": "usage_group_activity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_o365 indexes the Graph API response's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "MessageTraceId",
+      "concept": "trace_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "MessageId",
+      "concept": "trace_message_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "Received",
+      "concept": "trace_received_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "SenderAddress",
+      "concept": "trace_sender",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "RecipientAddress",
+      "concept": "trace_recipient",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "Subject",
+      "concept": "trace_subject",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "Size",
+      "concept": "trace_size",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "FromIP",
+      "concept": "trace_from_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "ToIP",
+      "concept": "trace_to_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "Status",
+      "concept": "trace_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "Organization",
+      "concept": "trace_organization",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "action",
+      "concept": "trace_cim_action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "dest",
+      "concept": "trace_to_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "internal_message_id",
+      "concept": "trace_message_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "message_id",
+      "concept": "trace_message_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "recipient",
+      "concept": "trace_recipient",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "recipient_count",
+      "concept": "trace_recipient_count",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "recipient_domain",
+      "concept": "trace_recipient_domain",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "size",
+      "concept": "trace_size",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "src",
+      "concept": "trace_from_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "src_user",
+      "concept": "trace_sender",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "src_user_domain",
+      "concept": "trace_src_user_domain",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "status_code",
+      "concept": "trace_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "subject",
+      "concept": "trace_subject",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "o365:reporting:messagetrace",
+      "column": "vendor_product",
+      "concept": "trace_vendor_product",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "splunk_ta_o365 indexes the message trace result's JSON with KV_MODE=json; each key becomes a field of the same name."
+      }
+    }
+  ],
+  "hazards": {
+    "time_no_zone": {
+      "text": "CreationTime has no UTC offset though the schema says every timestamp is UTC; a bare string compare against a local time silently shifts the window."
+    },
+    "time_epoch_vs_iso": {
+      "text": "timestamp is epoch milliseconds (this dev Splunk's TIME_FORMAT is %s%3N) while resolveTime on the same record is an ISO 8601 string; the two are not interchangeable."
+    },
+    "time_frac_seconds_missing": {
+      "text": "props.conf expects receivedDateTime with seven fractional digits (TIME_FORMAT %7N) but every vendor example and this pack's samples have none; the second still parses, a stricter downstream format check would not."
+    },
+    "time_edit_not_incident": {
+      "text": "lastModifiedDateTime, not startDateTime, is the field this dev Splunk's TIME_PREFIX indexes as _time; a time-range search finds when the post was last edited, not when the issue or message actually started."
+    },
+    "no_time_field": {
+      "text": "o365:metadata carries no event time field at all (entry.json marks it index_time_ok); only Splunk's own index time is available."
+    },
+    "ids_look_alike_mgmt": {
+      "text": "Id, InterSystemsId, IntraSystemId, ActorContextId and TargetContextId are all GUID-shaped. Only Id identifies this audit record; the others identify a cross-system correlation, a session and a tenant. Do not join on shape alone."
+    },
+    "ids_look_alike_cas": {
+      "text": "the Alerts API's own property table labels _id as an 'Alert type identifier', but in the List response's example _id is the alert's own 24-character id and idValue (a separate integer field) is the type identifier. Trust the example, not that row of the table."
+    },
+    "underscore_stripped": {
+      "text": "the vendor's field is _id; this dev Splunk's JSON key-value extraction strips the leading underscore (reserved for Splunk's own internal fields), so the identical value also appears as id."
+    },
+    "identitytype_int_undocumented": {
+      "text": "the IdentityType enum table names its members (Claim, Name, Other, PUID, SPN, UPN) but the schema page never publishes which integer is which; treat an observed Actor.Type or Target.Type value as an opaque code, not a name."
+    },
+    "aadeventtype_int_undocumented": {
+      "text": "the AzureActiveDirectoryEventType table publishes only two member names with no integers; every record in this pack's sample carries 0, and which name that is stays undocumented."
+    },
+    "entitytype_int_undocumented": {
+      "text": "entities[].entityType is an integer the Alerts API pages never define; entities[].type, a separate string field, is the one the docs and the samples actually use to tell entity kinds apart."
+    },
+    "request_type_constructed": {
+      "text": "request_type is not a vendor field; EVAL-request_type calculates it from a case-sensitive match on source and Workload. This pack's own sample notes the exact source string was constructed, not read from a running poller, since no o365-polling TA is installed next to the CIM add-on here."
+    },
+    "toip_blank_incoming": {
+      "text": "toIP is documented blank for incoming mail; every sample record in this pack is incoming, so an empty toIP is expected, not missing data."
+    },
+    "recipient_count_constant": {
+      "text": "recipient_count is calculated to the literal 1 on every record; it does not count the message's actual recipients."
+    },
+    "resultstatus_vocabulary_varies": {
+      "text": "ResultStatus's vocabulary depends on the workload: Succeeded, PartiallySucceeded or Failed for most audit activity, True or False for Exchange admin activity, and lowercase success or failed for the Azure AD logon events in this pack's own sample. o365_status_lookup normalises five such literals to success or failure and leaves anything else unset."
+    },
+    "resultstatus_sts_caveat": {
+      "text": "for Microsoft Entra ID STS logon events the vendor doc warns ResultStatus=Succeeded means only that the HTTP call succeeded, not that the sign-in did; LoginStatus (0 for success, any other value a logon error code) carries the real outcome."
+    },
+    "severity_id_duplicate": {
+      "text": "severity_id repeats severityValue for a system alert and has no value at all for a policy-based alert; it is not a second, independent severity."
+    },
+    "signin_time_vs_timestamp": {
+      "text": "createdDateTime (signin_time) is the Graph API's own UTC sign-in clock. This dev Splunk also lands a bare 'timestamp' field on the same event (Splunk's own extraction, not a Graph property, and left unbound here); the two are not always the same instant. Sort and window on createdDateTime."
+    },
+    "signin_ids_look_alike": {
+      "text": "id (signin_id), correlationId (signin_correlation_id) and resourceId (signin_resource_id) are all GUID-shaped. id identifies this sign-in event; correlationId is client-supplied and only useful to line up client and server logs of the same attempt; resourceId names the application signed into, not the user or the sign-in."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

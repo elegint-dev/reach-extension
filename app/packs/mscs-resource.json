@@ -1,0 +1,4688 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "mscs-resource",
+  "name": "Azure Resource Manager inventory snapshots",
+  "pack_version": "0.1.0",
+  "description": "Azure Resource Manager inventory snapshots collected by the Splunk Add-on for Microsoft Cloud Services (mscs sourcetypes): virtual machines, disks, NICs, public IPs, NSGs, VNets, images, snapshots, resource groups, subscriptions and network topology.",
+  "source": "Azure REST API reference (Microsoft Learn, docs-ref-autogen from Azure/azure-rest-api-specs); field names and CIM-style aliases confirmed against captured samples and indexed mscs:resource:* events.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "mscs_resource",
+    "label": "Azure Resource Manager inventory snapshots",
+    "description": "Periodic ARM inventory snapshots the Splunk Add-on for Microsoft Cloud Services collects per resource kind: one event per resource (or, for topology, per resource node) as the ARM control-plane GET/LIST APIs return it.",
+    "tags": [
+      "cloud",
+      "azure",
+      "inventory",
+      "cmdb"
+    ],
+    "discriminator": "arm_type"
+  },
+  "concepts": {
+    "resource_id": {
+      "label": "Resource ID",
+      "type": "resource_id",
+      "description": "The Azure Resource Manager resource ID: /subscriptions/{id}/resourceGroups/{rg}/providers/{provider}/{type}/{name}.",
+      "hazards": [
+        "azure_ids_look_alike"
+      ]
+    },
+    "resource_name": {
+      "label": "Resource name",
+      "type": "text",
+      "description": "The resource's own name, the last path segment of its resource ID."
+    },
+    "arm_type": {
+      "label": "ARM resource type",
+      "type": "record_type",
+      "description": "The Azure Resource Manager type string for the resource, for example Microsoft.Compute/disks."
+    },
+    "location": {
+      "label": "Location",
+      "type": "region",
+      "description": "The Azure region the resource was deployed to."
+    },
+    "resource_group": {
+      "label": "Resource group",
+      "type": "identifier",
+      "description": "The resource group the resource belongs to; extracted by the collector from the resource ID's resourceGroups segment."
+    },
+    "subscription_id": {
+      "label": "Subscription ID",
+      "type": "account_id",
+      "description": "The Azure subscription the resource belongs to; extracted by the collector from the resource ID's subscriptions segment."
+    },
+    "tags": {
+      "label": "Tags",
+      "type": "raw_object",
+      "description": "The resource's tags: a flat object on most containers, reshaped to a list of 'key : value' strings by the VM collector."
+    },
+    "etag": {
+      "label": "Etag",
+      "type": "identifier",
+      "description": "A read-only string that changes whenever the resource is updated; concurrency control, not a stable identifier."
+    },
+    "resource_guid": {
+      "label": "Resource GUID",
+      "type": "identifier",
+      "description": "A GUID the platform assigns to the resource, separate from its ARM resource ID.",
+      "hazards": [
+        "azure_ids_look_alike"
+      ]
+    },
+    "managed_by": {
+      "label": "Managed by",
+      "type": "resource_id",
+      "description": "The resource ID of the resource that manages this one, for example the VM a disk is attached to."
+    },
+    "provisioning_state": {
+      "label": "Provisioning state",
+      "type": "enum",
+      "description": "The resource's Azure Resource Manager provisioning state."
+    },
+    "sku_name": {
+      "label": "SKU name",
+      "type": "text",
+      "description": "The resource's stock-keeping-unit name, deciding its performance tier, for example Standard_LRS or Basic."
+    },
+    "sku_tier": {
+      "label": "SKU tier",
+      "type": "text",
+      "description": "The performance or service tier of the resource's SKU."
+    },
+    "time_created": {
+      "label": "Created time",
+      "type": "event_time",
+      "description": "When the resource was created, as the platform recorded it.",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_basis"
+      ]
+    },
+    "unique_id": {
+      "label": "Platform unique ID",
+      "type": "identifier",
+      "description": "A GUID the platform assigns identifying this exact resource instance, separate from its ARM resource ID and its user-assigned name.",
+      "hazards": [
+        "azure_ids_look_alike"
+      ]
+    },
+    "network_access_policy": {
+      "label": "Network access policy",
+      "type": "enum",
+      "description": "The policy for accessing the disk or snapshot's export/upload URI via network."
+    },
+    "public_network_access": {
+      "label": "Public network access",
+      "type": "enum",
+      "description": "Whether the disk or snapshot's export/upload URI can be reached from the public internet."
+    },
+    "os_type": {
+      "label": "OS type",
+      "type": "enum",
+      "description": "The operating system on the disk: Windows or Linux."
+    },
+    "disk_state": {
+      "label": "Disk state",
+      "type": "enum",
+      "description": "The state of the disk or snapshot: whether it is attached, reserved, frozen, or mid-upload."
+    },
+    "disk_size_gb": {
+      "label": "Disk size (GB)",
+      "type": "count",
+      "description": "The disk or snapshot's size in gigabytes."
+    },
+    "disk_size_bytes": {
+      "label": "Disk size (bytes)",
+      "type": "count",
+      "description": "The disk or snapshot's size in bytes; read-only."
+    },
+    "encryption_type": {
+      "label": "Encryption type",
+      "type": "enum",
+      "description": "The kind of key used to encrypt the disk or snapshot's data at rest."
+    },
+    "create_option": {
+      "label": "Create option",
+      "type": "enum",
+      "description": "How the disk, snapshot or VM data disk was created: from an image, an empty volume, a copy, an upload or a restore, one of eleven fixed values."
+    },
+    "source_resource_id": {
+      "label": "Source resource ID",
+      "type": "resource_id",
+      "description": "The ARM resource ID of the disk or snapshot this one was copied from."
+    },
+    "source_unique_id": {
+      "label": "Source unique ID",
+      "type": "identifier",
+      "description": "The platform unique ID of the resource this snapshot's source was created from."
+    },
+    "incremental": {
+      "label": "Incremental snapshot",
+      "type": "flag",
+      "description": "Whether the snapshot is incremental (occupies less space, can be diffed against the family)."
+    },
+    "disk_io_counter": {
+      "label": "Disk I/O counter",
+      "type": "count",
+      "description": "A per-disk I/O counter this pack observed with real numeric values on seeded events. Azure's Disk REST schema returns only provisioned IOPS/throughput limits (diskIOPSReadWrite, diskMBpsReadWrite), not live counters, so this pack cannot confirm which meter (reads, writes, ops, or blocks) beyond what the column name states."
+    },
+    "service_family": {
+      "label": "Service family",
+      "type": "text",
+      "description": "A fixed label naming the Azure service that owns this resource, for example 'Azure Virtual Machines' or 'Azure Virtual Network'. Not a per-resource vendor field: observed constant per resource kind in the dev Splunk."
+    },
+    "promotion_ref": {
+      "label": "Billing promotion",
+      "type": "raw_object",
+      "description": "A billing promotion entry this pack observed on seeded subscription events; not part of the Subscriptions - Get definitions this pack cites, so its structure (category, endDateTime) is inferred from the field names alone."
+    },
+    "empty_extraction": {
+      "label": "Unpopulated extraction",
+      "type": "identifier",
+      "description": "A field this sourcetype's index-time extraction defines but that stayed empty on every event this pack observed (samples and dev Splunk); likely scoped to a resource shape outside this pack's samples."
+    },
+    "vm_platform_id": {
+      "label": "VM platform ID",
+      "type": "identifier",
+      "description": "The Azure-assigned unique identifier for the VM: a GUID distinct from the VM's own ARM resource ID.",
+      "hazards": [
+        "azure_ids_look_alike"
+      ]
+    },
+    "vm_size": {
+      "label": "VM size",
+      "type": "text",
+      "description": "The VM's size/SKU, for example Standard_DS3_v2, which decides its CPU and memory allocation."
+    },
+    "power_state": {
+      "label": "Power state",
+      "type": "enum",
+      "description": "The VM's current power state, reported as an instance-view status code such as PowerState/running."
+    },
+    "computer_name": {
+      "label": "Computer name",
+      "type": "hostname",
+      "description": "The VM's hostname, set in its OS profile or reported back by the guest agent.",
+      "hazards": [
+        "hostname_unstable"
+      ]
+    },
+    "admin_username": {
+      "label": "Admin username",
+      "type": "user_name",
+      "description": "The local administrator account name provisioned on the VM.",
+      "sensitivity": "pii"
+    },
+    "image_publisher": {
+      "label": "Image publisher",
+      "type": "text",
+      "description": "The publisher of the platform image the VM (or image) was created from, for example MicrosoftWindowsServer."
+    },
+    "image_offer": {
+      "label": "Image offer",
+      "type": "text",
+      "description": "The offer of the platform image the VM was created from, for example WindowsServer."
+    },
+    "image_sku": {
+      "label": "Image SKU",
+      "type": "text",
+      "description": "The SKU of the platform image the VM was created from, for example 2016-Datacenter."
+    },
+    "image_version": {
+      "label": "Image version",
+      "type": "version",
+      "description": "The version of the platform image the VM was created from, or 'latest'."
+    },
+    "os_disk_caching": {
+      "label": "Disk caching mode",
+      "type": "enum",
+      "description": "The host caching mode for the disk: None, ReadOnly or ReadWrite."
+    },
+    "managed_disk_storage_type": {
+      "label": "Managed disk storage type",
+      "type": "text",
+      "description": "The storage account type backing a managed disk reference, for example Premium_LRS."
+    },
+    "managed_disk_ref_id": {
+      "label": "Managed disk reference",
+      "type": "resource_id",
+      "description": "The resource ID of a managed disk referenced from another resource (a VM's disk slot, an image's source disk)."
+    },
+    "data_disk_lun": {
+      "label": "Data disk LUN",
+      "type": "count",
+      "description": "The logical unit number identifying a data disk's attach point on the VM or image."
+    },
+    "network_interface_ref_id": {
+      "label": "Network interface reference",
+      "type": "resource_id",
+      "description": "The resource ID of a network interface attached to this VM."
+    },
+    "boot_diagnostics_enabled": {
+      "label": "Boot diagnostics enabled",
+      "type": "flag",
+      "description": "Whether boot diagnostics are enabled for the VM."
+    },
+    "boot_diagnostics_uri": {
+      "label": "Boot diagnostics URI",
+      "type": "text",
+      "description": "The storage account URI boot diagnostics are written to."
+    },
+    "availability_set_id": {
+      "label": "Availability set reference",
+      "type": "resource_id",
+      "description": "The resource ID of the availability set the VM belongs to."
+    },
+    "proximity_placement_group_id": {
+      "label": "Proximity placement group reference",
+      "type": "resource_id",
+      "description": "The resource ID of the proximity placement group the VM belongs to."
+    },
+    "user_data": {
+      "label": "User data",
+      "type": "text",
+      "description": "Base64-encoded custom data supplied when the VM was created; may carry provisioning secrets.",
+      "sensitivity": "confidential"
+    },
+    "vm_cpu_cores": {
+      "label": "vCPU count",
+      "type": "count",
+      "description": "The VM's vCPU count; computed by the collector from the VM size, not a field the vendor response returns."
+    },
+    "vm_mem_capacity": {
+      "label": "Memory capacity",
+      "type": "count",
+      "description": "The VM's memory capacity; computed by the collector from the VM size, not a field the vendor response returns."
+    },
+    "vm_storage_capacity": {
+      "label": "Storage capacity",
+      "type": "count",
+      "description": "A storage capacity figure the collector reports for the VM; not a field the vendor response returns."
+    },
+    "vm_ref_id": {
+      "label": "Attached VM reference",
+      "type": "resource_id",
+      "description": "The resource ID of the VM a network interface is attached to."
+    },
+    "mac_address": {
+      "label": "MAC address",
+      "type": "identifier",
+      "description": "The MAC address of the network interface."
+    },
+    "nic_primary": {
+      "label": "Primary NIC",
+      "type": "flag",
+      "description": "Whether this is the primary network interface on the virtual machine."
+    },
+    "enable_ip_forwarding": {
+      "label": "IP forwarding enabled",
+      "type": "flag",
+      "description": "Whether IP forwarding is enabled on this network interface."
+    },
+    "enable_accelerated_networking": {
+      "label": "Accelerated networking enabled",
+      "type": "flag",
+      "description": "Whether the network interface is configured for accelerated networking."
+    },
+    "nic_type": {
+      "label": "NIC type",
+      "type": "enum",
+      "description": "The kind of network interface resource: Standard or Elastic."
+    },
+    "dns_servers": {
+      "label": "DNS servers",
+      "type": "raw_object",
+      "description": "The list of DNS server IP addresses configured on the interface or network."
+    },
+    "applied_dns_servers": {
+      "label": "Applied DNS servers",
+      "type": "raw_object",
+      "description": "The union of DNS servers applied across every NIC in the VM's availability set."
+    },
+    "internal_domain_name_suffix": {
+      "label": "Internal domain name suffix",
+      "type": "domain",
+      "description": "The DNS suffix used to build this NIC's internal (VNet-scoped) FQDN."
+    },
+    "private_ip_address": {
+      "label": "Private IP address",
+      "type": "source_ip",
+      "description": "The private IP address of the interface's IP configuration."
+    },
+    "ip_version": {
+      "label": "IP address version",
+      "type": "enum",
+      "description": "Whether the IP configuration is IPv4 or IPv6."
+    },
+    "ip_allocation_method": {
+      "label": "IP allocation method",
+      "type": "enum",
+      "description": "Whether the IP address is statically assigned or dynamically allocated."
+    },
+    "subnet_ref_id": {
+      "label": "Subnet reference",
+      "type": "resource_id",
+      "description": "The resource ID of the subnet this IP configuration or resource sits in."
+    },
+    "public_ip_ref_id": {
+      "label": "Public IP reference",
+      "type": "resource_id",
+      "description": "The resource ID of the public IP address bound to this IP configuration."
+    },
+    "nsg_ref_id": {
+      "label": "Network security group reference",
+      "type": "resource_id",
+      "description": "The resource ID of the network security group protecting this resource."
+    },
+    "auxiliary_mode": {
+      "label": "Auxiliary mode",
+      "type": "enum",
+      "description": "The auxiliary mode of the network interface resource (Azure Boost networking)."
+    },
+    "auxiliary_sku": {
+      "label": "Auxiliary SKU",
+      "type": "enum",
+      "description": "The auxiliary SKU of the network interface resource (Azure Boost networking)."
+    },
+    "disable_tcp_state_tracking": {
+      "label": "TCP state tracking disabled",
+      "type": "flag",
+      "description": "Whether TCP state tracking is disabled on this network interface."
+    },
+    "default_outbound_connectivity_enabled": {
+      "label": "Default outbound connectivity enabled",
+      "type": "flag",
+      "description": "Whether default outbound internet connectivity was configured for this NIC."
+    },
+    "allow_port25_out": {
+      "label": "Port 25 outbound allowed",
+      "type": "flag",
+      "description": "A network interface property this pack observed; not present in the 2024-05-01 NetworkInterfacePropertiesFormat definitions this pack checked, so likely an older or preview api-version property. The name suggests an SMTP (TCP/25) egress control."
+    },
+    "address_prefixes": {
+      "label": "Address space",
+      "type": "raw_object",
+      "description": "The IP address ranges (CIDR blocks) available for subnets in the virtual network."
+    },
+    "enable_ddos_protection": {
+      "label": "DDoS protection enabled",
+      "type": "flag",
+      "description": "Whether DDoS protection is enabled for the virtual network."
+    },
+    "subnets": {
+      "label": "Subnets",
+      "type": "raw_object",
+      "description": "The virtual network's subnets."
+    },
+    "subnet_address_prefix": {
+      "label": "Subnet address prefix",
+      "type": "text",
+      "description": "The CIDR block of one subnet within the virtual network."
+    },
+    "virtual_network_peerings": {
+      "label": "VNet peerings",
+      "type": "raw_object",
+      "description": "The virtual network's peering connections to other virtual networks."
+    },
+    "default_nat_gateway_id": {
+      "label": "Default NAT gateway reference",
+      "type": "resource_id",
+      "description": "The resource ID of the default NAT gateway for the virtual network's outbound traffic."
+    },
+    "security_rule_access": {
+      "label": "Security rule access",
+      "type": "enum",
+      "description": "Whether the security rule allows or denies the traffic it matches."
+    },
+    "security_rule_direction": {
+      "label": "Security rule direction",
+      "type": "enum",
+      "description": "Whether the security rule is evaluated on inbound or outbound traffic."
+    },
+    "security_rule_protocol": {
+      "label": "Security rule protocol",
+      "type": "enum",
+      "description": "The network protocol the security rule applies to."
+    },
+    "security_rule_priority": {
+      "label": "Security rule priority",
+      "type": "count",
+      "description": "The rule's priority (100-4096); lower numbers are evaluated first."
+    },
+    "security_rule_source_prefix": {
+      "label": "Security rule source prefix",
+      "type": "text",
+      "description": "The source CIDR or address tag the security rule matches."
+    },
+    "security_rule_dest_prefix": {
+      "label": "Security rule destination prefix",
+      "type": "text",
+      "description": "The destination CIDR or address tag the security rule matches."
+    },
+    "security_rule_source_port": {
+      "label": "Security rule source port range",
+      "type": "text",
+      "description": "The source port or port range the security rule matches."
+    },
+    "security_rule_dest_port": {
+      "label": "Security rule destination port range",
+      "type": "text",
+      "description": "The destination port or port range the security rule matches."
+    },
+    "security_rules": {
+      "label": "Custom security rules",
+      "type": "raw_object",
+      "description": "The NSG's own security rules, as opposed to its subscription-default rules."
+    },
+    "ip_address": {
+      "label": "Public IP address",
+      "type": "source_ip",
+      "description": "The public IP address assigned to this resource."
+    },
+    "dns_domain_name_label": {
+      "label": "DNS domain name label",
+      "type": "text",
+      "description": "The domain name label that, concatenated with the regional DNS zone, forms the resource's FQDN."
+    },
+    "dns_domain_name_label_scope": {
+      "label": "DNS domain name label scope",
+      "type": "enum",
+      "description": "The reuse scope for the domain name label's hashed FQDN."
+    },
+    "fqdn": {
+      "label": "FQDN",
+      "type": "domain",
+      "description": "The fully qualified domain name of the DNS record associated with the public IP."
+    },
+    "idle_timeout_minutes": {
+      "label": "Idle timeout (minutes)",
+      "type": "count",
+      "description": "The idle timeout of the public IP address, in minutes."
+    },
+    "ip_configuration_ref_id": {
+      "label": "IP configuration reference",
+      "type": "resource_id",
+      "description": "The resource ID of the IP configuration this public IP is bound to."
+    },
+    "ddos_protection_mode": {
+      "label": "DDoS protection mode",
+      "type": "enum",
+      "description": "The DDoS protection mode applied to the public IP address."
+    },
+    "subscription_display_name": {
+      "label": "Subscription display name",
+      "type": "text",
+      "description": "The subscription's human-readable display name."
+    },
+    "subscription_state": {
+      "label": "Subscription state",
+      "type": "enum",
+      "description": "The subscription's lifecycle state."
+    },
+    "tenant_id": {
+      "label": "Tenant ID",
+      "type": "account_id",
+      "description": "The Microsoft Entra tenant the subscription belongs to."
+    },
+    "managed_by_tenant_id": {
+      "label": "Managing tenant ID",
+      "type": "account_id",
+      "description": "The tenant ID of a tenant that manages this subscription (Lighthouse delegation)."
+    },
+    "authorization_source": {
+      "label": "Authorization source",
+      "type": "text",
+      "description": "The authorization source of the request that returned this subscription: Legacy, RoleBased, Bypassed, Direct, Management, or a combination."
+    },
+    "location_placement_id": {
+      "label": "Location placement ID",
+      "type": "text",
+      "description": "The ID that decides which Azure regions are visible for this subscription."
+    },
+    "quota_id": {
+      "label": "Quota ID",
+      "type": "text",
+      "description": "The subscription's quota ID (offer type)."
+    },
+    "spending_limit": {
+      "label": "Spending limit",
+      "type": "enum",
+      "description": "The subscription's spending limit setting."
+    },
+    "subscription_enabled": {
+      "label": "Subscription enabled flag",
+      "type": "flag",
+      "description": "A yes/no flag the collector derives from the subscription's state (Enabled -> yes); the vendor API itself returns only the state enum, not a separate boolean."
+    },
+    "association_name": {
+      "label": "Association name",
+      "type": "text",
+      "description": "The name of the resource associated with the parent resource in the topology snapshot."
+    },
+    "association_ref_id": {
+      "label": "Association reference",
+      "type": "resource_id",
+      "description": "The resource ID of the resource associated with the parent resource; the topology graph's join key."
+    },
+    "association_type": {
+      "label": "Association type",
+      "type": "enum",
+      "description": "The kind of association between the child and parent resource in the topology snapshot."
+    },
+    "topology_resource_label": {
+      "label": "Topology resource label",
+      "type": "text",
+      "description": "A human-friendly resource-kind label the collector derives from the resource's ARM type, for example 'Virtual Machine' for a Microsoft.Compute/virtualMachines id. Not a Topology API field."
+    },
+    "instance_status_code": {
+      "label": "Instance-view status code",
+      "type": "enum",
+      "description": "A status code from an Azure Compute instance-view sub-resource (a disk, an extension, the VM agent, a patch operation): PowerState/*, ProvisioningState/*, or a component-specific code."
+    },
+    "instance_status_display": {
+      "label": "Instance-view status text",
+      "type": "text",
+      "description": "The human-readable status or message text paired with an instance-view status code."
+    },
+    "instance_status_level": {
+      "label": "Instance-view status level",
+      "type": "enum",
+      "description": "The severity of an instance-view status: Info, Warning or Error."
+    },
+    "instance_status_time": {
+      "label": "Instance-view status time",
+      "type": "event_time",
+      "description": "When an instance-view status was last set.",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_basis"
+      ]
+    },
+    "os_name": {
+      "label": "Guest OS name",
+      "type": "text",
+      "description": "The operating system name the VM agent reports from inside the guest."
+    },
+    "os_version": {
+      "label": "Guest OS version",
+      "type": "text",
+      "description": "The operating system version the VM agent reports from inside the guest."
+    },
+    "hyperv_generation": {
+      "label": "HyperV generation",
+      "type": "enum",
+      "description": "The hypervisor generation of the virtual machine: V1 or V2."
+    },
+    "vm_agent_version": {
+      "label": "VM agent version",
+      "type": "version",
+      "description": "The Azure VM Guest Agent's own version string."
+    },
+    "extension_version": {
+      "label": "Extension handler version",
+      "type": "version",
+      "description": "The type handler version of a VM extension or agent extension handler."
+    },
+    "extension_publisher": {
+      "label": "Extension publisher",
+      "type": "text",
+      "description": "The publisher of a VM extension child resource."
+    },
+    "extension_auto_upgrade": {
+      "label": "Extension auto-upgrades minor version",
+      "type": "flag",
+      "description": "Whether a VM extension automatically upgrades to the latest minor version."
+    },
+    "vm_in_standby_pool": {
+      "label": "VM in standby pool",
+      "type": "flag",
+      "description": "Whether the VM currently sits in a standby pool."
+    },
+    "platform_domain": {
+      "label": "Platform fault/update domain",
+      "type": "count",
+      "description": "The platform fault domain or update domain index the VM is placed in."
+    },
+    "extensions_time_budget": {
+      "label": "Extensions time budget",
+      "type": "text",
+      "description": "The time allotted for all extensions to start on the VM, an ISO 8601 duration such as PT1H30M."
+    }
+  },
+  "containers": {
+    "mscs:resource:virtualMachine": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Azure Virtual Machine inventory snapshot: the ARM VirtualMachine object merged with its InstanceView (runtime state).",
+      "note": "properties.instanceView is appended to the LIST-shaped VM object by the collector's own InstanceView call; tags are reshaped from an object to a list of 'key : value' strings."
+    },
+    "mscs:resource:disk": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Azure managed disk inventory snapshot."
+    },
+    "mscs:resource:networkInterfaceCard": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Azure network interface (NIC) inventory snapshot."
+    },
+    "mscs:resource:publicIPAddress": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Azure public IP address inventory snapshot."
+    },
+    "mscs:resource:securityGroup": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Azure network security group (NSG) inventory snapshot."
+    },
+    "mscs:resource:virtualNetwork": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Azure virtual network (VNet) inventory snapshot."
+    },
+    "mscs:resource:image": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Azure custom (managed) VM image inventory snapshot."
+    },
+    "mscs:resource:snapshot": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Azure managed-disk snapshot inventory snapshot."
+    },
+    "mscs:resource:resourceGroup": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Azure resource group inventory snapshot."
+    },
+    "mscs:resource:subscriptions": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Azure subscription inventory snapshot."
+    },
+    "mscs:resource:topology": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Azure network topology snapshot: one event per resource element of a Network Watcher topology response.",
+      "note": "Each event is one TopologyResource from the topology's resources[] array, not the top-level Topology object (its id/createdDateTime/lastModified are not present on these events)."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "location",
+      "concept": "location",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "subscription_id",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "resource_group",
+      "concept": "resource_group",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "tags{}",
+      "concept": "tags",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "etag",
+      "concept": "etag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "managedBy",
+      "concept": "managed_by",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "vm_id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "vm_name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.vmId",
+      "concept": "vm_platform_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "instance_type",
+      "concept": "vm_size",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "vm_size",
+      "concept": "vm_size",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.hardwareProfile.vmSize",
+      "concept": "vm_size",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "power_state",
+      "concept": "power_state",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "power_state_tmp",
+      "concept": "power_state",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.statuses{}.code",
+      "concept": "power_state",
+      "note": "This array also carries ProvisioningState/* codes, not only PowerState/*.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "vm_os",
+      "concept": "os_type",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.osDisk.osType",
+      "concept": "os_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "nt_host",
+      "concept": "computer_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.osProfile.computerName",
+      "concept": "computer_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.computerName",
+      "concept": "computer_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.osProfile.adminUsername",
+      "concept": "admin_username",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.imageReference.publisher",
+      "concept": "image_publisher",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.imageReference.offer",
+      "concept": "image_offer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.imageReference.sku",
+      "concept": "image_sku",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.imageReference.version",
+      "concept": "image_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.imageReference.exactVersion",
+      "concept": "image_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.osDisk.caching",
+      "concept": "os_disk_caching",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.osDisk.createOption",
+      "concept": "create_option",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.dataDisks{}.createOption",
+      "concept": "create_option",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.osDisk.managedDisk.storageAccountType",
+      "concept": "managed_disk_storage_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.dataDisks{}.managedDisk.storageAccountType",
+      "concept": "managed_disk_storage_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.osDisk.managedDisk.id",
+      "concept": "managed_disk_ref_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.dataDisks{}.managedDisk.id",
+      "concept": "managed_disk_ref_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.dataDisks{}.lun",
+      "concept": "data_disk_lun",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.osDisk.diskSizeGB",
+      "concept": "disk_size_gb",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.storageProfile.dataDisks{}.diskSizeGB",
+      "concept": "disk_size_gb",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "network_interface_id",
+      "concept": "network_interface_ref_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.networkProfile.networkInterfaces{}.id",
+      "concept": "network_interface_ref_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.diagnosticsProfile.bootDiagnostics.enabled",
+      "concept": "boot_diagnostics_enabled",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.diagnosticsProfile.bootDiagnostics.storageUri",
+      "concept": "boot_diagnostics_uri",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.bootDiagnostics.consoleScreenshotBlobUri",
+      "concept": "boot_diagnostics_uri",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.bootDiagnostics.serialConsoleLogBlobUri",
+      "concept": "boot_diagnostics_uri",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.availabilitySet.id",
+      "concept": "availability_set_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.proximityPlacementGroup.id",
+      "concept": "proximity_placement_group_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.userData",
+      "concept": "user_data",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.provisioningState",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.timeCreated",
+      "concept": "time_created",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "cpu_cores",
+      "concept": "vm_cpu_cores",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Computed by the TA's collector at index time; not a literal key in the vendor's JSON response."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "mem_capacity",
+      "concept": "vm_mem_capacity",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Computed by the TA's collector at index time; not a literal key in the vendor's JSON response."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "storage_capacity",
+      "concept": "vm_storage_capacity",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Computed by the TA's collector at index time; not a literal key in the vendor's JSON response."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "region",
+      "concept": "location",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "vendor_region",
+      "concept": "location",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "account_id",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "vendor",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "vendor_product",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "custom_tag",
+      "concept": "tags",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.osName",
+      "concept": "os_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.osVersion",
+      "concept": "os_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.hyperVGeneration",
+      "concept": "hyperv_generation",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.vmAgent.vmAgentVersion",
+      "concept": "vm_agent_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.isVMInStandbyPool",
+      "concept": "vm_in_standby_pool",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.platformFaultDomain",
+      "concept": "platform_domain",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.platformUpdateDomain",
+      "concept": "platform_domain",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.extensionsTimeBudget",
+      "concept": "extensions_time_budget",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.disks{}.name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.extensions{}.name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.extensions{}.type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.extensions{}.typeHandlerVersion",
+      "concept": "extension_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "resources{}.name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "resources{}.type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "resources{}.location",
+      "concept": "location",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "resources{}.properties.typeHandlerVersion",
+      "concept": "extension_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "resources{}.properties.publisher",
+      "concept": "extension_publisher",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "resources{}.properties.autoUpgradeMinorVersion",
+      "concept": "extension_auto_upgrade",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "resources{}.properties.provisioningState",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.vmAgent.extensionHandlers{}.type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.vmAgent.extensionHandlers{}.typeHandlerVersion",
+      "concept": "extension_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.disks{}.statuses{}.code",
+      "concept": "instance_status_code",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.disks{}.statuses{}.displayStatus",
+      "concept": "instance_status_display",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.disks{}.statuses{}.level",
+      "concept": "instance_status_level",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.extensions{}.statuses{}.code",
+      "concept": "instance_status_code",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.extensions{}.statuses{}.displayStatus",
+      "concept": "instance_status_display",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.extensions{}.statuses{}.level",
+      "concept": "instance_status_level",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.vmAgent.statuses{}.code",
+      "concept": "instance_status_code",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.vmAgent.statuses{}.displayStatus",
+      "concept": "instance_status_display",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.vmAgent.statuses{}.level",
+      "concept": "instance_status_level",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.vmAgent.extensionHandlers{}.status.code",
+      "concept": "instance_status_code",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.vmAgent.extensionHandlers{}.status.displayStatus",
+      "concept": "instance_status_display",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.vmAgent.extensionHandlers{}.status.level",
+      "concept": "instance_status_level",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.patchStatus.configurationStatuses{}.code",
+      "concept": "instance_status_code",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.patchStatus.configurationStatuses{}.displayStatus",
+      "concept": "instance_status_display",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.patchStatus.configurationStatuses{}.level",
+      "concept": "instance_status_level",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.statuses{}.displayStatus",
+      "concept": "instance_status_display",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.statuses{}.level",
+      "concept": "instance_status_level",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.disks{}.statuses{}.time",
+      "concept": "instance_status_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.statuses{}.time",
+      "concept": "instance_status_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.vmAgent.statuses{}.time",
+      "concept": "instance_status_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.patchStatus.configurationStatuses{}.time",
+      "concept": "instance_status_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.extensions{}.statuses{}.message",
+      "concept": "instance_status_display",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualMachine",
+      "column": "properties.instanceView.vmAgent.statuses{}.message",
+      "concept": "instance_status_display",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "location",
+      "concept": "location",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "subscription_id",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "resource_group",
+      "concept": "resource_group",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "tags.department",
+      "concept": "tags",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "tags.project",
+      "concept": "tags",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "dest",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "family",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "mount",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "status",
+      "concept": "disk_state",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "description",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "vendor_product",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "serial",
+      "concept": "unique_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.uniqueId",
+      "concept": "unique_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.diskState",
+      "concept": "disk_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.diskSizeGB",
+      "concept": "disk_size_gb",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.diskSizeBytes",
+      "concept": "disk_size_bytes",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.diskIOPSReadWrite",
+      "concept": "disk_io_counter",
+      "note": "Provisioned IOPS limit, not a live counter (distinct from read_ops/write_ops below).",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.diskMBpsReadWrite",
+      "concept": "disk_io_counter",
+      "note": "Provisioned throughput limit, not a live counter.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.osType",
+      "concept": "os_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.provisioningState",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.networkAccessPolicy",
+      "concept": "network_access_policy",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.publicNetworkAccess",
+      "concept": "public_network_access",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.encryption.type",
+      "concept": "encryption_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.encryptionSettingsCollection.enabled",
+      "concept": "encryption_type",
+      "note": "Whether Azure Disk Encryption (guest-level) is enabled; a different mechanism from properties.encryption.type.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.encryptionSettingsCollection.encryptionSettings{}.diskEncryptionKey.secretUrl",
+      "concept": "resource_id",
+      "note": "A Key Vault secret URL, not an ARM id, but the only reference-shaped field for this entry; see left-out list for full Key Vault modelling.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.encryptionSettingsCollection.encryptionSettings{}.diskEncryptionKey.sourceVault.id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.encryptionSettingsCollection.encryptionSettings{}.keyEncryptionKey.keyUrl",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.encryptionSettingsCollection.encryptionSettings{}.keyEncryptionKey.sourceVault.id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.creationData.createOption",
+      "concept": "create_option",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.creationData.sourceResourceId",
+      "concept": "source_resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.creationData.imageReference.id",
+      "concept": "managed_disk_ref_id",
+      "note": "The platform image or gallery image this disk was created from.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "properties.timeCreated",
+      "concept": "time_created",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "sku.name",
+      "concept": "sku_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "sku.tier",
+      "concept": "sku_tier",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "version",
+      "concept": "empty_extraction",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "hypervisor_id",
+      "concept": "empty_extraction",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "parent",
+      "concept": "empty_extraction",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "read_ops",
+      "concept": "disk_io_counter",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Computed by the TA's collector at index time; not a literal key in the vendor's JSON response."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "write_ops",
+      "concept": "disk_io_counter",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Computed by the TA's collector at index time; not a literal key in the vendor's JSON response."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "read_blocks",
+      "concept": "disk_io_counter",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Computed by the TA's collector at index time; not a literal key in the vendor's JSON response."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "write_blocks",
+      "concept": "disk_io_counter",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Computed by the TA's collector at index time; not a literal key in the vendor's JSON response."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:disk",
+      "column": "storage",
+      "concept": "disk_size_gb",
+      "note": "Observed equal to properties.diskSizeGB's magnitude in the dev Splunk; a CIM Storage-model alias.",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "location",
+      "concept": "location",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "subscription_id",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "resource_group",
+      "concept": "resource_group",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "etag",
+      "concept": "etag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.resourceGuid",
+      "concept": "resource_guid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "dest",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "region",
+      "concept": "location",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "interface",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "mac",
+      "concept": "mac_address",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.macAddress",
+      "concept": "mac_address",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "ip",
+      "concept": "private_ip_address",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "dns",
+      "concept": "dns_servers",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "kind",
+      "concept": "nic_type",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.nicType",
+      "concept": "nic_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "product",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "vendor",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "vendor_product",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.provisioningState",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.primary",
+      "concept": "nic_primary",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.enableIPForwarding",
+      "concept": "enable_ip_forwarding",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.enableAcceleratedNetworking",
+      "concept": "enable_accelerated_networking",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.auxiliaryMode",
+      "concept": "auxiliary_mode",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.auxiliarySku",
+      "concept": "auxiliary_sku",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.disableTcpStateTracking",
+      "concept": "disable_tcp_state_tracking",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.defaultOutboundConnectivityEnabled",
+      "concept": "default_outbound_connectivity_enabled",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.allowPort25Out",
+      "concept": "allow_port25_out",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.vnetEncryptionSupported",
+      "concept": "enable_accelerated_networking",
+      "note": "A different flag (guest encryption support); bound here only because no other concept fits and it stayed unobserved with a real value. See left-out list.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.dnsSettings.dnsServers{}",
+      "concept": "dns_servers",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.dnsSettings.appliedDnsServers{}",
+      "concept": "applied_dns_servers",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.dnsSettings.internalDomainNameSuffix",
+      "concept": "internal_domain_name_suffix",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.ipConfigurations{}.etag",
+      "concept": "etag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.ipConfigurations{}.id",
+      "concept": "resource_id",
+      "note": "A child IP-configuration resource id, not the NIC's own id.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.ipConfigurations{}.name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.ipConfigurations{}.type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.ipConfigurations{}.properties.primary",
+      "concept": "nic_primary",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.ipConfigurations{}.properties.privateIPAddress",
+      "concept": "private_ip_address",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.ipConfigurations{}.properties.privateIPAddressVersion",
+      "concept": "ip_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.ipConfigurations{}.properties.privateIPAllocationMethod",
+      "concept": "ip_allocation_method",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.ipConfigurations{}.properties.provisioningState",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.ipConfigurations{}.properties.publicIPAddress.id",
+      "concept": "public_ip_ref_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.ipConfigurations{}.properties.subnet.id",
+      "concept": "subnet_ref_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "subnet_id",
+      "concept": "subnet_ref_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "virtual_subnet_id",
+      "concept": "subnet_ref_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "security_group_id",
+      "concept": "nsg_ref_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.networkSecurityGroup.id",
+      "concept": "nsg_ref_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "virtual_network_id",
+      "concept": "resource_id",
+      "note": "The parent virtual network's own id, via the subnet it sits in.",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "vm_id",
+      "concept": "vm_ref_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:networkInterfaceCard",
+      "column": "properties.virtualMachine.id",
+      "concept": "vm_ref_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "location",
+      "concept": "location",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "subscription_id",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "resource_group",
+      "concept": "resource_group",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "etag",
+      "concept": "etag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "properties.resourceGuid",
+      "concept": "resource_guid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "region",
+      "concept": "location",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "properties.provisioningState",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "properties.ipAddress",
+      "concept": "ip_address",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "properties.publicIPAddressVersion",
+      "concept": "ip_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "properties.publicIPAllocationMethod",
+      "concept": "ip_allocation_method",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "properties.idleTimeoutInMinutes",
+      "concept": "idle_timeout_minutes",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "properties.ipConfiguration.id",
+      "concept": "ip_configuration_ref_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "properties.dnsSettings.domainNameLabel",
+      "concept": "dns_domain_name_label",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "properties.dnsSettings.domainNameLabelScope",
+      "concept": "dns_domain_name_label_scope",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "properties.dnsSettings.fqdn",
+      "concept": "fqdn",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "properties.ddosSettings.protectionMode",
+      "concept": "ddos_protection_mode",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "sku.name",
+      "concept": "sku_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:publicIPAddress",
+      "column": "sku.tier",
+      "concept": "sku_tier",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "location",
+      "concept": "location",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "subscription_id",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "resource_group",
+      "concept": "resource_group",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "etag",
+      "concept": "etag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.resourceGuid",
+      "concept": "resource_guid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "dest",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "family",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "status",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "description",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "vendor_product",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "serial",
+      "concept": "resource_guid",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.provisioningState",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.securityRules{}",
+      "concept": "security_rules",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.defaultSecurityRules{}.etag",
+      "concept": "etag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.defaultSecurityRules{}.id",
+      "concept": "resource_id",
+      "note": "A default security rule's own resource id, not the NSG's.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.defaultSecurityRules{}.name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.defaultSecurityRules{}.type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.defaultSecurityRules{}.properties.access",
+      "concept": "security_rule_access",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.defaultSecurityRules{}.properties.direction",
+      "concept": "security_rule_direction",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.defaultSecurityRules{}.properties.protocol",
+      "concept": "security_rule_protocol",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.defaultSecurityRules{}.properties.priority",
+      "concept": "security_rule_priority",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.defaultSecurityRules{}.properties.sourceAddressPrefix",
+      "concept": "security_rule_source_prefix",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.defaultSecurityRules{}.properties.destinationAddressPrefix",
+      "concept": "security_rule_dest_prefix",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.defaultSecurityRules{}.properties.sourcePortRange",
+      "concept": "security_rule_source_port",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.defaultSecurityRules{}.properties.destinationPortRange",
+      "concept": "security_rule_dest_port",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.defaultSecurityRules{}.properties.description",
+      "concept": "service_family",
+      "note": "A free-text rule description; bound here as the nearest free-text concept. See left-out list.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:securityGroup",
+      "column": "properties.defaultSecurityRules{}.properties.provisioningState",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "location",
+      "concept": "location",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "subscription_id",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "resource_group",
+      "concept": "resource_group",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "etag",
+      "concept": "etag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.resourceGuid",
+      "concept": "resource_guid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "vpc_id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "region",
+      "concept": "location",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.provisioningState",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.addressSpace.addressPrefixes{}",
+      "concept": "address_prefixes",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.enableDdosProtection",
+      "concept": "enable_ddos_protection",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.privateEndpointVNetPolicies",
+      "concept": "enable_ddos_protection",
+      "note": "A different, unrelated policy flag; bound here only for lack of a closer concept. See left-out list.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.defaultPublicNatGateway.id",
+      "concept": "default_nat_gateway_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.dhcpOptions.dnsServers{}",
+      "concept": "dns_servers",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.subnets{}",
+      "concept": "subnets",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.subnets{}.etag",
+      "concept": "etag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.subnets{}.id",
+      "concept": "subnet_ref_id",
+      "note": "A subnet's own id (self), reusing the reference concept since the meaning (a subnet resource id) is identical.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.subnets{}.name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.subnets{}.type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.subnets{}.properties.addressPrefix",
+      "concept": "subnet_address_prefix",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.subnets{}.properties.provisioningState",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.subnets{}.properties.defaultOutboundAccess",
+      "concept": "enable_ddos_protection",
+      "note": "A different boolean (default outbound internet access for the subnet); bound here for lack of a closer concept. See left-out list.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.subnets{}.properties.privateEndpointNetworkPolicies",
+      "concept": "ip_allocation_method",
+      "note": "A policy enum unrelated to IP allocation; bound loosely for lack of a closer concept. See left-out list.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.subnets{}.properties.privateLinkServiceNetworkPolicies",
+      "concept": "ip_allocation_method",
+      "note": "A policy enum unrelated to IP allocation; bound loosely for lack of a closer concept. See left-out list.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:virtualNetwork",
+      "column": "properties.virtualNetworkPeerings{}",
+      "concept": "virtual_network_peerings",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "location",
+      "concept": "location",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "subscription_id",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "resource_group",
+      "concept": "resource_group",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "dest",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "family",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "status",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "description",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "vendor_product",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "properties.provisioningState",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "properties.storageProfile.osDisk.osType",
+      "concept": "os_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "properties.storageProfile.osDisk.osState",
+      "concept": "create_option",
+      "note": "Generalized/Specialized; a different (2-value) enum from DiskCreateOption, bound here for lack of a closer generic 'lifecycle state' concept. See left-out list.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "properties.storageProfile.osDisk.blobUri",
+      "concept": "boot_diagnostics_uri",
+      "note": "A VHD blob URI, reusing the nearest 'a storage blob URI' concept. See left-out list.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "properties.storageProfile.osDisk.managedDisk.id",
+      "concept": "managed_disk_ref_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "properties.storageProfile.osDisk.snapshot.id",
+      "concept": "source_resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "properties.storageProfile.osDisk.storageAccountType",
+      "concept": "managed_disk_storage_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "properties.storageProfile.dataDisks{}.lun",
+      "concept": "data_disk_lun",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "properties.storageProfile.dataDisks{}.blobUri",
+      "concept": "boot_diagnostics_uri",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "properties.storageProfile.dataDisks{}.managedDisk.id",
+      "concept": "managed_disk_ref_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "properties.storageProfile.dataDisks{}.snapshot.id",
+      "concept": "source_resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "properties.storageProfile.dataDisks{}.storageAccountType",
+      "concept": "managed_disk_storage_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "version",
+      "concept": "empty_extraction",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:image",
+      "column": "hypervisor_id",
+      "concept": "empty_extraction",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "location",
+      "concept": "location",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "subscription_id",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "resource_group",
+      "concept": "resource_group",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "tags.department",
+      "concept": "tags",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "tags.project",
+      "concept": "tags",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "dest",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "family",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "status",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "description",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "vendor_product",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "snapshot",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "time",
+      "concept": "time_created",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "size",
+      "concept": "disk_size_gb",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.provisioningState",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.diskSizeGB",
+      "concept": "disk_size_gb",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.diskSizeBytes",
+      "concept": "disk_size_bytes",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.diskState",
+      "concept": "disk_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.osType",
+      "concept": "os_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.networkAccessPolicy",
+      "concept": "network_access_policy",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.publicNetworkAccess",
+      "concept": "public_network_access",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.encryption.type",
+      "concept": "encryption_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.encryptionSettingsCollection.enabled",
+      "concept": "encryption_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.encryptionSettingsCollection.encryptionSettings{}.diskEncryptionKey.secretUrl",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.encryptionSettingsCollection.encryptionSettings{}.diskEncryptionKey.sourceVault.id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.encryptionSettingsCollection.encryptionSettings{}.keyEncryptionKey.keyUrl",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.encryptionSettingsCollection.encryptionSettings{}.keyEncryptionKey.sourceVault.id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.creationData.createOption",
+      "concept": "create_option",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.creationData.sourceResourceId",
+      "concept": "source_resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.creationData.sourceUniqueId",
+      "concept": "source_unique_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.incremental",
+      "concept": "incremental",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.timeCreated",
+      "concept": "time_created",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "properties.uniqueId",
+      "concept": "unique_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "sku.name",
+      "concept": "sku_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:snapshot",
+      "column": "sku.tier",
+      "concept": "sku_tier",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:resourceGroup",
+      "column": "id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:resourceGroup",
+      "column": "name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:resourceGroup",
+      "column": "type",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:resourceGroup",
+      "column": "location",
+      "concept": "location",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:resourceGroup",
+      "column": "subscription_id",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:resourceGroup",
+      "column": "resource_group",
+      "concept": "resource_group",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:resourceGroup",
+      "column": "dest",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:resourceGroup",
+      "column": "family",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:resourceGroup",
+      "column": "status",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:resourceGroup",
+      "column": "description",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:resourceGroup",
+      "column": "vendor_product",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:resourceGroup",
+      "column": "properties.provisioningState",
+      "concept": "provisioning_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "subscriptionId",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "displayName",
+      "concept": "subscription_display_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "state",
+      "concept": "subscription_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "tenantId",
+      "concept": "tenant_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "authorizationSource",
+      "concept": "authorization_source",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "managedByTenants{}.tenantId",
+      "concept": "managed_by_tenant_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "subscriptionPolicies.locationPlacementId",
+      "concept": "location_placement_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "subscriptionPolicies.quotaId",
+      "concept": "quota_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "subscriptionPolicies.spendingLimit",
+      "concept": "spending_limit",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "tags.tagKey1",
+      "concept": "tags",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "tags.tagKey2",
+      "concept": "tags",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "dest",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "family",
+      "concept": "arm_type",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "status",
+      "concept": "subscription_state",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "description",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "vendor_product",
+      "concept": "service_family",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "serial",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A short CIM-style name the TA's props.conf sets from the vendor field or from the id; confirmed against the value the dev Splunk indexed for this sourcetype."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "enabled",
+      "concept": "subscription_enabled",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Computed by the TA's collector at index time; not a literal key in the vendor's JSON response."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "promotions{}.category",
+      "concept": "promotion_ref",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:subscriptions",
+      "column": "promotions{}.endDateTime",
+      "concept": "promotion_ref",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:topology",
+      "column": "id",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:topology",
+      "column": "name",
+      "concept": "resource_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:topology",
+      "column": "location",
+      "concept": "location",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:topology",
+      "column": "resourceType",
+      "concept": "topology_resource_label",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "Computed by the TA's collector at index time; not a literal key in the vendor's JSON response."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:topology",
+      "column": "topo_subscription_id",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:topology",
+      "column": "topo_resource_group",
+      "concept": "resource_group",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Extracted by the TA's index-time regex from the resource ID path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:topology",
+      "column": "associations{}.name",
+      "concept": "association_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:topology",
+      "column": "associations{}.resourceId",
+      "concept": "association_ref_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:resource:topology",
+      "column": "associations{}.associationType",
+      "concept": "association_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed as JSON; the TA's JSON field extraction flattens nested objects to dotted field names and arrays to name{}."
+      }
+    }
+  ],
+  "hazards": {
+    "azure_ids_look_alike": {
+      "text": "An Azure resource carries several different identifiers that are not interchangeable: the ARM resource id (a path), a platform GUID (vmId, uniqueId, resourceGuid), and sometimes a column of the same name meaning a different resource on a different container (a NIC's vm_id names the attached VM, not the NIC). Match by concept, not by column name."
+    }
+  },
+  "edges": [
+    {
+      "id": "disk_managed_by_vm",
+      "kind": "reference",
+      "label": "The VM this disk is attached to",
+      "src": {
+        "concept": "managed_by"
+      },
+      "dst": {
+        "concept": "resource_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Disks - Get: Disk.managedBy",
+      "note": "managedBy names the VM's ARM resource id."
+    },
+    {
+      "id": "nic_attached_vm",
+      "kind": "reference",
+      "label": "The VM this NIC is attached to",
+      "src": {
+        "concept": "vm_ref_id"
+      },
+      "dst": {
+        "concept": "resource_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Network Interfaces - Get: properties.virtualMachine"
+    },
+    {
+      "id": "nic_network_security_group",
+      "kind": "reference",
+      "label": "The NSG protecting this NIC",
+      "src": {
+        "concept": "nsg_ref_id"
+      },
+      "dst": {
+        "concept": "resource_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Network Interfaces - Get: properties.networkSecurityGroup"
+    },
+    {
+      "id": "nic_ipconfig_subnet",
+      "kind": "reference",
+      "label": "The subnet this NIC's IP configuration sits in",
+      "src": {
+        "concept": "subnet_ref_id"
+      },
+      "dst": {
+        "concept": "resource_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Network Interfaces - Get: properties.ipConfigurations[].properties.subnet"
+    },
+    {
+      "id": "nic_ipconfig_public_ip",
+      "kind": "reference",
+      "label": "The public IP bound to this NIC's IP configuration",
+      "src": {
+        "concept": "public_ip_ref_id"
+      },
+      "dst": {
+        "concept": "resource_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Network Interfaces - Get: properties.ipConfigurations[].properties.publicIPAddress"
+    },
+    {
+      "id": "vm_network_interface",
+      "kind": "reference",
+      "label": "A network interface attached to this VM",
+      "src": {
+        "concept": "network_interface_ref_id"
+      },
+      "dst": {
+        "concept": "resource_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Virtual Machines - Get: properties.networkProfile.networkInterfaces"
+    },
+    {
+      "id": "vm_managed_disk",
+      "kind": "reference",
+      "label": "A managed disk attached to this VM",
+      "src": {
+        "concept": "managed_disk_ref_id"
+      },
+      "dst": {
+        "concept": "resource_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Virtual Machines - Get: storageProfile.osDisk/dataDisks.managedDisk"
+    },
+    {
+      "id": "disk_source_resource",
+      "kind": "reference",
+      "label": "The disk or snapshot this one was copied from",
+      "src": {
+        "concept": "source_resource_id"
+      },
+      "dst": {
+        "concept": "resource_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Disks - Get: creationData.sourceResourceId"
+    },
+    {
+      "id": "topology_association",
+      "kind": "reference",
+      "label": "A resource associated with this one in the topology snapshot",
+      "src": {
+        "concept": "association_ref_id"
+      },
+      "dst": {
+        "concept": "resource_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Network Watchers - Get Topology: associations[].resourceId"
+    }
+  ],
+  "templates": [],
+  "queries": []
+}

@@ -1,0 +1,1165 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "aws-config",
+  "name": "AWS Config",
+  "pack_version": "0.1.0",
+  "description": "AWS Config's resource inventory and change history (configuration items, delivered both as an S3-based history and as SNS/EventBridge change notifications) and AWS Config Rules compliance evaluations, as the Splunk Add-on for AWS ingests each.",
+  "source": "AWS Config and AWS Config Rules API and developer-guide documentation, checked against this pack's own seeded samples and, for aws:config, a live dev Splunk index.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "aws_config",
+    "label": "AWS Config",
+    "description": "What changed on an AWS resource, when, and whether it complies with your AWS Config rules.",
+    "tags": [
+      "aws",
+      "cloud",
+      "config",
+      "compliance",
+      "inventory"
+    ]
+  },
+  "concepts": {
+    "aws_account_id": {
+      "label": "AWS account id",
+      "type": "account_id",
+      "description": "The 12-digit AWS account that owns the resource, or that ran the rule evaluation.",
+      "role": "identifier"
+    },
+    "resource_arn": {
+      "label": "Resource ARN",
+      "type": "identifier",
+      "description": "The Amazon Resource Name of the resource the configuration item describes.",
+      "role": "identifier",
+      "hazards": [
+        "cfg_arn_malformed_history_shape"
+      ]
+    },
+    "resource_id": {
+      "label": "Resource id",
+      "type": "resource_id",
+      "description": "The AWS Config resource id: an instance id, volume id, security-group id or similar, unique within its resource type.",
+      "role": "identifier"
+    },
+    "resource_type": {
+      "label": "Resource type",
+      "type": "enum",
+      "description": "The AWS::<service>::<Type> resource type name AWS Config assigns the resource, one of several hundred values; the cite lists them all.",
+      "role": "enum",
+      "hazards": [
+        "cfg_dest_is_resourcetype"
+      ]
+    },
+    "resource_name": {
+      "label": "Resource name",
+      "type": "text",
+      "description": "The resource's custom or display name, when the resource type carries one; null otherwise.",
+      "role": "other"
+    },
+    "aws_region": {
+      "label": "AWS region",
+      "type": "region",
+      "description": "The AWS region the resource is in. IAM and other account-scoped resources report 'global' instead of a region.",
+      "role": "enum"
+    },
+    "availability_zone": {
+      "label": "Availability zone",
+      "type": "text",
+      "description": "The Availability Zone the resource is in, when the resource type is zonal. Non-zonal resources report a placeholder such as 'Not Applicable' or 'Regional'.",
+      "role": "other",
+      "hazards": [
+        "cfg_az_spelling"
+      ]
+    },
+    "item_capture_time": {
+      "label": "Item capture time",
+      "type": "event_time",
+      "description": "When AWS Config captured this configuration item's state; this pack's time_field for both aws:config and aws:config:notification.",
+      "role": "timestamp",
+      "hazards": [
+        "cfg_notification_vs_capture_time"
+      ]
+    },
+    "notification_creation_time": {
+      "label": "Notification creation time",
+      "type": "event_time",
+      "description": "When AWS Config generated this SNS or EventBridge notification message, after the configuration item was captured. A delivery timestamp, not the event's own time.",
+      "role": "timestamp",
+      "hazards": [
+        "cfg_notification_vs_capture_time"
+      ]
+    },
+    "resource_creation_time": {
+      "label": "Resource creation time",
+      "type": "event_time",
+      "description": "The timestamp when the resource itself was created; null when AWS Config could not determine it (for example, a newly discovered security group).",
+      "role": "timestamp"
+    },
+    "config_state_id": {
+      "label": "Configuration state id",
+      "type": "identifier",
+      "description": "An identifier AWS Config assigns that indicates the ordering of a resource's configuration items.",
+      "role": "identifier",
+      "hazards": [
+        "cfg_state_id_shape"
+      ]
+    },
+    "item_version": {
+      "label": "Configuration item version",
+      "type": "version",
+      "description": "The version number of the delivered configuration item format (the API's own field is named 'version'; delivered JSON shapes name it configurationItemVersion or, on the oldest history shape, snapshotVersion).",
+      "role": "version"
+    },
+    "item_status": {
+      "label": "Configuration item status",
+      "type": "enum",
+      "description": "AWS Config's own status for this configuration item: whether the resource was updated, newly discovered, deleted, or not recorded.",
+      "role": "enum"
+    },
+    "cim_outcome": {
+      "label": "CIM outcome",
+      "type": "outcome",
+      "description": "The TA's Splunk CIM outcome for this record. Observed as the single fixed value 'success' on every event in the dev index; AWS Config records configuration changes out of band from the recording pipeline's own health, so this pipeline has not been observed to report a failure in-band.",
+      "role": "enum"
+    },
+    "cim_object_category": {
+      "label": "CIM object category",
+      "type": "enum",
+      "description": "The TA's Splunk CIM change-object category, looked up from the resource's resourceType by the add-on's aws_config_object_category_lookup.",
+      "role": "enum"
+    },
+    "cim_action": {
+      "label": "CIM action",
+      "type": "enum",
+      "description": "The TA's Splunk CIM action, looked up from the item's configurationItemStatus by the add-on's aws_config_action_lookup: 'modified' when the status is OK, 'created' when the status is ResourceDiscovered.",
+      "role": "enum"
+    },
+    "cim_change_type": {
+      "label": "CIM change type (TA)",
+      "type": "enum",
+      "description": "The TA's own lowercase Splunk CIM change_type field, distinct from AWS Config's own configurationItemDiff.changeType. Observed as the single fixed value 'configuration' on every event in the dev index.",
+      "role": "enum",
+      "hazards": [
+        "cfg_change_type_clash"
+      ]
+    },
+    "diff_change_type": {
+      "label": "Configuration item diff change type",
+      "type": "enum",
+      "description": "AWS Config's own change classification for this notification: whether the configuration item was created, updated or deleted since the previous capture.",
+      "role": "enum",
+      "hazards": [
+        "cfg_change_type_clash"
+      ]
+    },
+    "changed_properties": {
+      "label": "Changed properties",
+      "type": "raw_object",
+      "description": "The property-by-property diff of this change: one entry per changed path (for example Configuration.NetworkInterfaces.0 or Relationships.1), each with previousValue, updatedValue and its own changeType. The underlying resource's own property paths are not enumerated by this pack: they are polymorphic per resourceType.",
+      "role": "other"
+    },
+    "message_type": {
+      "label": "Notification message type",
+      "type": "enum",
+      "description": "Which kind of SNS or EventBridge notification this message is.",
+      "role": "enum"
+    },
+    "record_version": {
+      "label": "Notification record version",
+      "type": "version",
+      "description": "The version of the notification message format itself, distinct from the configuration item's own version.",
+      "role": "version"
+    },
+    "resource_relationships": {
+      "label": "Resource relationships",
+      "type": "raw_object",
+      "description": "The resource's direct relationships to other AWS resources, each an object with a related resourceId, resourceType and a label naming the relationship (for example 'Attached to Instance'). The label key is 'name' on this pack's samples and on the vendor's own published examples; at least one live event in the dev index carries it as 'relationshipName' instead.",
+      "role": "other"
+    },
+    "related_events": {
+      "label": "Related CloudTrail events",
+      "type": "identifier",
+      "description": "CloudTrail event ids that initiated this configuration change, when AWS Config could attribute one. Empty on every event in this pack's own samples; AWS Config's documentation says this field has been empty since format version 1.3, so treat it as rarely populated.",
+      "role": "identifier"
+    },
+    "resource_tags": {
+      "label": "Resource tags",
+      "type": "raw_object",
+      "description": "The resource's own key/value tags, as AWS Config's TA indexes them: Splunk explodes the tag map into one field per key (tags.<key>). Keys seen live in the dev index include Name, Environment, CostCenter, Description, ManagedBy, Project and Purpose, plus AWS-managed keys such as aws:cloudformation:stack-name.",
+      "role": "other"
+    },
+    "resource_configuration": {
+      "label": "Resource configuration",
+      "type": "raw_object",
+      "description": "The resource's own configuration, as the underlying AWS service's API reports it: a JSON-encoded string, deserialized by the TA into fields under configuration (and, for some resource types, supplementaryConfiguration). Its shape is entirely resource-type specific (an EC2 volume's fields differ completely from a security group's or an EFS file system's), so this pack does not enumerate its sub-fields; the resource's own AWS API reference documents them.",
+      "role": "other"
+    },
+    "item_state_hash": {
+      "label": "Configuration item state hash",
+      "type": "identifier",
+      "description": "An MD5-shaped hash Config computes over the item's state, for comparing whether two captures of the same resource actually changed. The API's own field for this is configurationItemMD5Hash; the notification shape's field in the same structural position is named configurationStateMd5Hash, which is not independently defined on the vendor's field-reference page, so the two are treated as the same concept by position and by name similarity, not by a vendor statement that they are identical.",
+      "role": "identifier"
+    },
+    "config_service_label": {
+      "label": "Config service label",
+      "type": "text",
+      "description": "A constant label the TA sets to identify AWS Config as the source device and vendor product. Observed as the single fixed value 'AWS Config' on every event queried.",
+      "role": "other"
+    },
+    "cim_object_attrs": {
+      "label": "CIM object attributes",
+      "type": "raw_object",
+      "description": "A TA-computed Splunk CIM field carrying the notification's changed attributes. Present as a column on this pack's own sample events; its content was not independently queried against the dev index, so no example or value table is given.",
+      "role": "other"
+    },
+    "compliance_type": {
+      "label": "Compliance type",
+      "type": "enum",
+      "description": "Whether the evaluated resource complies with the AWS Config rule it was evaluated against.",
+      "role": "enum"
+    },
+    "rule_ordering_time": {
+      "label": "Rule evaluation ordering time",
+      "type": "event_time",
+      "description": "The time of the AWS Config event that triggered this rule evaluation: for event-based evaluations, when the triggering configuration item was created; for periodic evaluations, when AWS Config ran the rule on its schedule.",
+      "role": "timestamp",
+      "hazards": [
+        "cfg_rule_time_fields"
+      ]
+    },
+    "rule_invoked_time": {
+      "label": "Rule invoked time",
+      "type": "event_time",
+      "description": "When AWS Config invoked the rule to produce this evaluation result.",
+      "role": "timestamp",
+      "hazards": [
+        "cfg_rule_time_fields",
+        "cfg_rule_time_alias_clobber"
+      ]
+    },
+    "rule_result_recorded_time": {
+      "label": "Rule result recorded time",
+      "type": "event_time",
+      "description": "When AWS Config recorded this evaluation result, after invoking the rule.",
+      "role": "timestamp",
+      "hazards": [
+        "cfg_rule_time_fields"
+      ]
+    },
+    "config_rule_name": {
+      "label": "Config rule name",
+      "type": "text",
+      "description": "The name of the AWS Config rule that produced this evaluation.",
+      "role": "other"
+    }
+  },
+  "containers": {
+    "aws:config": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "AWS Config's resource-centric configuration history, delivered to an Amazon S3 bucket as one file per resource type and pulled by the Splunk Add-on for AWS's Config input (bin/splunk_ta_aws/modinputs/config). Each event is one element of the delivered configurationItems array, written as its own line: the bare configuration item, no wrapper.",
+      "note": "This pack's own sample is AWS's own published EBS configuration-history example (samples/aws:config/ebs-configuration-history.json), seeded verbatim; the dev index also carries later, differently shaped live events (EC2 security groups, an S3 bucket, IAM roles and a policy) used here only as observed evidence for the TA's CIM fields (dest, object, object_category, action, change_type, status), never as a documented claim. resourceType AWS::EC2::VOLUME versus AWS::EC2::Volume, and resourceType AWS::EC2::Volume versus dest AWS::EC2::Volume, are the same field read two ways, not two facts.",
+      "hazards": [
+        "cfg_dest_is_resourcetype",
+        "cfg_state_id_shape",
+        "cfg_arn_malformed_history_shape",
+        "cfg_az_spelling"
+      ]
+    },
+    "aws:config:notification": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "AWS Config's SNS ConfigurationItemChangeNotification messages, pulled by the Splunk Add-on for AWS's Config input from the subscribed SNS topic. On receipt the modinput unwraps the SNS envelope and indexes the inner Message object verbatim: messageType, notificationCreationTime, recordVersion, configurationItemDiff and the full configurationItem.",
+      "note": "This pack's sample is two consecutive vendor-published examples for one EC2 instance's security-group change and the resulting new security group (samples/aws:config:notification/config-item-change-notification.json). The CIM fields confirmed live on aws:config (dest, object, object_id, action, change_type, status, result) are also columns on this container's own sample events, but were not independently re-confirmed by a live query against this sourcetype (it currently carries no live events in the dev index); bindings for them are marked basis proposed, inferred from the same TA pipeline's confirmed behaviour on aws:config.",
+      "hazards": [
+        "cfg_state_id_shape",
+        "cfg_change_type_clash",
+        "cfg_notification_vs_capture_time"
+      ]
+    },
+    "aws:config:rule": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "AWS Config rule compliance results, pulled by the Splunk Add-on for AWS's Config Rules input (aws_config_rule_data_loader.py) via GetComplianceDetailsByConfigRule. This sourcetype multiplexes three disjoint record shapes on the TA side (evaluation results, rule metadata from DescribeConfigRules, and a compliance summary); this pack binds only the evaluation-result (compliance-detail) shape, the one this pack's sample covers.",
+      "note": "Fields seen at the sourcetype level in the dev index but belonging to the other two record shapes (account_id, app, body, description, enabled, name, region, severity, src_user, status, time, type, user_id, vendor_product) are left out: no sample or vendor page in this pack documents their meaning for this specific sourcetype.",
+      "hazards": [
+        "cfg_rule_time_fields",
+        "cfg_rule_time_alias_clobber"
+      ]
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "accountId",
+      "concept": "aws_account_id",
+      "note": "Legacy history-shape key for the account id; the awsAccountId key the TA's own FIELDALIAS targets is absent on this shape, so vendor_account and the notification-shape aws_account_id alias stay empty on these events.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "vendor_account",
+      "concept": "aws_account_id",
+      "note": "TA CIM account-id alias; present as a column on this sourcetype in the dev index but observed empty on every event queried, per this shape's accountId-not-awsAccountId key mismatch.",
+      "alias_of": "accountId",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "arn",
+      "concept": "resource_arn",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "availibilityZone",
+      "concept": "availability_zone",
+      "note": "Vendor's own published spelling on the legacy history shape.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "availabilityZone",
+      "concept": "availability_zone",
+      "note": "Well-spelled variant, present on this sourcetype in the dev index from later, differently shaped events.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "change_type",
+      "concept": "cim_change_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "configuration",
+      "concept": "resource_configuration",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "configurationItemCaptureTime",
+      "concept": "item_capture_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "configurationItemMD5Hash",
+      "concept": "item_state_hash",
+      "note": "Present on this sourcetype in the dev index; observed empty on every event queried.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "configurationItemState",
+      "concept": "config_state_id",
+      "note": "UUID-string variant key name, seen on two of the three items in this pack's own sample.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "configurationItemStatus",
+      "concept": "item_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "configurationItemVersion",
+      "concept": "item_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "configurationStateID",
+      "concept": "config_state_id",
+      "note": "UUID-string form, seen on the first item in this pack's own sample.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "dest",
+      "concept": "resource_type",
+      "note": "TA CIM alias; confirmed by live query to carry resourceType, not an id.",
+      "alias_of": "resourceType",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "dvc",
+      "concept": "config_service_label",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "object",
+      "concept": "resource_id",
+      "note": "TA CIM alias; confirmed by live query to mirror resourceId.",
+      "alias_of": "resourceId",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "object_category",
+      "concept": "cim_object_category",
+      "note": "aws_config_object_category_lookup output, keyed off resourceType; see samples/aws:config/entry.json.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "object_id",
+      "concept": "resource_id",
+      "note": "TA CIM alias; confirmed by live query to duplicate the object column.",
+      "alias_of": "resourceId",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "relatedEvents{}",
+      "concept": "related_events",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "relationships{}.name",
+      "concept": "resource_relationships",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "relationships{}.resourceId",
+      "concept": "resource_relationships",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "relationships{}.resourceType",
+      "concept": "resource_relationships",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "resourceCreationTime",
+      "concept": "resource_creation_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "resourceId",
+      "concept": "resource_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "resourceName",
+      "concept": "resource_name",
+      "note": "Present on this sourcetype in the dev index; not in this pack's own sample.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "resourceType",
+      "concept": "resource_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "result",
+      "concept": "item_status",
+      "note": "TA CIM alias; confirmed by live query to mirror configurationItemStatus verbatim.",
+      "alias_of": "configurationItemStatus",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "snapshotVersion",
+      "concept": "item_version",
+      "note": "Oldest history-shape key name, seen on the first item in this pack's own sample.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "status",
+      "concept": "cim_outcome",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "tags.Name",
+      "concept": "resource_tags",
+      "note": "Splunk explodes the resource's tag map into one field per key; this is the Name key. Other keys are not individually bound.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config",
+      "column": "vendor_product",
+      "concept": "config_service_label",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.ARN",
+      "concept": "resource_arn",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.availabilityZone",
+      "concept": "availability_zone",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.awsAccountId",
+      "concept": "aws_account_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.awsRegion",
+      "concept": "aws_region",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.configuration",
+      "concept": "resource_configuration",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/config/latest/APIReference/API_ConfigurationItem.html",
+          "title": "ConfigurationItem - AWS Config",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.configurationItemCaptureTime",
+      "concept": "item_capture_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.configurationItemStatus",
+      "concept": "item_status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.configurationItemVersion",
+      "concept": "item_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.configurationStateId",
+      "concept": "config_state_id",
+      "note": "Integer epoch-millisecond form on this shape, unlike the UUID-string form on aws:config.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.configurationStateMd5Hash",
+      "concept": "item_state_hash",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.relatedEvents{}",
+      "concept": "related_events",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.relationships{}.name",
+      "concept": "resource_relationships",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.relationships{}.resourceId",
+      "concept": "resource_relationships",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.relationships{}.resourceName",
+      "concept": "resource_relationships",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.relationships{}.resourceType",
+      "concept": "resource_relationships",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.resourceCreationTime",
+      "concept": "resource_creation_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.resourceId",
+      "concept": "resource_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.resourceName",
+      "concept": "resource_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.resourceType",
+      "concept": "resource_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItem.tags.Name",
+      "concept": "resource_tags",
+      "note": "Splunk explodes the resource's tag map into one field per key; this is the Name key seen in this pack's own sample.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItemDiff.changeType",
+      "concept": "diff_change_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "configurationItemDiff.changedProperties",
+      "concept": "changed_properties",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "cite": {
+          "url": "https://docs.aws.amazon.com/config/latest/developerguide/example-sns-notification.html",
+          "title": "Example Configuration Item Change Notifications - AWS Config Developer Guide",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "aws_account_id",
+      "concept": "aws_account_id",
+      "note": "TA CIM alias; not independently confirmed live (no live events on this sourcetype), inferred from the aws_account_id pattern confirmed on aws:config.",
+      "alias_of": "configurationItem.awsAccountId",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "dest",
+      "concept": "resource_type",
+      "note": "Not independently confirmed live; inferred from the confirmed dest=resourceType pattern on aws:config.",
+      "alias_of": "configurationItem.resourceType",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "dvc",
+      "concept": "config_service_label",
+      "note": "Not independently confirmed live; inferred from the confirmed dvc pattern on aws:config.",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "object",
+      "concept": "resource_id",
+      "note": "Not independently confirmed live; inferred from the confirmed object=resourceId pattern on aws:config.",
+      "alias_of": "configurationItem.resourceId",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "object_attrs",
+      "concept": "cim_object_attrs",
+      "note": "Present as a column on this pack's own sample events; content not independently queried.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "object_id",
+      "concept": "resource_id",
+      "note": "Not independently confirmed live; inferred from the confirmed pattern on aws:config.",
+      "alias_of": "configurationItem.resourceId",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "action",
+      "concept": "cim_action",
+      "note": "Not independently confirmed live; inferred from the aws_config_action_lookup pattern confirmed on aws:config.",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "lookup"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "change_type",
+      "concept": "cim_change_type",
+      "note": "Not independently confirmed live; inferred from the confirmed constant value on aws:config. Distinct from this container's own configurationItemDiff.changeType.",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "messageType",
+      "concept": "message_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "notificationCreationTime",
+      "concept": "notification_creation_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "recordVersion",
+      "concept": "record_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "region",
+      "concept": "aws_region",
+      "note": "Not independently confirmed live; inferred from the TA's usual region alias convention.",
+      "alias_of": "configurationItem.awsRegion",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "result",
+      "concept": "item_status",
+      "note": "Not independently confirmed live; inferred from the confirmed result=configurationItemStatus pattern on aws:config.",
+      "alias_of": "configurationItem.configurationItemStatus",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:notification",
+      "column": "status",
+      "concept": "cim_outcome",
+      "note": "Not independently confirmed live; inferred from the confirmed constant value on aws:config.",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:rule",
+      "column": "ComplianceType",
+      "concept": "compliance_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:rule",
+      "column": "ConfigRuleInvokedTime",
+      "concept": "rule_invoked_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:rule",
+      "column": "EvaluationResultIdentifier.EvaluationResultQualifier.ConfigRuleName",
+      "concept": "config_rule_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:rule",
+      "column": "EvaluationResultIdentifier.EvaluationResultQualifier.ResourceId",
+      "concept": "resource_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:rule",
+      "column": "EvaluationResultIdentifier.EvaluationResultQualifier.ResourceType",
+      "concept": "resource_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:rule",
+      "column": "EvaluationResultIdentifier.OrderingTimestamp",
+      "concept": "rule_ordering_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:rule",
+      "column": "ResultRecordedTime",
+      "concept": "rule_result_recorded_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:rule",
+      "column": "aws_account_id",
+      "concept": "aws_account_id",
+      "note": "TA CIM alias, present in this pack's own sample; the raw field it aliases was not independently identified.",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:rule",
+      "column": "dest",
+      "concept": "resource_type",
+      "note": "Not independently confirmed; inferred from the confirmed dest=resourceType pattern on aws:config, on the same TA.",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:config:rule",
+      "column": "signature_id",
+      "concept": "config_rule_name",
+      "note": "TA CIM signature_id alias, present in this pack's own sample; matches Splunk's usual convention of aliasing the detection/rule name to signature_id.",
+      "alias_of": "EvaluationResultIdentifier.EvaluationResultQualifier.ConfigRuleName",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "alias"
+      }
+    }
+  ],
+  "hazards": {
+    "cfg_dest_is_resourcetype": {
+      "level": "danger",
+      "text": "On aws:config the TA CIM field dest carries the resource's type (for example AWS::EC2::Volume, AWS::EC2::SecurityGroup), not its id or name, confirmed by live query against the dev index. The resource's own id is object and object_id instead. A query written as if dest held an id returns nothing."
+    },
+    "cfg_state_id_shape": {
+      "level": "danger",
+      "text": "The item's ordering identifier appears in two incompatible shapes across this family's own containers, all documented by AWS as the same field: a dashed UUID string under the key configurationStateID (or, with a typo variant, configurationItemState) on the legacy history shape, and a plain integer Unix epoch-millisecond value under the differently cased key configurationStateId on the notification shape and on at least one live aws:config event. Comparing the two as strings, or parsing one as the other, is wrong."
+    },
+    "cfg_change_type_clash": {
+      "level": "caution",
+      "text": "Two fields share the name 'change type' but not a vocabulary. The TA's own lowercase CIM field change_type on aws:config is a constant, observed as 'configuration' on every event in the dev index; AWS Config's own configurationItemDiff.changeType, present only on aws:config:notification, is CREATE, UPDATE or DELETE. Filtering one by the other's values silently matches nothing."
+    },
+    "cfg_rule_time_fields": {
+      "level": "danger",
+      "text": "aws:config:rule's compliance-detail records carry three timestamps close together: EvaluationResultIdentifier.OrderingTimestamp, ConfigRuleInvokedTime and ResultRecordedTime. All three render as Python's str(datetime) ('2015-12-17 01:10:35.065000+00:00', no T separator), not ISO 8601, because the TA's modinput calls datetime.fromtimestamp on the API's numeric epoch fields and stringifies the result (see samples/aws:config:rule/entry.json). OrderingTimestamp is this pack's time_field only because it is the first of the three to fall inside Splunk's default 128-character timestamp lookahead window when the modinput's own explicit-time path is unavailable, not because it is the semantically preferred one."
+    },
+    "cfg_rule_time_alias_clobber": {
+      "level": "caution",
+      "text": "props.conf's [aws:config:rule] stanza defines two FIELDALIASes onto the same destination field time: one from ConfigRuleInvokedTime (this record shape) and one from FirstActivatedTime (a disjoint rule-metadata record shape this pack's sample does not cover). Empirically the source-less second alias wins, so the CIM field time is unreliable on this sourcetype; see samples/aws:config:rule/entry.json."
+    },
+    "cfg_notification_vs_capture_time": {
+      "level": "caution",
+      "text": "notificationCreationTime is when AWS Config generated the SNS/EventBridge message, roughly one to two seconds after configurationItem.configurationItemCaptureTime, which is when the change was actually captured. This pack's sample shows 2017-01-09T22:50:14.328Z (capture) versus 2017-01-09T22:50:15.928Z (notification) for the same event. Only configurationItemCaptureTime is this container's time_field; notificationCreationTime is a delivery timestamp, not an event one."
+    },
+    "cfg_arn_malformed_history_shape": {
+      "level": "caution",
+      "text": "AWS's own published example for the legacy configuration-history shape (and this pack's seeded sample) carries a malformed ARN missing the service segment, with an availability zone sitting in the region slot: arn:aws:us-west-2b:123456789012:volume/vol-ce676ccc. It does not parse as a well-formed ARN. The notification shape's ARN values are well-formed."
+    },
+    "cfg_az_spelling": {
+      "level": "caution",
+      "text": "The legacy history shape spells the field availibilityZone, AWS's own published typo, carried through unchanged by the TA and this pack's sample. The notification shape spells it correctly, availabilityZone. Both spellings are observed under sourcetype aws:config in the dev index; a query for only one misses the other."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

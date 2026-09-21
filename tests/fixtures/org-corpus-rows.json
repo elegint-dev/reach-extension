@@ -1,0 +1,12 @@
+{
+  "splunk": [
+    { "sha256": "077fc5180ed67177cfdcad85cadc028f2466fa21db42ba8265ee2187b02114e9", "path": "/System/Library/Frameworks/Contacts.framework/Support/contactsd", "signing_id": "com.apple.contactsd", "platform": "Mac", "hosts": "42", "events": "911", "first_seen": "1788220800.000", "last_seen": "1789776000.000" },
+    { "sha256": "9f2c0b1e6a1d4c3b8e7f6a5d4c3b2a1908f7e6d5c4b3a2918e7d6c5b4a392817", "path": "\\Device\\HarddiskVolume3\\Windows\\System32\\svchost.exe", "signing_id": "-", "platform": "Win", "hosts": "310", "events": "120544", "first_seen": "1782864000.000", "last_seen": "1789776000.000" },
+    { "sha256": "9f2c0b1e6a1d4c3b8e7f6a5d4c3b2a1908f7e6d5c4b3a2918e7d6c5b4a392817", "path": "\\Device\\HarddiskVolume2\\Windows\\System32\\svchost.exe", "signing_id": "-", "platform": "Win", "hosts": "12", "events": "3301", "first_seen": "1784073600.000", "last_seen": "1789689600.000" },
+    { "sha256": "4d1c8a2b9e0f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b", "path": "/Users/dev/Downloads/updater", "signing_id": "com.example.updater", "platform": "Mac", "hosts": "1", "events": "3", "first_seen": "1789689600.000", "last_seen": "1789689600.000" }
+  ],
+  "sentinel": [
+    { "sha256": "077fc5180ed67177cfdcad85cadc028f2466fa21db42ba8265ee2187b02114e9", "path": "/System/Library/Frameworks/Contacts.framework/Support/contactsd", "signing_id": "", "platform": "Mac", "hosts": 7, "events": 90, "first_seen": "2026-09-01T00:00:00Z", "last_seen": "2026-09-19T12:00:00Z" },
+    { "sha256": "9f2c0b1e6a1d4c3b8e7f6a5d4c3b2a1908f7e6d5c4b3a2918e7d6c5b4a392817", "path": "\\Device\\HarddiskVolume3\\Windows\\System32\\svchost.exe", "signing_id": "", "platform": "Win", "hosts": 55, "events": 20011, "first_seen": "2026-08-21T00:00:00Z", "last_seen": "2026-09-19T12:00:00Z" }
+  ]
+}

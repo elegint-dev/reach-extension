@@ -1,0 +1,403 @@
+{
+ "packs": [
+  "aws-cloudtrail.json",
+  "entra-signin.json",
+  "crowdstrike-falcon.json",
+  "reach-sentinel-samples.json",
+  "okta.json",
+  "gws.json",
+  "crowdstrike-events.json",
+  "ms-defender.json",
+  "okta-inventory.json",
+  "gws-directory.json",
+  "o365.json",
+  "gws-reports.json",
+  "gws-alerts.json",
+  "google-gcp-audit.json",
+  "github.json",
+  "aws-cloudtrail-lake.json",
+  "ocsf-aws.json",
+  "aws-security-findings.json",
+  "mscs-security.json",
+  "google-gcp-security.json",
+  "aws-config.json",
+  "aws-cloudwatch-events.json",
+  "cisco-ftd.json",
+  "aws-access-logs.json",
+  "google-gcp-access-logs.json",
+  "mscs-vnet-flow.json",
+  "ms-defender-ti.json",
+  "azure-monitor.json",
+  "aws-metadata.json",
+  "google-gcp-inventory.json",
+  "mscs-resource.json",
+  "crowdstrike-inventory.json",
+  "aws-vpcflow.json",
+  "cisco-asa.json",
+  "aws-asl.json"
+ ],
+ "values": [
+  {
+   "pack": "aws-cloudtrail",
+   "file": "aws-cloudtrail.values.json",
+   "bytes": 36272,
+   "containers": [
+    "AWSCloudTrail",
+    "aws:cloudtrail"
+   ]
+  },
+  {
+   "pack": "okta",
+   "file": "okta.values.json",
+   "bytes": 6900,
+   "containers": [
+    "OktaIM2:log",
+    "Okta_CL"
+   ]
+  },
+  {
+   "pack": "gws",
+   "file": "gws.values.json",
+   "bytes": 2526,
+   "containers": [
+    "GWorkspace_ReportsAPI_admin_CL",
+    "GWorkspace_ReportsAPI_drive_CL",
+    "GWorkspace_ReportsAPI_login_CL",
+    "gws:reports:admin",
+    "gws:reports:drive",
+    "gws:reports:login"
+   ]
+  },
+  {
+   "pack": "crowdstrike-events",
+   "file": "crowdstrike-events.values.json",
+   "bytes": 22430,
+   "containers": [
+    "crowdstrike:events",
+    "crowdstrike:events:external",
+    "crowdstrike:events:sensor:ithr",
+    "crowdstrike:hosts"
+   ]
+  },
+  {
+   "pack": "ms-defender",
+   "file": "ms-defender.values.json",
+   "bytes": 38915,
+   "containers": [
+    "m365:defender:incident:advanced_hunting",
+    "ms365:defender:incident",
+    "ms365:defender:incident:alerts",
+    "ms:defender:atp:alerts",
+    "ms:defender:eventhub",
+    "ms:defender:machines",
+    "ms:defender:simulations"
+   ]
+  },
+  {
+   "pack": "okta-inventory",
+   "file": "okta-inventory.values.json",
+   "bytes": 23145,
+   "containers": [
+    "OktaIM2:app",
+    "OktaIM2:appUser",
+    "OktaIM2:group",
+    "OktaIM2:groupUser",
+    "OktaIM2:user"
+   ]
+  },
+  {
+   "pack": "gws-directory",
+   "file": "gws-directory.values.json",
+   "bytes": 8934,
+   "containers": [
+    "google:gcp:gsuite:admin:directory:users",
+    "gws:users:identity"
+   ]
+  },
+  {
+   "pack": "o365",
+   "file": "o365.values.json",
+   "bytes": 28949,
+   "containers": [
+    "ms:o365:management",
+    "o365:cas:api",
+    "o365:graph:api",
+    "o365:graph:messagetrace",
+    "o365:management:activity",
+    "o365:metadata",
+    "o365:reporting:messagetrace",
+    "o365:service:healthIssue",
+    "o365:service:updateMessage"
+   ]
+  },
+  {
+   "pack": "gws-reports",
+   "file": "gws-reports.values.json",
+   "bytes": 9252,
+   "containers": [
+    "gws:reports:access_transparency",
+    "gws:reports:calendar",
+    "gws:reports:chat",
+    "gws:reports:chrome",
+    "gws:reports:context_aware_access",
+    "gws:reports:data_studio",
+    "gws:reports:gcp",
+    "gws:reports:gemini_in_workspace_apps",
+    "gws:reports:groups_enterprise",
+    "gws:reports:mobile",
+    "gws:reports:rules",
+    "gws:reports:saml",
+    "gws:reports:token"
+   ]
+  },
+  {
+   "pack": "gws-alerts",
+   "file": "gws-alerts.values.json",
+   "bytes": 10205,
+   "containers": [
+    "gws:alerts"
+   ]
+  },
+  {
+   "pack": "google-gcp-audit",
+   "file": "google-gcp-audit.values.json",
+   "bytes": 12992,
+   "containers": [
+    "google:gcp:pubsub:audit:admin_activity",
+    "google:gcp:pubsub:audit:data_access",
+    "google:gcp:pubsub:audit:system_event",
+    "google:gsuite:pubsub:audit:auth"
+   ]
+  },
+  {
+   "pack": "github",
+   "file": "github.values.json",
+   "bytes": 19008,
+   "containers": [
+    "github:cloud:audit",
+    "github:cloud:code:scanning:alerts",
+    "github:cloud:dependabot:scanning:alerts",
+    "github:cloud:secret:scanning:alerts",
+    "github:cloud:user",
+    "github:enterprise:audit"
+   ]
+  },
+  {
+   "pack": "aws-cloudtrail-lake",
+   "file": "aws-cloudtrail-lake.values.json",
+   "bytes": 11429,
+   "containers": [
+    "aws:cloudtrail:lake"
+   ]
+  },
+  {
+   "pack": "ocsf-aws",
+   "file": "ocsf-aws.values.json",
+   "bytes": 39358,
+   "containers": [
+    "ocsf:aws:cloudtrail",
+    "ocsf:aws:eks:audit",
+    "ocsf:aws:route53resolver",
+    "ocsf:aws:securityhub:finding",
+    "ocsf:aws:vpcflow",
+    "ocsf:aws:waf"
+   ]
+  },
+  {
+   "pack": "aws-security-findings",
+   "file": "aws-security-findings.values.json",
+   "bytes": 40936,
+   "containers": [
+    "aws:accessanalyzer:finding",
+    "aws:cloudwatch:guardduty",
+    "aws:cloudwatchlogs:guardduty",
+    "aws:inspector:v2:findings",
+    "aws:securityhub:finding"
+   ]
+  },
+  {
+   "pack": "mscs-security",
+   "file": "mscs-security.values.json",
+   "bytes": 14125,
+   "containers": [
+    "mscs:azure:security:alert",
+    "mscs:azure:security:recommendation"
+   ]
+  },
+  {
+   "pack": "google-gcp-security",
+   "file": "google-gcp-security.values.json",
+   "bytes": 9356,
+   "containers": [
+    "google:gcp:security:alerts"
+   ]
+  },
+  {
+   "pack": "aws-config",
+   "file": "aws-config.values.json",
+   "bytes": 11138,
+   "containers": [
+    "aws:config",
+    "aws:config:notification",
+    "aws:config:rule"
+   ]
+  },
+  {
+   "pack": "aws-cloudwatch-events",
+   "file": "aws-cloudwatch-events.values.json",
+   "bytes": 6599,
+   "containers": [
+    "aws:firehose:cloudwatchevents"
+   ]
+  },
+  {
+   "pack": "cisco-ftd",
+   "file": "cisco-ftd.values.json",
+   "bytes": 12287,
+   "containers": [
+    "cisco:ftd"
+   ]
+  },
+  {
+   "pack": "aws-access-logs",
+   "file": "aws-access-logs.values.json",
+   "bytes": 10474,
+   "containers": [
+    "aws:cloudfront:accesslogs",
+    "aws:elb:accesslogs",
+    "aws:s3:accesslogs",
+    "aws:transitgateway:flowlogs"
+   ]
+  },
+  {
+   "pack": "google-gcp-access-logs",
+   "file": "google-gcp-access-logs.values.json",
+   "bytes": 14780,
+   "containers": [
+    "google:gcp:buckets:accesslogs",
+    "google:gcp:compute:vpc_flows"
+   ]
+  },
+  {
+   "pack": "mscs-vnet-flow",
+   "file": "mscs-vnet-flow.values.json",
+   "bytes": 8363,
+   "containers": [
+    "mscs:vnet:flow"
+   ]
+  },
+  {
+   "pack": "ms-defender-ti",
+   "file": "ms-defender-ti.values.json",
+   "bytes": 16730,
+   "containers": [
+    "ms:defender:ti:article_indicators",
+    "ms:defender:ti:articles",
+    "ms:defender:ti:certificates",
+    "ms:defender:ti:components",
+    "ms:defender:ti:cookies",
+    "ms:defender:ti:hostpairs",
+    "ms:defender:ti:passivedns",
+    "ms:defender:ti:subdomains",
+    "ms:defender:ti:whois"
+   ]
+  },
+  {
+   "pack": "azure-monitor",
+   "file": "azure-monitor.values.json",
+   "bytes": 13092,
+   "containers": [
+    "azure:monitor:aad",
+    "azure:monitor:activity",
+    "azure:monitor:resource",
+    "mscs:azure:audit",
+    "mscs:vm:metrics"
+   ]
+  },
+  {
+   "pack": "aws-metadata",
+   "file": "aws-metadata.values.json",
+   "bytes": 10752,
+   "containers": [
+    "aws:metadata"
+   ]
+  },
+  {
+   "pack": "google-gcp-inventory",
+   "file": "google-gcp-inventory.values.json",
+   "bytes": 10953,
+   "containers": [
+    "google:gcp:compute:instance"
+   ]
+  },
+  {
+   "pack": "mscs-resource",
+   "file": "mscs-resource.values.json",
+   "bytes": 19283,
+   "containers": [
+    "mscs:resource:disk",
+    "mscs:resource:image",
+    "mscs:resource:networkInterfaceCard",
+    "mscs:resource:publicIPAddress",
+    "mscs:resource:resourceGroup",
+    "mscs:resource:securityGroup",
+    "mscs:resource:snapshot",
+    "mscs:resource:subscriptions",
+    "mscs:resource:topology",
+    "mscs:resource:virtualMachine",
+    "mscs:resource:virtualNetwork"
+   ]
+  },
+  {
+   "pack": "crowdstrike-inventory",
+   "file": "crowdstrike-inventory.values.json",
+   "bytes": 6220,
+   "containers": [
+    "CrowdStrike_Secondary_Data_CL",
+    "crowdstrike:inventory:aidmaster",
+    "crowdstrike:inventory:appinfo",
+    "crowdstrike:inventory:managedassets",
+    "crowdstrike:inventory:notmanaged",
+    "crowdstrike:inventory:userinfo"
+   ]
+  },
+  {
+   "pack": "aws-vpcflow",
+   "file": "aws-vpcflow.values.json",
+   "bytes": 11284,
+   "containers": [
+    "aws:cloudwatchlogs:vpcflow"
+   ]
+  },
+  {
+   "pack": "cisco-asa",
+   "file": "cisco-asa.values.json",
+   "bytes": 21150,
+   "containers": [
+    "cisco:asa"
+   ]
+  },
+  {
+   "pack": "aws-asl",
+   "file": "aws-asl.values.json",
+   "bytes": 14963,
+   "containers": [
+    "aws:asl"
+   ]
+  }
+ ],
+ "fields": [
+  {
+   "pack": "crowdstrike-falcon",
+   "file": "crowdstrike-falcon.fields.json",
+   "bytes": 3112139,
+   "containers": [
+    "crowdstrike:appinfo",
+    "crowdstrike:events:external",
+    "crowdstrike:events:sensor",
+    "crowdstrike:inventory:aidmaster",
+    "crowdstrike:userinfo"
+   ]
+  }
+ ]
+}

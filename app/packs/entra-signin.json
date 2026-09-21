@@ -1,0 +1,971 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "entra-signin",
+  "name": "Microsoft Entra ID sign-ins",
+  "pack_version": "0.1.0",
+  "description": "Microsoft Entra ID (Azure AD) sign-in records: who signed in, from where, with which client and app, and how it ended. One feed record for the SigninLogs table, the Splunk azure:aad:signin sourcetype and the dev sample table.",
+  "source": "Microsoft Entra sign-in log schema; Azure Monitor Logs reference (SigninLogs); Microsoft Graph signIn resource; curated notes written for the Reach sample table",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h",
+      "hint": "On TimeGenerated (replay time for these samples, the connector's event time in production). SourceEventTime keeps the capture's own timestamp."
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now",
+      "hint": "Optional. Ingestion lags event time by minutes; a tight bound can miss the newest rows."
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "entra_signin",
+    "label": "Entra ID sign-ins",
+    "description": "Microsoft Entra ID (Azure AD) sign-in log records, one per authentication attempt: who signed in, from where, with which client and app, and how it ended (ResultType).",
+    "tags": [
+      "identity",
+      "entra",
+      "authentication"
+    ],
+    "discriminator": "category"
+  },
+  "concepts": {
+    "created_date_time": {
+      "label": "Sign-in time",
+      "type": "event_time",
+      "description": "The capture's own timestamp. TimeGenerated is replay time in this dev workspace (the loader shifts each dataset so it is visible to ago(1d)); this column keeps when the event actually happened.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ]
+    },
+    "operation_name": {
+      "label": "Operation name",
+      "type": "enum",
+      "description": "The sign-in activity: Sign-in activity for interactive user sign-ins. Distinguishes user, non-interactive, service principal and managed identity sign-ins in the production tables.",
+      "role": "enum"
+    },
+    "category": {
+      "label": "Category",
+      "type": "record_type",
+      "description": "Log category the record belongs to: SignInLogs here. The record type of this table: NonInteractiveUserSignInLogs, ServicePrincipalSignInLogs and ManagedIdentitySignInLogs are the siblings in production.",
+      "role": "enum"
+    },
+    "tenant_id": {
+      "label": "Tenant id",
+      "type": "account_id",
+      "description": "The Entra tenant the sign-in was evaluated in. Differs from the workspace's TenantId column, which is the Log Analytics workspace id.",
+      "role": "identifier"
+    },
+    "result_type": {
+      "label": "Result type",
+      "type": "outcome",
+      "description": "Sign-in outcome as an Entra error code: 0 is success; 50126 invalid credentials; 50053 locked or blocked; 50076/50074 MFA required; 53003 blocked by Conditional Access. The single most useful column for a spray: one code, many users.",
+      "role": "enum",
+      "tags": [
+        "outcome"
+      ],
+      "decode": {
+        "lookup": "entra-sign-in-error-codes",
+        "meaning_field": "outcome",
+        "values": {
+          "0": "Success",
+          "50034": "User account not found in the tenant",
+          "50053": "Account locked, or sign-in from this IP blocked (too many failures)",
+          "50055": "Password expired",
+          "50056": "No password or invalid password",
+          "50057": "User account disabled",
+          "50058": "Silent sign-in interrupted; interactive sign-in required",
+          "50072": "User must enrol for multi-factor authentication",
+          "50074": "Strong (multi-factor) authentication required",
+          "50076": "MFA required: new location or device",
+          "50079": "User must register security info",
+          "50097": "Device authentication required",
+          "50125": "Sign-in interrupted by a password reset",
+          "50126": "Invalid username or password",
+          "50133": "Session invalid after a password change",
+          "50140": "Keep-me-signed-in interrupt",
+          "50144": "Password expired (on-premises)",
+          "50173": "Fresh authentication token required",
+          "51004": "User account does not exist in the directory",
+          "53003": "Blocked by Conditional Access",
+          "500121": "MFA challenge failed",
+          "530032": "Blocked by Conditional Access on a security policy"
+        }
+      }
+    },
+    "result_signature": {
+      "label": "Result signature",
+      "type": "outcome",
+      "description": "Short outcome label paired with ResultType (None on success, otherwise a short error name).",
+      "role": "enum"
+    },
+    "result_description": {
+      "label": "Result description",
+      "type": "text",
+      "description": "Human-readable outcome text. Free text; key on ResultType instead.",
+      "role": "other"
+    },
+    "duration_ms": {
+      "label": "Duration (ms)",
+      "type": "count",
+      "description": "How long the sign-in took to evaluate, in milliseconds.",
+      "role": "count"
+    },
+    "caller_ip": {
+      "label": "Caller IP address",
+      "type": "source_ip",
+      "description": "Address the sign-in request came from. In a spray this is the one constant across every failed user. Proxies and VPN egress make one address many people; it is a lead, not a person.",
+      "role": "ip",
+      "sensitivity": "internal",
+      "hazards": [
+        "ip_shared"
+      ]
+    },
+    "correlation_id": {
+      "label": "Correlation id",
+      "type": "request_id",
+      "description": "Ties together every record of one sign-in flow (the interactive prompt, the MFA step, the token issue). Search it to see the whole flow.",
+      "role": "identifier"
+    },
+    "identity": {
+      "label": "Identity",
+      "type": "user_name",
+      "description": "Display name of the signing-in identity, as Entra renders it. Not unique; use UserId or UserPrincipalName.",
+      "role": "user_id",
+      "sensitivity": "pii"
+    },
+    "severity_level": {
+      "label": "Severity level",
+      "type": "count",
+      "description": "Diagnostic severity of the record (0 informational). Not the sign-in's risk.",
+      "role": "count"
+    },
+    "country": {
+      "label": "Country",
+      "type": "region",
+      "description": "Country code derived from CallerIpAddress by Entra's geolocation. Derived, coarse, and wrong for VPN egress.",
+      "role": "enum"
+    },
+    "user_display_name": {
+      "label": "User display name",
+      "type": "user_name",
+      "description": "The user's display name at sign-in time. Changes with renames; UserId does not.",
+      "role": "user_id",
+      "sensitivity": "pii"
+    },
+    "user_principal_name": {
+      "label": "User principal name",
+      "type": "principal",
+      "description": "The user's UPN (user@tenant). The key an analyst holds; UserId is the stable one underneath it.",
+      "role": "user_id",
+      "sensitivity": "pii",
+      "hazards": [
+        "upn_renames"
+      ]
+    },
+    "user_id": {
+      "label": "User id",
+      "type": "user_id",
+      "description": "The user's Entra object id (GUID). Stable across UPN changes and renames.",
+      "role": "user_id"
+    },
+    "app_id": {
+      "label": "Application id",
+      "type": "app_id",
+      "description": "Application (client) id the user signed in to. Well-known ids name Microsoft first-party clients (Office, Graph Explorer, Azure CLI…).",
+      "role": "identifier"
+    },
+    "app_display_name": {
+      "label": "App display name",
+      "type": "text",
+      "description": "Display name of the application in AppId.",
+      "role": "other"
+    },
+    "client_app_used": {
+      "label": "Client app used",
+      "type": "enum",
+      "description": "How the client authenticated: Browser, Mobile Apps and Desktop clients, or a legacy protocol (Authenticated SMTP, IMAP, POP, Exchange ActiveSync, Other clients). Legacy protocols cannot do MFA; sprays target them.",
+      "role": "enum",
+      "hazards": [
+        "legacy_auth"
+      ]
+    },
+    "user_agent": {
+      "label": "User agent",
+      "type": "user_agent",
+      "description": "The client's User-Agent string. Client-supplied and trivially spoofed; a spray tool often carries an odd or constant one.",
+      "role": "other",
+      "hazards": [
+        "ua_client_supplied"
+      ]
+    },
+    "conditional_access_status": {
+      "label": "Conditional access status",
+      "type": "enum",
+      "description": "success, failure or notApplied: whether a Conditional Access policy applied to this sign-in and what it decided.",
+      "role": "enum",
+      "decode": {
+        "lookup": "entra-conditional-access-status",
+        "meaning_field": "status",
+        "values": {
+          "success": "A Conditional Access policy applied and the sign-in satisfied it",
+          "failure": "A Conditional Access policy applied and blocked the sign-in",
+          "notApplied": "No Conditional Access policy applied to this sign-in"
+        }
+      }
+    },
+    "is_interactive": {
+      "label": "Is interactive",
+      "type": "flag",
+      "description": "true when a person typed credentials; false for token refreshes and background sign-ins.",
+      "role": "bool"
+    },
+    "status": {
+      "label": "Status",
+      "type": "raw_object",
+      "description": "Nested outcome object: errorCode, failureReason, additionalDetails. Status.errorCode duplicates ResultType as a number.",
+      "role": "other"
+    },
+    "device_detail": {
+      "label": "Device detail",
+      "type": "raw_object",
+      "description": "Nested device object: deviceId, displayName, operatingSystem, browser, trustType. Empty for an unregistered device, which a spray always is.",
+      "role": "other"
+    },
+    "location_details": {
+      "label": "Location details",
+      "type": "raw_object",
+      "description": "Nested geolocation of CallerIpAddress: city, state, countryOrRegion, geoCoordinates. Derived from the address, not from the device.",
+      "role": "other"
+    },
+    "authentication_details": {
+      "label": "Authentication details",
+      "type": "raw_object",
+      "description": "Nested array of authentication steps (method, succeeded, resultDetail): the password step, then MFA if it got that far.",
+      "role": "other"
+    },
+    "properties": {
+      "label": "Properties",
+      "type": "raw_object",
+      "description": "The connector's full properties bag, everything above and more (riskLevelDuringSignIn, riskState, tokenIssuerType…).",
+      "role": "other"
+    }
+  },
+  "containers": {
+    "SigninLogs": {
+      "platform": "sentinel",
+      "kind": "vendor",
+      "note": "The Entra ID diagnostic-settings table for interactive user sign-ins. Non-interactive, service-principal and managed-identity sign-ins land in sibling tables with the same shape."
+    },
+    "azure:aad:signin": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "note": "Splunk Add-on for Microsoft Cloud Services: the Graph signIn resource as JSON, nested objects flattened to dotted field names."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "TimeGenerated",
+      "concept": "created_date_time",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17",
+      "note": "When the sign-in was evaluated; CreatedDateTime is the same instant as Entra recorded it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "CreatedDateTime",
+      "concept": "created_date_time",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "OperationName",
+      "concept": "operation_name",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "Category",
+      "concept": "category",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "AADTenantId",
+      "concept": "tenant_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "ResultType",
+      "concept": "result_type",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "ResultSignature",
+      "concept": "result_signature",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "ResultDescription",
+      "concept": "result_description",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "DurationMs",
+      "concept": "duration_ms",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "IPAddress",
+      "concept": "caller_ip",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "CorrelationId",
+      "concept": "correlation_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "Identity",
+      "concept": "identity",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "Level",
+      "concept": "severity_level",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "Location",
+      "concept": "country",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17",
+      "note": "Two-letter country code."
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "UserDisplayName",
+      "concept": "user_display_name",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "UserPrincipalName",
+      "concept": "user_principal_name",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "UserId",
+      "concept": "user_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "AppId",
+      "concept": "app_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "AppDisplayName",
+      "concept": "app_display_name",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "ClientAppUsed",
+      "concept": "client_app_used",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "UserAgent",
+      "concept": "user_agent",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "ConditionalAccessStatus",
+      "concept": "conditional_access_status",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "IsInteractive",
+      "concept": "is_interactive",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "Status",
+      "concept": "status",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "DeviceDetail",
+      "concept": "device_detail",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "LocationDetails",
+      "concept": "location_details",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "SigninLogs",
+      "column": "AuthenticationDetails",
+      "concept": "authentication_details",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: SigninLogs table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "createdDateTime",
+      "concept": "created_date_time",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "userPrincipalName",
+      "concept": "user_principal_name",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "userId",
+      "concept": "user_id",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "userDisplayName",
+      "concept": "user_display_name",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "appId",
+      "concept": "app_id",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "appDisplayName",
+      "concept": "app_display_name",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "ipAddress",
+      "concept": "caller_ip",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "clientAppUsed",
+      "concept": "client_app_used",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "correlationId",
+      "concept": "correlation_id",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "conditionalAccessStatus",
+      "concept": "conditional_access_status",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "isInteractive",
+      "concept": "is_interactive",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "userAgent",
+      "concept": "user_agent",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "status",
+      "concept": "status",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "status.errorCode",
+      "concept": "result_type",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)",
+      "note": "The Graph resource carries the code inside status; ResultType in Sentinel is the same number."
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "status.failureReason",
+      "concept": "result_description",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "deviceDetail",
+      "concept": "device_detail",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "location",
+      "concept": "location_details",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "location.countryOrRegion",
+      "concept": "country",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:aad:signin",
+      "column": "authenticationDetails{}",
+      "concept": "authentication_details",
+      "basis": "documented",
+      "basis_ref": "Microsoft Graph signIn resource, as the Splunk Add-on for Microsoft Cloud Services indexes it (azure:aad:signin)"
+    }
+  ],
+  "hazards": {
+    "upn_renames": {
+      "level": "note",
+      "text": "UserPrincipalName changes on rename and can be reassigned; UserId (the object id) is the stable key."
+    },
+    "legacy_auth": {
+      "level": "note",
+      "text": "Legacy protocols in ClientAppUsed (IMAP, POP, SMTP, ActiveSync) cannot complete MFA, which is why sprays target them; a success there is a real compromise, not an MFA-pending one."
+    },
+    "ip_shared": {
+      "level": "note",
+      "text": "One address is many people behind NAT, a proxy or a VPN egress. 'From this address' groups a network, not a person."
+    },
+    "ua_client_supplied": {
+      "level": "caution",
+      "text": "User-Agent is set by the client and trivially spoofed. Use it to notice change, not to attribute."
+    }
+  },
+  "edges": [
+    {
+      "id": "aad_user_signins",
+      "kind": "actor",
+      "label": "Every sign-in by this user",
+      "src": {
+        "concept": "user_principal_name"
+      },
+      "dst": {
+        "concept": "user_principal_name"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Entra sign-in logs: one row per attempt keyed by the signing-in UPN",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "upn_renames"
+      ],
+      "note": "Outcome, client and address per attempt, newest first.",
+      "intent": {
+        "filter": [
+          {
+            "concept": "user_principal_name",
+            "op": "eq_ci",
+            "value": "$value"
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "result_type",
+            "result_description",
+            "caller_ip",
+            "country",
+            "app_display_name",
+            "client_app_used",
+            "conditional_access_status",
+            "is_interactive"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "aad_ip_signins",
+      "kind": "source",
+      "label": "Sign-ins from this address, by user and outcome",
+      "src": {
+        "concept": "caller_ip"
+      },
+      "dst": {
+        "concept": "caller_ip"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Entra sign-in logs: CallerIpAddress on every attempt",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "ip_shared"
+      ],
+      "note": "A spray reads as many users, one code, from one address.",
+      "intent": {
+        "filter": [
+          {
+            "concept": "caller_ip",
+            "op": "eq",
+            "value": "$value"
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "summary",
+          "by": [
+            "result_type",
+            "client_app_used"
+          ],
+          "measures": [
+            {
+              "fn": "count",
+              "as": "attempts"
+            },
+            {
+              "fn": "dcount",
+              "concept": "user_principal_name",
+              "as": "users"
+            },
+            {
+              "fn": "min_time",
+              "as": "first_seen"
+            },
+            {
+              "fn": "max_time",
+              "as": "last_seen"
+            }
+          ],
+          "order": {
+            "by": "attempts",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "aad_ip_users",
+      "kind": "source",
+      "label": "Which users this address tried",
+      "src": {
+        "concept": "caller_ip"
+      },
+      "dst": {
+        "concept": "user_principal_name"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Entra sign-in logs",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "ip_shared",
+        "legacy_auth"
+      ],
+      "intent": {
+        "filter": [
+          {
+            "concept": "caller_ip",
+            "op": "eq",
+            "value": "$value"
+          }
+        ],
+        "window": {
+          "since": "$earliest"
+        },
+        "shape": {
+          "kind": "summary",
+          "by": [
+            "user_principal_name"
+          ],
+          "measures": [
+            {
+              "fn": "count",
+              "as": "attempts"
+            },
+            {
+              "fn": "values",
+              "concept": "result_type",
+              "as": "codes",
+              "limit": 10
+            },
+            {
+              "fn": "max_time",
+              "as": "last_seen"
+            }
+          ],
+          "order": {
+            "by": "attempts",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "aad_correlation",
+      "kind": "request",
+      "label": "Every record of this sign-in flow",
+      "src": {
+        "concept": "correlation_id"
+      },
+      "dst": {
+        "concept": "correlation_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Entra: CorrelationId is shared by every record of one authentication flow",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [],
+      "intent": {
+        "filter": [
+          {
+            "concept": "correlation_id",
+            "op": "eq",
+            "value": "$value"
+          }
+        ],
+        "window": {
+          "since": "$earliest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "user_principal_name",
+            "result_type",
+            "app_display_name",
+            "authentication_details",
+            "status"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "asc"
+          }
+        }
+      }
+    },
+    {
+      "id": "aad_app_signins",
+      "kind": "target",
+      "label": "Who signed in to this application",
+      "src": {
+        "concept": "app_id"
+      },
+      "dst": {
+        "concept": "app_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Entra sign-in logs",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [],
+      "intent": {
+        "filter": [
+          {
+            "concept": "app_id",
+            "op": "eq",
+            "value": "$value"
+          }
+        ],
+        "window": {
+          "since": "$earliest"
+        },
+        "shape": {
+          "kind": "summary",
+          "by": [
+            "user_principal_name"
+          ],
+          "measures": [
+            {
+              "fn": "count",
+              "as": "attempts"
+            },
+            {
+              "fn": "dcount",
+              "concept": "caller_ip",
+              "as": "addresses"
+            }
+          ],
+          "order": {
+            "by": "attempts",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "aad_ip_elsewhere",
+      "kind": "source",
+      "label": "This address in other feeds",
+      "src": {
+        "concept": "caller_ip"
+      },
+      "dst": {
+        "type": "source_ip"
+      },
+      "basis": "asserted",
+      "basis_ref": "Same address string; a NAT or proxy can put many people behind it",
+      "cardinality": "n:m",
+      "scope": [],
+      "hazards": [
+        "ip_shared"
+      ],
+      "note": "Sign-ins and API calls from the same address are a lead, not a link.",
+      "intent": {
+        "scope": "type",
+        "filter": [
+          {
+            "concept": "caller_ip",
+            "op": "eq",
+            "value": "$value"
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "category",
+            "user_principal_name",
+            "result_type",
+            "user_agent"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "desc"
+          },
+          "take": 200
+        }
+      }
+    }
+  ],
+  "templates": []
+}

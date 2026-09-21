@@ -1,0 +1,1544 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "gws-directory",
+  "name": "Google Workspace directory users",
+  "pack_version": "0.1.0",
+  "description": "Google Workspace user accounts as the Admin SDK Directory API's users resource: identity, name, admin and suspension state, contact methods and org placement, on the TA's own gws:users:identity input and on the GCP add-on's Pub/Sub-delivered directory:users sourcetype.",
+  "source": "Google Admin SDK Directory API Users resource reference (developers.google.com); Splunk Add-on for Google Workspace and Splunk Add-on for Google Cloud Platform sourcetype docs; captured samples and indexed events.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "gws_directory_users",
+    "label": "Google Workspace directory users",
+    "description": "One record per Google Workspace user account, as the Admin SDK Directory API's users().list() and users().get() return it: identity, name, admin flags, suspension state, contact methods and org placement. A directory snapshot, not an audit event: no field here says when something changed, only what the account currently holds.",
+    "tags": [
+      "gws",
+      "google-workspace",
+      "identity",
+      "directory"
+    ],
+    "discriminator": "resource_kind"
+  },
+  "concepts": {
+    "resource_kind": {
+      "label": "Resource kind",
+      "type": "record_type",
+      "description": "The API resource's declared type. Both captured samples read directory#user.",
+      "hazards": [
+        "kind_wire_mismatch"
+      ]
+    },
+    "user_id": {
+      "label": "User id",
+      "type": "user_id",
+      "description": "The directory-issued unique id for the account, usable as the userKey in a Directory API request URI.",
+      "hazards": [
+        "id_vs_email_alike",
+        "placeholder_example"
+      ]
+    },
+    "primary_email": {
+      "label": "Primary email",
+      "type": "principal",
+      "description": "The account's primary email address; required and unique at creation, and the address the account signs in with.",
+      "hazards": [
+        "names_not_stable",
+        "id_vs_email_alike"
+      ]
+    },
+    "given_name": {
+      "label": "Given name",
+      "type": "user_name",
+      "description": "The user's first name.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "family_name": {
+      "label": "Family name",
+      "type": "user_name",
+      "description": "The user's last name.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "full_name": {
+      "label": "Full name",
+      "type": "user_name",
+      "description": "The user's full name, formed by concatenating the first and last name values.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "email_alias": {
+      "label": "Email alias",
+      "type": "principal",
+      "description": "One of the account's alias email addresses; mail to any of these reaches the same account.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "non_editable_alias": {
+      "label": "Non-editable alias",
+      "type": "principal",
+      "description": "An alias address outside the account's primary domain or sub-domain, kept read-only for backward compatibility.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "secondary_email_address": {
+      "label": "Email entry address",
+      "type": "principal",
+      "description": "One entry of the account's emails array; may or may not be the primary address (see the primary flag).",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "email_type": {
+      "label": "Email entry type",
+      "type": "enum",
+      "description": "Which category an emails{} entry belongs to: custom, home, other or work."
+    },
+    "email_custom_type": {
+      "label": "Email custom type label",
+      "type": "text",
+      "description": "The free-text label for an emails{} entry whose type is custom."
+    },
+    "email_primary_flag": {
+      "label": "Email entry is primary",
+      "type": "flag",
+      "description": "True on exactly one entry of the emails array: the account's primary address."
+    },
+    "phone_number": {
+      "label": "Phone number",
+      "type": "identifier",
+      "description": "A phone number on the account, from phones{}.value or the TA's phone alias.",
+      "hazards": [
+        "placeholder_example"
+      ]
+    },
+    "phone_type": {
+      "label": "Phone entry type",
+      "type": "enum",
+      "description": "Which category a phones{} entry belongs to (work, home, mobile and others the vendor's phones{} reference lists)."
+    },
+    "external_id_value": {
+      "label": "External id value",
+      "type": "identifier",
+      "description": "The value of one externalIds{} entry: an employee number, a license number, or whatever its type names.",
+      "hazards": [
+        "external_id_type_dependent",
+        "placeholder_example"
+      ]
+    },
+    "external_id_type": {
+      "label": "External id type",
+      "type": "enum",
+      "description": "What kind of external id the paired value is: account, custom, customer, login_id, network or organization.",
+      "hazards": [
+        "external_id_type_dependent"
+      ]
+    },
+    "external_id_custom_type": {
+      "label": "External id custom type label",
+      "type": "text",
+      "description": "The free-text label for an externalIds{} entry whose type is custom."
+    },
+    "customer_id": {
+      "label": "Customer id",
+      "type": "account_id",
+      "description": "The Google Workspace customer id the account belongs to."
+    },
+    "org_unit_path": {
+      "label": "Org unit path",
+      "type": "identifier",
+      "description": "The full path of the organizational unit the account is placed in; a bare / is the top-level org."
+    },
+    "is_admin": {
+      "label": "Is super admin",
+      "type": "flag",
+      "description": "True for an account with super administrator privileges."
+    },
+    "is_delegated_admin": {
+      "label": "Is delegated admin",
+      "type": "flag",
+      "description": "True for a delegated administrator: an account with a subset of admin console privileges."
+    },
+    "agreed_to_terms": {
+      "label": "Agreed to terms",
+      "type": "flag",
+      "description": "True once the account has completed an initial login and accepted the Terms of Service."
+    },
+    "account_suspended": {
+      "label": "Account suspended",
+      "type": "flag",
+      "description": "True while the account is suspended, by an administrator or by Google."
+    },
+    "suspension_reason": {
+      "label": "Suspension reason",
+      "type": "enum",
+      "description": "Why a suspended account was suspended; present only while suspended is true. The vendor page names the field but does not publish a full code list."
+    },
+    "suspension_time": {
+      "label": "Suspension time",
+      "type": "event_time",
+      "description": "When the account was suspended.",
+      "hazards": [
+        "time_basis",
+        "directory_snapshot_time"
+      ]
+    },
+    "change_password_next_login": {
+      "label": "Change password at next login",
+      "type": "flag",
+      "description": "True if the account must change its password on next sign-in; does not apply when the user signs in through a third-party identity provider."
+    },
+    "ip_allowlisted": {
+      "label": "IP allowlisted",
+      "type": "flag",
+      "description": "If true, the account's address is subject to a deprecated IP address allowlist configuration."
+    },
+    "is_mailbox_setup": {
+      "label": "Mailbox set up",
+      "type": "flag",
+      "description": "True once the account's Gmail mailbox has been created; only applicable when the account holds a Gmail license."
+    },
+    "include_in_gal": {
+      "label": "Included in global address list",
+      "type": "flag",
+      "description": "True if the account's profile is visible in the domain's global address list, where contact sharing is enabled."
+    },
+    "hash_function": {
+      "label": "Password hash function",
+      "type": "enum",
+      "description": "Which hash format the password value uses."
+    },
+    "creation_time": {
+      "label": "Creation time",
+      "type": "event_time",
+      "description": "When the account was created.",
+      "hazards": [
+        "time_basis",
+        "directory_snapshot_time"
+      ]
+    },
+    "last_login_time": {
+      "label": "Last login time",
+      "type": "event_time",
+      "description": "The last time the account signed in.",
+      "hazards": [
+        "time_basis",
+        "directory_snapshot_time"
+      ]
+    },
+    "managed_by": {
+      "label": "Managed by",
+      "type": "text",
+      "description": "An indexed column on gws:users:identity; empty on both captured sample events, so its source path and meaning could not be confirmed."
+    },
+    "address_type": {
+      "label": "Address entry type",
+      "type": "enum",
+      "description": "Which category an addresses{} entry belongs to: custom, home, other or work."
+    },
+    "address_custom_type": {
+      "label": "Address custom type label",
+      "type": "text",
+      "description": "The free-text label for an addresses{} entry whose type is custom."
+    },
+    "address_locality": {
+      "label": "Address locality",
+      "type": "text",
+      "description": "The city or locality of an addresses{} entry."
+    },
+    "address_region": {
+      "label": "Address region",
+      "type": "text",
+      "description": "The state or region of an addresses{} entry."
+    },
+    "address_postal_code": {
+      "label": "Address postal code",
+      "type": "text",
+      "description": "The postal code of an addresses{} entry."
+    },
+    "address_street": {
+      "label": "Address street",
+      "type": "text",
+      "description": "The street address of an addresses{} entry."
+    },
+    "im_handle": {
+      "label": "IM handle",
+      "type": "text",
+      "description": "The instant-messenger handle of an ims{} entry."
+    },
+    "im_type": {
+      "label": "IM entry type",
+      "type": "enum",
+      "description": "Which category an ims{} entry belongs to. The vendor page states this pattern for emails{} and addresses{} (custom, home, other, work) but does not itself enumerate ims{}.type's values; inferred by analogy with those two arrays, not confirmed for ims{} specifically."
+    },
+    "im_protocol": {
+      "label": "IM protocol",
+      "type": "enum",
+      "description": "Which messenger protocol an ims{} entry uses (the vendor's ims{} reference lists aim, custom_protocol, gtalk, icq, jabber, msn, net_meeting, qq, skype and yahoo)."
+    },
+    "im_primary_flag": {
+      "label": "IM entry is primary",
+      "type": "flag",
+      "description": "True on the account's primary ims{} entry."
+    },
+    "org_name": {
+      "label": "Organization name",
+      "type": "text",
+      "description": "The name of an organizations{} entry."
+    },
+    "org_title": {
+      "label": "Organization title",
+      "type": "text",
+      "description": "The job title of an organizations{} entry."
+    },
+    "org_primary_flag": {
+      "label": "Organization entry is primary",
+      "type": "flag",
+      "description": "True on the account's primary organizations{} entry, per the samples; the fetched vendor page names title, department, name, domain, cost center and location for organizations{} but not a primary flag."
+    },
+    "org_custom_type": {
+      "label": "Organization custom type label",
+      "type": "text",
+      "description": "The free-text label for an organizations{} entry whose type is custom, per the samples; not named on the fetched vendor page."
+    },
+    "org_description": {
+      "label": "Organization description",
+      "type": "text",
+      "description": "The free-text description of an organizations{} entry, per the samples; not named on the fetched vendor page."
+    },
+    "publish_time": {
+      "label": "Publish time",
+      "type": "event_time",
+      "description": "The Pub/Sub delivery time the modinput wraps the message with; not part of the Directory API User resource. On the getuser.json sample it was mechanically derived from the user's own creationTime (no vendor-published value exists to draw from).",
+      "hazards": [
+        "time_basis",
+        "directory_snapshot_time"
+      ]
+    }
+  },
+  "containers": {
+    "gws:users:identity": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "The Splunk Add-on for Google Workspace's own user-identity input: one JSON event per Directory API user, indexed close to the API's own field names (name.givenName, emails{}.address).",
+      "note": "The TA also emits convenience top-level aliases (email, first, last, identity) alongside the nested JSON path fields; both carry the same value (confirmed on the dev Splunk index, 2026-09-19)."
+    },
+    "google:gcp:gsuite:admin:directory:users": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "The Splunk Add-on for Google Cloud Platform's Pub/Sub modinput, routed to this sourcetype for Directory API user messages: the User resource wrapped as the data key of a Pub/Sub envelope ({publish_time, data: <User>}).",
+      "note": "Nested fields land as data.<path> (data.name.givenName, data.emails{}.address). Time is publish_time (epoch seconds, Pub/Sub delivery time), not an indexed _time field from the resource itself; index_time_ok is false for this sourcetype per the sample's own entry.json."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "kind",
+      "concept": "resource_kind",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "id",
+      "concept": "user_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "primaryEmail",
+      "concept": "primary_email",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "email",
+      "concept": "primary_email",
+      "alias_of": "primaryEmail",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "TA convenience alias; equal to the underlying JSON-path field on both captured sample events (dev Splunk query, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "identity",
+      "concept": "primary_email",
+      "alias_of": "primaryEmail",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "TA convenience alias; equal to the underlying JSON-path field on both captured sample events (dev Splunk query, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "name.givenName",
+      "concept": "given_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "first",
+      "concept": "given_name",
+      "alias_of": "name.givenName",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "TA convenience alias; equal to the underlying JSON-path field on both captured sample events (dev Splunk query, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "name.familyName",
+      "concept": "family_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "last",
+      "concept": "family_name",
+      "alias_of": "name.familyName",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "TA convenience alias; equal to the underlying JSON-path field on both captured sample events (dev Splunk query, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "name.fullName",
+      "concept": "full_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "aliases{}",
+      "concept": "email_alias",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "nonEditableAliases{}",
+      "concept": "non_editable_alias",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "emails{}.address",
+      "concept": "secondary_email_address",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "emails{}.type",
+      "concept": "email_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "emails{}.customType",
+      "concept": "email_custom_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "emails{}.primary",
+      "concept": "email_primary_flag",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "phones{}.value",
+      "concept": "phone_number",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "phone",
+      "concept": "phone_number",
+      "alias_of": "phones{}.value",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "TA convenience alias; equal to the underlying JSON-path field on both captured sample events (dev Splunk query, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "phones{}.type",
+      "concept": "phone_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "externalIds{}.value",
+      "concept": "external_id_value",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "externalIds{}.type",
+      "concept": "external_id_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "externalIds{}.customType",
+      "concept": "external_id_custom_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "customerId",
+      "concept": "customer_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "orgUnitPath",
+      "concept": "org_unit_path",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "isAdmin",
+      "concept": "is_admin",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "isDelegatedAdmin",
+      "concept": "is_delegated_admin",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "agreedToTerms",
+      "concept": "agreed_to_terms",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "suspended",
+      "concept": "account_suspended",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "suspensionReason",
+      "concept": "suspension_reason",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "suspensionTime",
+      "concept": "suspension_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "changePasswordAtNextLogin",
+      "concept": "change_password_next_login",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "ipWhitelisted",
+      "concept": "ip_allowlisted",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "isMailboxSetup",
+      "concept": "is_mailbox_setup",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "includeInGlobalAddressList",
+      "concept": "include_in_gal",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "hashFunction",
+      "concept": "hash_function",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "creationTime",
+      "concept": "creation_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "lastLoginTime",
+      "concept": "last_login_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "managedBy",
+      "concept": "managed_by",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Indexed column, observed in a live field capture; empty on both captured sample events."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "addresses{}.type",
+      "concept": "address_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "addresses{}.customType",
+      "concept": "address_custom_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "addresses{}.locality",
+      "concept": "address_locality",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "addresses{}.region",
+      "concept": "address_region",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "addresses{}.postalCode",
+      "concept": "address_postal_code",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "addresses{}.streetAddress",
+      "concept": "address_street",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "ims{}.im",
+      "concept": "im_handle",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "ims{}.type",
+      "concept": "im_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "ims{}.protocol",
+      "concept": "im_protocol",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "ims{}.primary",
+      "concept": "im_primary_flag",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "organizations{}.name",
+      "concept": "org_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "organizations{}.title",
+      "concept": "org_title",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "organizations{}.primary",
+      "concept": "org_primary_flag",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "organizations{}.customType",
+      "concept": "org_custom_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "gws:users:identity",
+      "column": "organizations{}.description",
+      "concept": "org_description",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Directory API user resource is indexed as JSON; nested objects flatten to dotted field names (props.conf indexed/line-breaking extraction observed against the sample and the dev Splunk index, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.kind",
+      "concept": "resource_kind",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.id",
+      "concept": "user_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.primaryEmail",
+      "concept": "primary_email",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "email",
+      "concept": "primary_email",
+      "alias_of": "data.primaryEmail",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "A separate regex EXTRACT against _raw (not the JSON-path field), per this sample's own entry.json transform note; the sourcetype's props.conf stanza does not set KV_MODE=json for these convenience columns."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "identity",
+      "concept": "primary_email",
+      "alias_of": "email",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "A FIELDALIAS names this column; entry.json's transform note names the alias but the field it copies is inferred from context (its value equals email/primaryEmail on the dev Splunk index, 2026-09-19), not read directly from a fetched props.conf."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.name.givenName",
+      "concept": "given_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "first",
+      "concept": "given_name",
+      "alias_of": "data.name.givenName",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "An EVAL reads the JSON-path field and reformats it, per this sample's own entry.json transform note."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.name.familyName",
+      "concept": "family_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "last",
+      "concept": "family_name",
+      "alias_of": "data.name.familyName",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "An EVAL reads the JSON-path field, by naming symmetry with EVAL-first; inferred, not read directly from a fetched props.conf (entry.json confirms EVAL-first/last/startdate as a group without printing last's own expression)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.name.fullName",
+      "concept": "full_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.aliases{}",
+      "concept": "email_alias",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.nonEditableAliases{}",
+      "concept": "non_editable_alias",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.emails{}.address",
+      "concept": "secondary_email_address",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.emails{}.type",
+      "concept": "email_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.emails{}.customType",
+      "concept": "email_custom_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.emails{}.primary",
+      "concept": "email_primary_flag",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.phones{}.value",
+      "concept": "phone_number",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "phone",
+      "concept": "phone_number",
+      "alias_of": "data.phones{}.value",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "A separate regex EXTRACT against _raw (not the JSON-path field), per this sample's own entry.json transform note; the sourcetype's props.conf stanza does not set KV_MODE=json for these convenience columns."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.phones{}.type",
+      "concept": "phone_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.externalIds{}.value",
+      "concept": "external_id_value",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.externalIds{}.type",
+      "concept": "external_id_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.externalIds{}.customType",
+      "concept": "external_id_custom_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.customerId",
+      "concept": "customer_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.orgUnitPath",
+      "concept": "org_unit_path",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.isAdmin",
+      "concept": "is_admin",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.isDelegatedAdmin",
+      "concept": "is_delegated_admin",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.agreedToTerms",
+      "concept": "agreed_to_terms",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.suspended",
+      "concept": "account_suspended",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.changePasswordAtNextLogin",
+      "concept": "change_password_next_login",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.ipWhitelisted",
+      "concept": "ip_allowlisted",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.isMailboxSetup",
+      "concept": "is_mailbox_setup",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.includeInGlobalAddressList",
+      "concept": "include_in_gal",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.hashFunction",
+      "concept": "hash_function",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.creationTime",
+      "concept": "creation_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "startdate",
+      "concept": "creation_time",
+      "alias_of": "data.creationTime",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-startdate reads data.creationTime, per this sample's own entry.json transform note (confirmed alongside publish_time's own derivation)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.lastLoginTime",
+      "concept": "last_login_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.addresses{}.type",
+      "concept": "address_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.addresses{}.customType",
+      "concept": "address_custom_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.addresses{}.locality",
+      "concept": "address_locality",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.addresses{}.region",
+      "concept": "address_region",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.addresses{}.postalCode",
+      "concept": "address_postal_code",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.addresses{}.streetAddress",
+      "concept": "address_street",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.ims{}.im",
+      "concept": "im_handle",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.ims{}.type",
+      "concept": "im_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.ims{}.protocol",
+      "concept": "im_protocol",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.ims{}.primary",
+      "concept": "im_primary_flag",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.organizations{}.name",
+      "concept": "org_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.organizations{}.title",
+      "concept": "org_title",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.organizations{}.primary",
+      "concept": "org_primary_flag",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.organizations{}.customType",
+      "concept": "org_custom_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "data.organizations{}.description",
+      "concept": "org_description",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub modinput wraps the Directory API user resource as the data key of its envelope; nested objects flatten to data.<path> dotted names (observed against the sample and a live field capture, 2026-09-19)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:gsuite:admin:directory:users",
+      "column": "publish_time",
+      "concept": "publish_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Pub/Sub RestParcel envelope's own publish_time key (bin/splunk_ta_gcp/modinputs/pubsub.py per this sample's entry.json); on this sample it has no vendor-published value and was mechanically derived from data.creationTime."
+      }
+    }
+  ],
+  "hazards": {
+    "names_not_stable": {
+      "text": "primaryEmail, the name fields and the alias lists are set by an admin and change on rename or re-provisioning; the id field is the stable key across a name or email change."
+    },
+    "time_basis": {
+      "text": "creationTime, lastLoginTime and suspensionTime describe the account's own history, not when this record was captured. On the Pub/Sub container, publish_time is the capture time and lags the account event it reports."
+    },
+    "directory_snapshot_time": {
+      "text": "Every field here describes the current state of the account, not an event. Two pulls of the same user return different creationTime-adjacent fields (lastLoginTime especially) with no record of what changed between them."
+    },
+    "id_vs_email_alike": {
+      "text": "id and primaryEmail (also exposed as email/identity) both read as 'the user's identifier' but differ: id is the directory-issued key and outlives a rename; primaryEmail changes when an admin changes it. Key joins on id, not on the email columns."
+    },
+    "external_id_type_dependent": {
+      "text": "externalIds{}.value carries whatever externalIds{}.type says it is (an employee number, a login id, a network id); the two captured samples hold an employee number and a contractor license number in the same column under different type values. Read type before value."
+    },
+    "kind_wire_mismatch": {
+      "text": "Both captured samples carry kind=directory#user; the current REST reference documents the User resource's kind as admin#directory#user. Treat kind as informational only, not a filter to match on."
+    },
+    "placeholder_example": {
+      "text": "The vendor's own published example User resource uses prose placeholder text for id ('the unique user id'), externalIds{}.value ('employee number') and phones{}.value ('+1 nnn nnn nnnn'); both sample datasets in this pack copy that text verbatim, so these columns carry placeholder strings, not real-looking values."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

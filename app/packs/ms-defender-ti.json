@@ -1,0 +1,2590 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "ms-defender-ti",
+  "name": "Microsoft Defender Threat Intelligence datasets",
+  "pack_version": "0.1.0",
+  "description": "Microsoft Defender Threat Intelligence's nine internet-infrastructure datasets: WHOIS history, passive DNS, subdomains, host pairs (redirects), SSL certificates, web components, cookies, threat-actor articles and their indicators, as the Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) indexes the Microsoft Graph security API's list responses.",
+  "source": "Microsoft Graph security API (microsoft.graph.security namespace) resource-type reference pages; Splunk_TA_MS_Security collector behaviour as recorded with the captured samples.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "ms_defender_ti",
+    "label": "Microsoft Defender Threat Intelligence",
+    "description": "Nine host- and article-centric internet-infrastructure datasets from Microsoft Defender Threat Intelligence, one container per dataset. odata_type discriminates the seven containers that carry it (record_types below); certificates and articles carry no top-level @odata.type and are told apart by container alone.",
+    "tags": [
+      "threat-intel",
+      "dns",
+      "certificates",
+      "whois"
+    ],
+    "discriminator": "odata_type"
+  },
+  "concepts": {
+    "odata_type": {
+      "label": "OData type",
+      "type": "record_type",
+      "description": "The Microsoft Graph @odata.type annotation naming this JSON object's resource type, for example #microsoft.graph.security.hostPair."
+    },
+    "artifact_type": {
+      "label": "Artifact type",
+      "type": "record_type",
+      "description": "The @odata.type of a related artifact object (for example an IP address or a hostname)."
+    },
+    "artifact_id": {
+      "label": "Artifact id",
+      "type": "identifier",
+      "description": "The value of a related artifact: an IP address or a hostname, depending on the sibling artifact type field.",
+      "hazards": [
+        "host_id_family"
+      ]
+    },
+    "record_id": {
+      "label": "Record id",
+      "type": "event_id",
+      "description": "A system-generated id Microsoft Graph assigns to this record.",
+      "hazards": [
+        "id_shape_varies"
+      ]
+    },
+    "article_id": {
+      "label": "Article id",
+      "type": "event_id",
+      "description": "A system-generated id Microsoft Graph assigns to this article; a short opaque string (for example a272d5ab), not the base64 composite most other containers use.",
+      "hazards": [
+        "id_shape_varies"
+      ]
+    },
+    "splunk_host_id": {
+      "label": "Splunk host id (injected)",
+      "type": "domain",
+      "description": "The host identifier (a domain or IP) the TA's collector was configured with to retrieve this record; injected by the add-on, not returned by Microsoft Graph.",
+      "hazards": [
+        "host_id_family"
+      ]
+    },
+    "splunk_article_id": {
+      "label": "Splunk article id (injected)",
+      "type": "identifier",
+      "description": "The article id the TA's collector queried indicators for; injected by the add-on, not returned by Microsoft Graph."
+    },
+    "host_id": {
+      "label": "Host id",
+      "type": "domain",
+      "description": "The host artifact (a hostname or IP address) this record's data is about, as Microsoft Graph identifies it.",
+      "hazards": [
+        "host_id_family"
+      ]
+    },
+    "host_artifact_type": {
+      "label": "Host artifact type",
+      "type": "enum",
+      "description": "The @odata.type of the host object: a hostname or an IP address implementation of the abstract host type."
+    },
+    "first_seen": {
+      "label": "First seen",
+      "type": "event_time",
+      "description": "The first date and time Microsoft Defender Threat Intelligence observed this record. The exact resource the record documents (host, hostPair, hostCookie, or another of the API's typed objects) depends on the container; each container's binding cites its own vendor page.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "last_seen": {
+      "label": "Last seen",
+      "type": "event_time",
+      "description": "The most recent date and time Microsoft Defender Threat Intelligence observed this record. The exact resource the record documents depends on the container, as for first_seen; each container's binding cites its own vendor page.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "last_update_time": {
+      "label": "WHOIS last modified",
+      "type": "event_time",
+      "description": "When this WHOIS record was last modified.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "registration_time": {
+      "label": "Domain registration time",
+      "type": "event_time",
+      "description": "When this domain was registered with a registrar, per WHOIS.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "expiration_time": {
+      "label": "Domain expiration time",
+      "type": "event_time",
+      "description": "When this WHOIS record expires with the registrar.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "domain_status": {
+      "label": "Domain status",
+      "type": "text",
+      "description": "The domain's status codes from the registry, as a single string (a comma-separated list of EPP codes in the sample read here)."
+    },
+    "whois_server": {
+      "label": "WHOIS server",
+      "type": "text",
+      "description": "The WHOIS server that supplied this record's details."
+    },
+    "raw_whois_text": {
+      "label": "Raw WHOIS text",
+      "type": "text",
+      "description": "The raw, free-text WHOIS response for this record; Microsoft's own example truncates it."
+    },
+    "whois_billing_contact": {
+      "label": "WHOIS billing contact",
+      "type": "raw_object",
+      "description": "The billing contact block for this WHOIS record (a whoisContact object: address, email, fax, name, organization, telephone); null and unexpanded in the one sample read here.",
+      "hazards": [
+        "conditional_flattening"
+      ]
+    },
+    "whois_noc_contact": {
+      "label": "WHOIS NOC contact",
+      "type": "raw_object",
+      "description": "The network operations center contact block for this WHOIS record (a whoisContact object); null and unexpanded in the one sample read here.",
+      "hazards": [
+        "conditional_flattening"
+      ]
+    },
+    "whois_zone_contact": {
+      "label": "WHOIS zone contact",
+      "type": "raw_object",
+      "description": "The zone contact block for this WHOIS record (a whoisContact object); null and unexpanded in the one sample read here.",
+      "hazards": [
+        "conditional_flattening"
+      ]
+    },
+    "contact_address_block": {
+      "label": "Contact address (unexpanded)",
+      "type": "raw_object",
+      "description": "A WHOIS contact's postal address (a physicalAddress object: city, countryOrRegion, postalCode, state, street) when the sample left it null instead of expanding it to dotted sub-fields.",
+      "hazards": [
+        "conditional_flattening"
+      ]
+    },
+    "nameserver_host_id": {
+      "label": "Nameserver host id",
+      "type": "domain",
+      "description": "A nameserver hostname listed for this domain in its WHOIS record."
+    },
+    "nameserver_first_seen": {
+      "label": "Nameserver first seen",
+      "type": "event_time",
+      "description": "The first time Microsoft observed this nameserver on the domain.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "nameserver_last_seen": {
+      "label": "Nameserver last seen",
+      "type": "event_time",
+      "description": "The most recent time Microsoft observed this nameserver on the domain.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "contact_email": {
+      "label": "Contact email",
+      "type": "identifier",
+      "description": "A WHOIS contact's email address (abuse, admin, registrant, registrar or technical, per the binding's column).",
+      "sensitivity": "pii"
+    },
+    "contact_fax": {
+      "label": "Contact fax",
+      "type": "text",
+      "description": "A WHOIS contact's fax number; no format is guaranteed."
+    },
+    "contact_name": {
+      "label": "Contact name",
+      "type": "text",
+      "description": "A WHOIS contact's name.",
+      "sensitivity": "pii"
+    },
+    "contact_organization": {
+      "label": "Contact organization",
+      "type": "text",
+      "description": "A WHOIS contact's organization."
+    },
+    "contact_telephone": {
+      "label": "Contact telephone",
+      "type": "text",
+      "description": "A WHOIS contact's telephone number; no format is guaranteed.",
+      "sensitivity": "pii"
+    },
+    "contact_address_city": {
+      "label": "Contact address city",
+      "type": "text",
+      "description": "The city of a WHOIS contact's postal address."
+    },
+    "contact_address_country": {
+      "label": "Contact address country or region",
+      "type": "region",
+      "description": "The country or region of a WHOIS contact's postal address; a free-format string, for example United States."
+    },
+    "contact_address_postal_code": {
+      "label": "Contact address postal code",
+      "type": "text",
+      "description": "The postal code of a WHOIS contact's postal address."
+    },
+    "contact_address_state": {
+      "label": "Contact address state",
+      "type": "text",
+      "description": "The state of a WHOIS contact's postal address."
+    },
+    "contact_address_street": {
+      "label": "Contact address street",
+      "type": "text",
+      "description": "The street of a WHOIS contact's postal address."
+    },
+    "collected_time": {
+      "label": "Collected time",
+      "type": "event_time",
+      "description": "When Microsoft collected this passive DNS entry.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "dns_record_type": {
+      "label": "DNS record type",
+      "type": "enum",
+      "description": "The DNS resource record type this passive DNS entry is for; the vendor page names the field but does not enumerate its values."
+    },
+    "dns_query_host_id": {
+      "label": "Passive DNS host",
+      "type": "domain",
+      "description": "The host this passive DNS entry's resolution history is about; generally the value you searched to find the record.",
+      "hazards": [
+        "host_id_family"
+      ]
+    },
+    "link_kind": {
+      "label": "Link kind",
+      "type": "enum",
+      "description": "Why Microsoft identified the two hosts as a parent-child pair, for example a redirect; the vendor page gives redirect as an example, not an exhaustive list."
+    },
+    "pair_parent_host_id": {
+      "label": "Host pair parent",
+      "type": "domain",
+      "description": "The host used to reach the child host in this pairing, for example the page that redirects.",
+      "hazards": [
+        "host_id_family"
+      ]
+    },
+    "pair_child_host_id": {
+      "label": "Host pair child",
+      "type": "domain",
+      "description": "The host reached via the parent host in this pairing, for example a redirect's destination.",
+      "hazards": [
+        "host_id_family"
+      ]
+    },
+    "port_first_seen": {
+      "label": "Port first seen",
+      "type": "event_time",
+      "description": "The first time Microsoft observed this port associated with the certificate.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "port_last_seen": {
+      "label": "Port last seen",
+      "type": "event_time",
+      "description": "The most recent time Microsoft observed this port associated with the certificate.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "port_number": {
+      "label": "Port number",
+      "type": "count",
+      "description": "A network port this SSL certificate was observed on."
+    },
+    "cert_odata_context": {
+      "label": "Certificate OData context",
+      "type": "text",
+      "description": "The OData $metadata context URL for the sslCertificate object; API plumbing, not certificate data."
+    },
+    "cert_first_seen": {
+      "label": "Certificate first seen",
+      "type": "event_time",
+      "description": "The first date and time this sslCertificate was observed.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "cert_last_seen": {
+      "label": "Certificate last seen",
+      "type": "event_time",
+      "description": "The most recent date and time this sslCertificate was observed.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "cert_id": {
+      "label": "Certificate id",
+      "type": "identifier",
+      "description": "The system-generated id for this sslCertificate."
+    },
+    "cert_issue_date": {
+      "label": "Certificate issue date",
+      "type": "event_time",
+      "description": "The date and time when the certificate was issued.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "cert_expiration": {
+      "label": "Certificate expiration",
+      "type": "event_time",
+      "description": "The date and time when the certificate expires.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "cert_serial_number": {
+      "label": "Certificate serial number",
+      "type": "identifier",
+      "description": "The serial number associated with the SSL certificate itself.",
+      "hazards": [
+        "cert_serial_vs_name_serial"
+      ]
+    },
+    "cert_fingerprint": {
+      "label": "Certificate fingerprint",
+      "type": "file_hash",
+      "description": "A hash of the certificate calculated on the data and signature.",
+      "hazards": [
+        "fingerprint_vs_sha1"
+      ]
+    },
+    "cert_sha1": {
+      "label": "Certificate SHA-1",
+      "type": "file_hash",
+      "description": "A SHA-1 hash of the certificate; the vendor page notes this is not the signature.",
+      "hazards": [
+        "fingerprint_vs_sha1"
+      ]
+    },
+    "cert_ssl_version": {
+      "label": "SSL version",
+      "type": "version",
+      "description": "The SSL/TLS protocol version associated with the certificate."
+    },
+    "x500_city": {
+      "label": "X.500 city",
+      "type": "text",
+      "description": "The city on a certificate subject's or issuer's address."
+    },
+    "x500_country": {
+      "label": "X.500 country or region",
+      "type": "region",
+      "description": "The country or region on a certificate subject's or issuer's address; a free-format string."
+    },
+    "x500_state": {
+      "label": "X.500 state",
+      "type": "text",
+      "description": "The state on a certificate subject's or issuer's address."
+    },
+    "x500_street": {
+      "label": "X.500 street",
+      "type": "text",
+      "description": "The street on a certificate subject's or issuer's address."
+    },
+    "x500_postal_code": {
+      "label": "X.500 postal code",
+      "type": "text",
+      "description": "The postal code on a certificate subject's or issuer's address."
+    },
+    "x500_post_office_box": {
+      "label": "X.500 post office box",
+      "type": "text",
+      "description": "A post office box on a certificate subject's or issuer's address; not named on the physicalAddress reference page read for this pack.",
+      "hazards": [
+        "undocumented_address_fields"
+      ]
+    },
+    "x500_address_type": {
+      "label": "X.500 address type",
+      "type": "enum",
+      "description": "A type tag on a certificate subject's or issuer's address (unknown in the one sample read here); not named on the physicalAddress or sslCertificateEntity reference pages read for this pack.",
+      "hazards": [
+        "undocumented_address_fields"
+      ]
+    },
+    "x500_alternate_name": {
+      "label": "X.500 alternate name",
+      "type": "domain",
+      "description": "Alternate names on the certificate subject or issuer, for example subject alternative names; the vendor's own property name is the plural alternateNames, the observed column is the singular alternateName{}."
+    },
+    "x500_common_name": {
+      "label": "X.500 common name",
+      "type": "text",
+      "description": "A common name on the certificate subject or issuer.",
+      "hazards": [
+        "common_name_role_differs"
+      ]
+    },
+    "x500_email": {
+      "label": "X.500 email",
+      "type": "text",
+      "description": "An email address on the certificate subject or issuer."
+    },
+    "x500_given_name": {
+      "label": "X.500 given name",
+      "type": "text",
+      "description": "A person's given name on the certificate subject or issuer, when the entity is a person."
+    },
+    "x500_organization_name": {
+      "label": "X.500 organization name",
+      "type": "text",
+      "description": "An organization's name on the certificate subject or issuer, when the entity is an organization."
+    },
+    "x500_organization_unit_name": {
+      "label": "X.500 organizational unit name",
+      "type": "text",
+      "description": "Whether a unit in the organization is named on the certificate subject or issuer."
+    },
+    "x500_serial_number": {
+      "label": "X.500 serial number",
+      "type": "identifier",
+      "description": "A serial number assigned to the certificate subject or issuer entity itself; usually only present for the issuer."
+    },
+    "x500_surname": {
+      "label": "X.500 surname",
+      "type": "text",
+      "description": "A person's surname on the certificate subject or issuer, when the entity is a person."
+    },
+    "component_category": {
+      "label": "Component category",
+      "type": "enum",
+      "description": "The type of web component detected on the host, for example Operating System, Framework, Remote Access, or Server; the vendor page gives these as examples, not an exhaustive list."
+    },
+    "component_name": {
+      "label": "Component name",
+      "type": "text",
+      "description": "A name running on the artifact, for example Microsoft IIS."
+    },
+    "component_version": {
+      "label": "Component version",
+      "type": "version",
+      "description": "The component's version; the vendor page notes this should not be assumed to be strictly numerical."
+    },
+    "cookie_domain": {
+      "label": "Cookie domain",
+      "type": "domain",
+      "description": "The URI for which the cookie is valid, per the vendor's own wording."
+    },
+    "cookie_name": {
+      "label": "Cookie name",
+      "type": "text",
+      "description": "The name of the cookie, for example JSESSIONID or SEARCH_NAMESITE."
+    },
+    "article_odata_context": {
+      "label": "Article OData context",
+      "type": "text",
+      "description": "The OData $metadata context URL for the article list response; API plumbing, not article data."
+    },
+    "article_body": {
+      "label": "Article body",
+      "type": "text",
+      "description": "The article's full formatted content."
+    },
+    "article_summary": {
+      "label": "Article summary",
+      "type": "text",
+      "description": "A quick summary of the article."
+    },
+    "content_format": {
+      "label": "Content format",
+      "type": "enum",
+      "description": "The format of an article's body or summary content."
+    },
+    "article_created_time": {
+      "label": "Article created time",
+      "type": "event_time",
+      "description": "When the article was created.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "article_updated_time": {
+      "label": "Article updated time",
+      "type": "event_time",
+      "description": "The most recent time the article was updated.",
+      "hazards": [
+        "index_time_only"
+      ]
+    },
+    "article_image_url": {
+      "label": "Article image URL",
+      "type": "text",
+      "description": "The URL of the article's header image, for display purposes."
+    },
+    "article_is_featured": {
+      "label": "Article is featured",
+      "type": "flag",
+      "description": "Whether Microsoft currently features this article."
+    },
+    "article_tags": {
+      "label": "Article tags",
+      "type": "text",
+      "description": "Free-text tags on the article communicating keywords or key concepts."
+    },
+    "article_title": {
+      "label": "Article title",
+      "type": "text",
+      "description": "The title of the article."
+    },
+    "indicator_source": {
+      "label": "Indicator source",
+      "type": "enum",
+      "description": "Where this article indicator originated."
+    }
+  },
+  "containers": {
+    "ms:defender:ti:whois": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "WHOIS history for a host, as Splunk_TA_MS_Security indexes the Microsoft Defender Threat Intelligence whoisRecord list.",
+      "note": "One event per historical WHOIS record for the queried host (splunk.hostId).",
+      "hazards": [
+        "no_sentinel_table"
+      ]
+    },
+    "ms:defender:ti:passivedns": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Passive DNS resolutions for a host.",
+      "hazards": [
+        "no_sentinel_table"
+      ]
+    },
+    "ms:defender:ti:subdomains": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Subdomains Microsoft has observed under a host.",
+      "hazards": [
+        "no_sentinel_table",
+        "placeholder_example"
+      ]
+    },
+    "ms:defender:ti:hostpairs": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Parent-child host pairs (redirects and similar links) for a host, in either direction.",
+      "hazards": [
+        "no_sentinel_table"
+      ]
+    },
+    "ms:defender:ti:certificates": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "SSL certificates observed on a host, with the ports they were seen on.",
+      "hazards": [
+        "no_sentinel_table"
+      ]
+    },
+    "ms:defender:ti:components": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Web components (server, framework, OS and similar) detected on a host by crawl or scan.",
+      "hazards": [
+        "no_sentinel_table"
+      ]
+    },
+    "ms:defender:ti:cookies": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Cookie names Microsoft indexed while crawling a host.",
+      "hazards": [
+        "no_sentinel_table"
+      ]
+    },
+    "ms:defender:ti:articles": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Microsoft Defender Threat Intelligence articles: narrative threat-actor, tooling and campaign writeups.",
+      "hazards": [
+        "no_sentinel_table"
+      ]
+    },
+    "ms:defender:ti:article_indicators": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Indicators of compromise reported inside one article.",
+      "note": "splunk.articleId (TA-injected) names the article; the sourcetype carries no article title or body of its own.",
+      "hazards": [
+        "no_sentinel_table",
+        "source_field_collision"
+      ]
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "@odata.type",
+      "concept": "odata_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "id",
+      "concept": "record_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "host.id",
+      "concept": "host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "splunk.hostId",
+      "concept": "splunk_host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The TA injects splunk.hostId as the host identifier the collector was configured with to retrieve this record (BaseHostDataset.inject_host_id), not a field Microsoft Graph returns."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "firstSeenDateTime",
+      "concept": "first_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/security-whoisrecord?view=graph-rest-1.0",
+          "title": "whoisRecord resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "lastSeenDateTime",
+      "concept": "last_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/security-whoisrecord?view=graph-rest-1.0",
+          "title": "whoisRecord resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "lastUpdateDateTime",
+      "concept": "last_update_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrationDateTime",
+      "concept": "registration_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "expirationDateTime",
+      "concept": "expiration_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "domainStatus",
+      "concept": "domain_status",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "whoisServer",
+      "concept": "whois_server",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "rawWhoisText",
+      "concept": "raw_whois_text",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "billing",
+      "concept": "whois_billing_contact",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "noc",
+      "concept": "whois_noc_contact",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "zone",
+      "concept": "whois_zone_contact",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrar.address",
+      "concept": "contact_address_block",
+      "note": "registrar",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "nameservers{}.host.id",
+      "concept": "nameserver_host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "nameservers{}.firstSeenDateTime",
+      "concept": "nameserver_first_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "nameservers{}.lastSeenDateTime",
+      "concept": "nameserver_last_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "abuse.email",
+      "concept": "contact_email",
+      "note": "abuse",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "abuse.fax",
+      "concept": "contact_fax",
+      "note": "abuse",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "abuse.name",
+      "concept": "contact_name",
+      "note": "abuse",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "abuse.organization",
+      "concept": "contact_organization",
+      "note": "abuse",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "abuse.telephone",
+      "concept": "contact_telephone",
+      "note": "abuse",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "abuse.address.city",
+      "concept": "contact_address_city",
+      "note": "abuse",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "abuse.address.countryOrRegion",
+      "concept": "contact_address_country",
+      "note": "abuse",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "abuse.address.postalCode",
+      "concept": "contact_address_postal_code",
+      "note": "abuse",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "abuse.address.state",
+      "concept": "contact_address_state",
+      "note": "abuse",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "abuse.address.street",
+      "concept": "contact_address_street",
+      "note": "abuse",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "admin.email",
+      "concept": "contact_email",
+      "note": "admin",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "admin.fax",
+      "concept": "contact_fax",
+      "note": "admin",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "admin.name",
+      "concept": "contact_name",
+      "note": "admin",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "admin.organization",
+      "concept": "contact_organization",
+      "note": "admin",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "admin.telephone",
+      "concept": "contact_telephone",
+      "note": "admin",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "admin.address.city",
+      "concept": "contact_address_city",
+      "note": "admin",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "admin.address.countryOrRegion",
+      "concept": "contact_address_country",
+      "note": "admin",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "admin.address.postalCode",
+      "concept": "contact_address_postal_code",
+      "note": "admin",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "admin.address.state",
+      "concept": "contact_address_state",
+      "note": "admin",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "admin.address.street",
+      "concept": "contact_address_street",
+      "note": "admin",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrant.email",
+      "concept": "contact_email",
+      "note": "registrant",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrant.fax",
+      "concept": "contact_fax",
+      "note": "registrant",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrant.name",
+      "concept": "contact_name",
+      "note": "registrant",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrant.organization",
+      "concept": "contact_organization",
+      "note": "registrant",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrant.telephone",
+      "concept": "contact_telephone",
+      "note": "registrant",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrant.address.city",
+      "concept": "contact_address_city",
+      "note": "registrant",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrant.address.countryOrRegion",
+      "concept": "contact_address_country",
+      "note": "registrant",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrant.address.postalCode",
+      "concept": "contact_address_postal_code",
+      "note": "registrant",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrant.address.state",
+      "concept": "contact_address_state",
+      "note": "registrant",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrant.address.street",
+      "concept": "contact_address_street",
+      "note": "registrant",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "technical.email",
+      "concept": "contact_email",
+      "note": "technical",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "technical.fax",
+      "concept": "contact_fax",
+      "note": "technical",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "technical.name",
+      "concept": "contact_name",
+      "note": "technical",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "technical.organization",
+      "concept": "contact_organization",
+      "note": "technical",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "technical.telephone",
+      "concept": "contact_telephone",
+      "note": "technical",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "technical.address.city",
+      "concept": "contact_address_city",
+      "note": "technical",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "technical.address.countryOrRegion",
+      "concept": "contact_address_country",
+      "note": "technical",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "technical.address.postalCode",
+      "concept": "contact_address_postal_code",
+      "note": "technical",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "technical.address.state",
+      "concept": "contact_address_state",
+      "note": "technical",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "technical.address.street",
+      "concept": "contact_address_street",
+      "note": "technical",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrar.email",
+      "concept": "contact_email",
+      "note": "registrar",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrar.fax",
+      "concept": "contact_fax",
+      "note": "registrar",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrar.name",
+      "concept": "contact_name",
+      "note": "registrar",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrar.organization",
+      "concept": "contact_organization",
+      "note": "registrar",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:whois",
+      "column": "registrar.telephone",
+      "concept": "contact_telephone",
+      "note": "registrar",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:passivedns",
+      "column": "@odata.type",
+      "concept": "odata_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:passivedns",
+      "column": "id",
+      "concept": "record_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:passivedns",
+      "column": "artifact.@odata.type",
+      "concept": "artifact_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:passivedns",
+      "column": "artifact.id",
+      "concept": "artifact_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:passivedns",
+      "column": "parentHost.id",
+      "concept": "dns_query_host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:passivedns",
+      "column": "recordType",
+      "concept": "dns_record_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:passivedns",
+      "column": "collectedDateTime",
+      "concept": "collected_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:passivedns",
+      "column": "firstSeenDateTime",
+      "concept": "first_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/security-passivednsrecord?view=graph-rest-1.0",
+          "title": "passiveDnsRecord resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:passivedns",
+      "column": "lastSeenDateTime",
+      "concept": "last_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/security-passivednsrecord?view=graph-rest-1.0",
+          "title": "passiveDnsRecord resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:passivedns",
+      "column": "splunk.hostId",
+      "concept": "splunk_host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The TA injects splunk.hostId as the host identifier the collector was configured with to retrieve this record (BaseHostDataset.inject_host_id), not a field Microsoft Graph returns."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:subdomains",
+      "column": "@odata.type",
+      "concept": "odata_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:subdomains",
+      "column": "id",
+      "concept": "record_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:subdomains",
+      "column": "firstSeenDateTime",
+      "concept": "first_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/security-subdomain?view=graph-rest-1.0",
+          "title": "subdomain resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:subdomains",
+      "column": "splunk.hostId",
+      "concept": "splunk_host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The TA injects splunk.hostId as the host identifier the collector was configured with to retrieve this record (BaseHostDataset.inject_host_id), not a field Microsoft Graph returns."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:hostpairs",
+      "column": "@odata.type",
+      "concept": "odata_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:hostpairs",
+      "column": "id",
+      "concept": "record_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:hostpairs",
+      "column": "linkKind",
+      "concept": "link_kind",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:hostpairs",
+      "column": "parentHost.id",
+      "concept": "pair_parent_host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:hostpairs",
+      "column": "childHost.id",
+      "concept": "pair_child_host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:hostpairs",
+      "column": "firstSeenDateTime",
+      "concept": "first_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/security-hostpair?view=graph-rest-1.0",
+          "title": "hostPair resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:hostpairs",
+      "column": "lastSeenDateTime",
+      "concept": "last_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/security-hostpair?view=graph-rest-1.0",
+          "title": "hostPair resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:hostpairs",
+      "column": "splunk.hostId",
+      "concept": "splunk_host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The TA injects splunk.hostId as the host identifier the collector was configured with to retrieve this record (BaseHostDataset.inject_host_id), not a field Microsoft Graph returns."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "id",
+      "concept": "record_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "host.id",
+      "concept": "host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "host.@odata.type",
+      "concept": "host_artifact_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "firstSeenDateTime",
+      "concept": "first_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/security-hostsslcertificate?view=graph-rest-1.0",
+          "title": "hostSslCertificate resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "lastSeenDateTime",
+      "concept": "last_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/security-hostsslcertificate?view=graph-rest-1.0",
+          "title": "hostSslCertificate resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "splunk.hostId",
+      "concept": "splunk_host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The TA injects splunk.hostId as the host identifier the collector was configured with to retrieve this record (BaseHostDataset.inject_host_id), not a field Microsoft Graph returns."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "ports{}.port",
+      "concept": "port_number",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "ports{}.firstSeenDateTime",
+      "concept": "port_first_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "ports{}.lastSeenDateTime",
+      "concept": "port_last_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.@odata.context",
+      "concept": "cert_odata_context",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.id",
+      "concept": "cert_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.firstSeenDateTime",
+      "concept": "cert_first_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.lastSeenDateTime",
+      "concept": "cert_last_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issueDateTime",
+      "concept": "cert_issue_date",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.expirationDateTime",
+      "concept": "cert_expiration",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.serialNumber",
+      "concept": "cert_serial_number",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.fingerprint",
+      "concept": "cert_fingerprint",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.sha1",
+      "concept": "cert_sha1",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.sslVersion",
+      "concept": "cert_ssl_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.address.city",
+      "concept": "x500_city",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.address.countryOrRegion",
+      "concept": "x500_country",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.address.state",
+      "concept": "x500_state",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.address.street",
+      "concept": "x500_street",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.address.postalCode",
+      "concept": "x500_postal_code",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.address.postOfficeBox",
+      "concept": "x500_post_office_box",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.address.type",
+      "concept": "x500_address_type",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.alternateName{}",
+      "concept": "x500_alternate_name",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.commonName",
+      "concept": "x500_common_name",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.email",
+      "concept": "x500_email",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.givenName",
+      "concept": "x500_given_name",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.organizationName",
+      "concept": "x500_organization_name",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.organizationUnitName",
+      "concept": "x500_organization_unit_name",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.serialNumber",
+      "concept": "x500_serial_number",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.issuer.surname",
+      "concept": "x500_surname",
+      "note": "issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.address.city",
+      "concept": "x500_city",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.address.countryOrRegion",
+      "concept": "x500_country",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.address.state",
+      "concept": "x500_state",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.address.street",
+      "concept": "x500_street",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.address.postalCode",
+      "concept": "x500_postal_code",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.address.postOfficeBox",
+      "concept": "x500_post_office_box",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.address.type",
+      "concept": "x500_address_type",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.alternateName{}",
+      "concept": "x500_alternate_name",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.commonName",
+      "concept": "x500_common_name",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.email",
+      "concept": "x500_email",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.givenName",
+      "concept": "x500_given_name",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.organizationName",
+      "concept": "x500_organization_name",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.organizationUnitName",
+      "concept": "x500_organization_unit_name",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.serialNumber",
+      "concept": "x500_serial_number",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:certificates",
+      "column": "sslCertificate.subject.surname",
+      "concept": "x500_surname",
+      "note": "subject",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:components",
+      "column": "@odata.type",
+      "concept": "odata_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:components",
+      "column": "id",
+      "concept": "record_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:components",
+      "column": "host.id",
+      "concept": "host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:components",
+      "column": "category",
+      "concept": "component_category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:components",
+      "column": "name",
+      "concept": "component_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:components",
+      "column": "version",
+      "concept": "component_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:components",
+      "column": "firstSeenDateTime",
+      "concept": "first_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/security-hostcomponent?view=graph-rest-1.0",
+          "title": "hostComponent resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:components",
+      "column": "lastSeenDateTime",
+      "concept": "last_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/security-hostcomponent?view=graph-rest-1.0",
+          "title": "hostComponent resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:components",
+      "column": "splunk.hostId",
+      "concept": "splunk_host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The TA injects splunk.hostId as the host identifier the collector was configured with to retrieve this record (BaseHostDataset.inject_host_id), not a field Microsoft Graph returns."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:cookies",
+      "column": "@odata.type",
+      "concept": "odata_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:cookies",
+      "column": "id",
+      "concept": "record_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:cookies",
+      "column": "host.id",
+      "concept": "host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:cookies",
+      "column": "domain",
+      "concept": "cookie_domain",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:cookies",
+      "column": "name",
+      "concept": "cookie_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:cookies",
+      "column": "firstSeenDateTime",
+      "concept": "first_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/security-hostcookie?view=graph-rest-1.0",
+          "title": "hostCookie resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:cookies",
+      "column": "lastSeenDateTime",
+      "concept": "last_seen",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/security-hostcookie?view=graph-rest-1.0",
+          "title": "hostCookie resource type - Microsoft Graph v1.0",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:cookies",
+      "column": "splunk.hostId",
+      "concept": "splunk_host_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The TA injects splunk.hostId as the host identifier the collector was configured with to retrieve this record (BaseHostDataset.inject_host_id), not a field Microsoft Graph returns."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:articles",
+      "column": "@odata.context",
+      "concept": "article_odata_context",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:articles",
+      "column": "id",
+      "concept": "article_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:articles",
+      "column": "title",
+      "concept": "article_title",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:articles",
+      "column": "body.content",
+      "concept": "article_body",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:articles",
+      "column": "body.format",
+      "concept": "content_format",
+      "note": "body",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:articles",
+      "column": "summary.content",
+      "concept": "article_summary",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:articles",
+      "column": "summary.format",
+      "concept": "content_format",
+      "note": "summary",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:articles",
+      "column": "createdDateTime",
+      "concept": "article_created_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:articles",
+      "column": "lastUpdatedDateTime",
+      "concept": "article_updated_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:articles",
+      "column": "imageUrl",
+      "concept": "article_image_url",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:articles",
+      "column": "isFeatured",
+      "concept": "article_is_featured",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:articles",
+      "column": "tags{}",
+      "concept": "article_tags",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:article_indicators",
+      "column": "@odata.type",
+      "concept": "odata_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:article_indicators",
+      "column": "id",
+      "concept": "record_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:article_indicators",
+      "column": "artifact.@odata.type",
+      "concept": "artifact_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:article_indicators",
+      "column": "artifact.id",
+      "concept": "artifact_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:article_indicators",
+      "column": "source",
+      "concept": "indicator_source",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Security (Splunk_TA_MS_Security) collector serializes each Microsoft Graph threat intelligence list item as one JSON event (json.dumps(item, ensure_ascii=False, sort_keys=True)); Splunk's JSON indexed-field extraction flattens nested objects to dotted field names and repeating arrays to <name>{} / <name>{}.<subfield> multivalue fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ms:defender:ti:article_indicators",
+      "column": "splunk.articleId",
+      "concept": "splunk_article_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The TA injects splunk.articleId as the article id the collector queried indicators for (ArticleIndicatorsDataset.collect), not a field Microsoft Graph returns."
+      }
+    }
+  ],
+  "hazards": {
+    "index_time_only": {
+      "text": "props.conf sets DATETIME_CONFIG = NONE for every ms:defender:ti sourcetype; _time is always index (collection) time, never firstSeenDateTime/lastSeenDateTime/etc, even though those fields carry real dates in the record.",
+      "level": "caution"
+    },
+    "conditional_flattening": {
+      "text": "A nested WHOIS contact block (abuse, admin, billing, noc, registrant, registrar, technical, zone) or a contact's address only appears as dotted sub-field columns when at least one sub-field was non-null in the record; a null block collapses to a single top-level key (as billing, noc, zone and registrar.address do in the one sample read here) instead of expanding. The dictionary's field coverage for a contact block reflects what one sample happened to populate, not a fixed column set.",
+      "level": "caution"
+    },
+    "id_shape_varies": {
+      "text": "id is a base64-encoded composite key on seven containers (whois, passivedns, hostpairs, certificates, components, cookies, article_indicators); on subdomains the one vendor example shows a plain GUID instead; on articles it is a short opaque string (for example a272d5ab). Do not assume one shape family-wide.",
+      "level": "note"
+    },
+    "placeholder_example": {
+      "text": "The subdomain resource's own vendor example gives firstSeenDateTime as the literal text 'String (timestamp)', not a real value; Microsoft's page never shows a populated example for this field.",
+      "level": "caution"
+    },
+    "fingerprint_vs_sha1": {
+      "text": "sslCertificate.fingerprint and sslCertificate.sha1 are both described as a hash of the certificate; the one sample shows them as the same digest, colon-delimited (fingerprint) versus plain hex (sha1). Do not treat them as two different certificates.",
+      "level": "note"
+    },
+    "cert_serial_vs_name_serial": {
+      "text": "sslCertificate.serialNumber is the X.509 certificate's own serial number; sslCertificate.issuer.serialNumber and sslCertificate.subject.serialNumber are a different field, an X.500 name attribute that is usually absent (null in the one sample). Same word, two unrelated values.",
+      "level": "caution"
+    },
+    "common_name_role_differs": {
+      "text": "commonName means the certificate's own hostname when it is on subject, and the issuing certificate authority's name when it is on issuer; the binding's column path (subject.* vs issuer.*), not the concept, carries that distinction.",
+      "level": "caution"
+    },
+    "undocumented_address_fields": {
+      "text": "sslCertificate.issuer/subject.address.postOfficeBox and .type appear in the vendor's own worked example but are not named on the physicalAddress or sslCertificateEntity reference pages read for this pack (2026-09-19); treat them as observed, not vendor-documented.",
+      "level": "note"
+    },
+    "host_id_family": {
+      "text": "Several fields carry a host-shaped value but mean different things: splunk.hostId is the identifier the TA collector was configured to query, not necessarily the record's subject; a hostpairs record carries three host ids at once (parentHost.id, childHost.id, splunk.hostId); cookies' domain equals host.id in the one sample read here but the vendor defines it as a URI, not guaranteed equal; artifact.id is an IP address or a hostname depending on the sibling artifact type field, not a fixed shape. Check the concept, not just the value, before joining two of these.",
+      "level": "caution"
+    },
+    "source_field_collision": {
+      "text": "article_indicators' own JSON field named source (the indicator's origin) collides with Splunk's built-in source metadata field (the input path). A search on source returns a multivalue mixing the two; confirmed against the dev index, where source held both the file path and the literal 'microsoft'. Reference the field through spath or _raw, not a bare source= filter.",
+      "level": "caution"
+    },
+    "no_sentinel_table": {
+      "text": "No Sentinel table for Microsoft Defender Threat Intelligence datasets is present in this workspace's samples or observed columns; every container here is Splunk-only until one is found.",
+      "level": "note"
+    }
+  },
+  "edges": [
+    {
+      "id": "host_pair_out",
+      "kind": "host",
+      "label": "Redirects and links this host makes outward",
+      "src": {
+        "concept": "host_id"
+      },
+      "dst": {
+        "concept": "pair_parent_host_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "host resource childHostPairs relationship: hostPairs where this host is the parentHost",
+      "hazards": []
+    },
+    {
+      "id": "host_pair_in",
+      "kind": "host",
+      "label": "Redirects and links reaching this host",
+      "src": {
+        "concept": "host_id"
+      },
+      "dst": {
+        "concept": "pair_child_host_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "host resource parentHostPairs relationship: hostPairs where this host is the childHost",
+      "hazards": []
+    },
+    {
+      "id": "host_passivedns",
+      "kind": "host",
+      "label": "Passive DNS resolutions for this host",
+      "src": {
+        "concept": "host_id"
+      },
+      "dst": {
+        "concept": "dns_query_host_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "host resource passiveDns relationship; passiveDnsRecord.parentHost is generally the value searched to find the record",
+      "hazards": []
+    },
+    {
+      "id": "article_to_indicators",
+      "kind": "record",
+      "label": "Indicators reported inside this article",
+      "src": {
+        "concept": "article_id"
+      },
+      "dst": {
+        "concept": "splunk_article_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "article resource's indicators relationship; the TA injects splunk.articleId with the article id it queried, matching article.id",
+      "hazards": []
+    }
+  ],
+  "templates": []
+}

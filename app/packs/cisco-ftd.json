@@ -1,0 +1,1469 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "cisco-ftd",
+  "name": "Cisco Firepower Threat Defense syslog",
+  "pack_version": "0.1.0",
+  "description": "Cisco FTD's LINA syslog: connection build/teardown, ACL deny and configuration-change events, normalized by the Splunk Add-on for Cisco ASA's cisco:ftd stanza. One feed for the cisco:ftd sourcetype.",
+  "source": "Splunk Add-on for Cisco ASA (Splunk_TA_cisco-asa) cisco:ftd props and transforms, read from a live instance; Cisco Secure Firewall Threat Defense Syslog Messages guide; Splunk Common Information Model Network Traffic, Intrusion Detection and Change data models.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "cisco_ftd_syslog",
+    "label": "Cisco FTD Syslog",
+    "description": "Cisco Firepower Threat Defense's LINA-engine syslog: one line per %FTD-<level>-<id> event, mostly connection build/teardown and configuration-change records, normalized by the Splunk Add-on for Cisco ASA.",
+    "tags": [
+      "firewall",
+      "network",
+      "cisco"
+    ],
+    "discriminator": "message_id"
+  },
+  "concepts": {
+    "message_id": {
+      "label": "Message id",
+      "type": "record_type",
+      "description": "The numeric id in the %FTD-<level>-<id> token, for example 302013; picks which other fields the line carries."
+    },
+    "log_level": {
+      "label": "Syslog level",
+      "type": "enum",
+      "description": "The syslog priority (0 to 7) in the %FTD-<level>-<id> token; a transport-layer severity, not Cisco's own event severity."
+    },
+    "severity_level": {
+      "label": "Syslog level name",
+      "type": "enum",
+      "description": "The RFC 5424 name of the syslog priority (emergencies, alert, critical ... debugging), looked up from log_level. Despite the name it grades the syslog transport priority, not the event.",
+      "hazards": [
+        "severity_namespace"
+      ]
+    },
+    "level_description": {
+      "label": "Syslog level meaning",
+      "type": "text",
+      "description": "A one-word gloss of the syslog priority (for example Informational messages only), looked up from log_level. On this sourcetype the description field holds this, not a summary of the event.",
+      "hazards": [
+        "severity_namespace"
+      ]
+    },
+    "vendor_severity": {
+      "label": "Vendor severity",
+      "type": "enum",
+      "description": "Cisco's own severity word (for example Informational, Attack) looked up from signature_id.",
+      "hazards": [
+        "severity_namespace"
+      ]
+    },
+    "severity": {
+      "label": "Severity",
+      "type": "enum",
+      "description": "The CIM-normalized severity word (critical, high, medium, low or informational): a literal for a handful of message ids, else filled from the same signature_id lookup that sets vendor_severity.",
+      "hazards": [
+        "severity_namespace"
+      ]
+    },
+    "action": {
+      "label": "Action",
+      "type": "outcome",
+      "description": "The CIM-normalized verb for what FTD did (allowed, blocked, teardown, ...), from a lookup keyed on the raw action token or on message_id."
+    },
+    "vendor_action": {
+      "label": "Vendor action",
+      "type": "enum",
+      "description": "Cisco's own action verb before CIM normalization (built, denied, permitted, ...), lower-cased; a literal for two message-id groups (blocked, flow)."
+    },
+    "category": {
+      "label": "Signature category",
+      "type": "enum",
+      "description": "The vendor category of a matched signature."
+    },
+    "signature": {
+      "label": "Signature name",
+      "type": "text",
+      "description": "The name of the intrusion or condition the event reports."
+    },
+    "signature_id": {
+      "label": "Signature id",
+      "type": "identifier",
+      "description": "The unique id of the signature or event code; the key the vendor_severity/severity lookup matches on."
+    },
+    "ids_type": {
+      "label": "IDS type",
+      "type": "enum",
+      "description": "Which kind of detector raised the event. A fixed literal (network) on every cisco:ftd record."
+    },
+    "status": {
+      "label": "Change status",
+      "type": "outcome",
+      "description": "Whether a configuration or account change succeeded; success is a literal for a fixed set of message ids, otherwise passed through."
+    },
+    "result": {
+      "label": "Result",
+      "type": "text",
+      "description": "The vendor-specific detail of a change's outcome; the literal command text for message id 111009, otherwise passed through."
+    },
+    "reason": {
+      "label": "Termination reason",
+      "type": "text",
+      "description": "Why a connection was torn down, for example the TCP flag that ended it; carried on the 302014/302016 teardown messages."
+    },
+    "teardown_initiator": {
+      "label": "Teardown initiator",
+      "type": "text",
+      "description": "Which side of the connection sent the packet that tore it down; carried on the 302014 teardown message. The syslog guide names the field without enumerating its values, so no values table is written for it."
+    },
+    "session_id": {
+      "label": "Session id",
+      "type": "session_id",
+      "description": "Ties together the records of one session."
+    },
+    "direction": {
+      "label": "Direction",
+      "type": "enum",
+      "description": "Which way the packet travelled (inbound, outbound); egress is normalized to outbound."
+    },
+    "transport": {
+      "label": "Transport",
+      "type": "enum",
+      "description": "The OSI layer 4 protocol of the traffic (icmp, tcp, udp), lower-cased.",
+      "hazards": [
+        "protocol_layers"
+      ]
+    },
+    "protocol": {
+      "label": "Network protocol",
+      "type": "enum",
+      "description": "The OSI layer 3 protocol; on this sourcetype it collapses to ip whenever transport is tcp or udp, and to icmp for icmp traffic. Not the same axis as transport.",
+      "hazards": [
+        "protocol_layers"
+      ]
+    },
+    "protocol_version": {
+      "label": "Protocol version",
+      "type": "enum",
+      "description": "The IP version of the traffic, from a lookup keyed on protocol and communication_protocol.",
+      "hazards": [
+        "protocol_layers"
+      ]
+    },
+    "communication_protocol": {
+      "label": "Address family",
+      "type": "enum",
+      "description": "ipv4 or ipv6, worked out by pattern-matching whichever of src_ip, dest_ip, src or dest is populated. A TA-internal helper, not a named CIM or Cisco field.",
+      "hazards": [
+        "protocol_layers"
+      ]
+    },
+    "bytes": {
+      "label": "Bytes",
+      "type": "count",
+      "description": "Total bytes handled; the literal bytes field if present, else bytes_in plus bytes_out."
+    },
+    "packets": {
+      "label": "Packets",
+      "type": "count",
+      "description": "Total packets handled; the literal packets field if present, else packets_in plus packets_out."
+    },
+    "duration": {
+      "label": "Duration",
+      "type": "count",
+      "description": "Connection lifetime in seconds, computed from the day/hour/minute/second components the extraction pulls out of the human-readable duration string."
+    },
+    "duration_component": {
+      "label": "Duration component",
+      "type": "count",
+      "description": "One unit (day, hour, minute or second) of the connection lifetime string; four columns that only make sense summed together as duration."
+    },
+    "dvc": {
+      "label": "Reporting device",
+      "type": "hostname",
+      "description": "The device that logged the event; aliased from Splunk's own host field, not read from the message text."
+    },
+    "original_device_ip": {
+      "label": "Original device address",
+      "type": "identifier",
+      "description": "The IP address of the device that generated the event, for a small set of message ids where FTD reports on another device's behalf; distinct from src_ip/dest_ip, which are traffic endpoints."
+    },
+    "original_device_time": {
+      "label": "Original device time",
+      "type": "event_time",
+      "description": "The generating device's own timestamp string, kept separate from _time. Falls back to _time itself for a handful of message ids that do not carry their own.",
+      "hazards": [
+        "time_no_year"
+      ]
+    },
+    "dest": {
+      "label": "Destination",
+      "type": "hostname",
+      "description": "The remote host of the traffic; an IP address or hostname depending on message id, with a fallback chain across dest, dest_ip, dest_host and assigned_ipv4."
+    },
+    "dest_ip": {
+      "label": "Destination IP",
+      "type": "dest_ip",
+      "description": "The IP address of the destination."
+    },
+    "dest_host": {
+      "label": "Destination hostname",
+      "type": "hostname",
+      "description": "The destination's hostname, populated only for the message ids that report on a named host rather than a bare address. Not a Network Traffic CIM field; the TA's own convention pairing with dest."
+    },
+    "dest_interface": {
+      "label": "Destination interface",
+      "type": "identifier",
+      "description": "The interface listening remotely or receiving packets locally."
+    },
+    "dest_port": {
+      "label": "Destination port",
+      "type": "identifier",
+      "description": "The destination port of the traffic; forced to 0 for icmp."
+    },
+    "dest_public_port": {
+      "label": "Destination public port",
+      "type": "identifier",
+      "description": "The destination port on the public (outside/untranslated) leg of a NAT, alongside dest_port and dest_translated_port. Not a Network Traffic CIM field; forced to 0 for icmp like the other port fields.",
+      "hazards": [
+        "nat_ports"
+      ]
+    },
+    "dest_translated_ip": {
+      "label": "Destination translated IP",
+      "type": "source_ip",
+      "description": "The NATed IPv4 or IPv6 address a packet has been sent to.",
+      "hazards": [
+        "nat_ports"
+      ]
+    },
+    "dest_translated_port": {
+      "label": "Destination translated port",
+      "type": "identifier",
+      "description": "The NATed port a packet has been sent to; forced to 0 for icmp.",
+      "hazards": [
+        "nat_ports"
+      ]
+    },
+    "dest_translated_host": {
+      "label": "Destination translated hostname",
+      "type": "hostname",
+      "description": "The hostname form of dest_translated_ip, when FTD names rather than addresses the mapped destination. Not a Network Traffic CIM field.",
+      "hazards": [
+        "nat_ports"
+      ]
+    },
+    "dest_user": {
+      "label": "Destination user",
+      "type": "user_name",
+      "description": "The user identity associated with the destination side of the flow, for example from identity-based firewall mapping. Not a Network Traffic CIM field; the TA's directional pairing of user.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "dest_nt_domain": {
+      "label": "Destination NT domain",
+      "type": "domain",
+      "description": "The Windows/AD domain qualifying dest_user, on messages that report an AD-authenticated destination identity."
+    },
+    "src": {
+      "label": "Source",
+      "type": "hostname",
+      "description": "The client requesting the connection; an IP address or hostname depending on message id."
+    },
+    "src_ip": {
+      "label": "Source IP",
+      "type": "source_ip",
+      "description": "The IP address of the source."
+    },
+    "src_host": {
+      "label": "Source hostname",
+      "type": "hostname",
+      "description": "The source's hostname, populated only for message ids that report on a named host. Not a Network Traffic CIM field."
+    },
+    "src_interface": {
+      "label": "Source interface",
+      "type": "identifier",
+      "description": "The interface listening locally or sending packets remotely."
+    },
+    "src_port": {
+      "label": "Source port",
+      "type": "identifier",
+      "description": "The source port of the traffic; forced to 0 for icmp."
+    },
+    "src_public_port": {
+      "label": "Source public port",
+      "type": "identifier",
+      "description": "The source port on the public leg of a NAT, alongside src_port and src_translated_port. Not a Network Traffic CIM field.",
+      "hazards": [
+        "nat_ports"
+      ]
+    },
+    "src_translated_ip": {
+      "label": "Source translated IP",
+      "type": "source_ip",
+      "description": "The NATed IPv4 or IPv6 address a packet has been sent from.",
+      "hazards": [
+        "nat_ports"
+      ]
+    },
+    "src_translated_port": {
+      "label": "Source translated port",
+      "type": "identifier",
+      "description": "The NATed port a packet has been sent from; forced to 0 for icmp.",
+      "hazards": [
+        "nat_ports"
+      ]
+    },
+    "src_translated_host": {
+      "label": "Source translated hostname",
+      "type": "hostname",
+      "description": "The hostname form of src_translated_ip. Not a Network Traffic CIM field.",
+      "hazards": [
+        "nat_ports"
+      ]
+    },
+    "src_user": {
+      "label": "Source user",
+      "type": "user_name",
+      "description": "The user identity associated with the source side of the flow. Not a Network Traffic CIM field; the TA's directional pairing of user.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "src_nt_domain": {
+      "label": "Source NT domain",
+      "type": "domain",
+      "description": "The Windows/AD domain qualifying src_user."
+    },
+    "user": {
+      "label": "User",
+      "type": "user_name",
+      "description": "The user that requested the traffic flow, or (on 302020/302021-style messages via direction) whichever side EVAL picks as the acting user.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "ip_address": {
+      "label": "Assigned IP (alias source)",
+      "type": "source_ip",
+      "description": "The underlying field the IP column aliases from; seen on the same address-assignment message ids as assigned_ip. Its own extraction was not independently observed, only the alias."
+    },
+    "assigned_ip": {
+      "label": "Assigned IP",
+      "type": "source_ip",
+      "description": "The IPv4 or IPv6 address FTD assigned to a client, for example over VPN or DHCP relay."
+    },
+    "group": {
+      "label": "Group",
+      "type": "identifier",
+      "description": "A AAA or VPN group policy name, aliased from the raw Group field."
+    },
+    "rule": {
+      "label": "Rule",
+      "type": "identifier",
+      "description": "The rule or access-list that decided the action taken."
+    },
+    "app": {
+      "label": "Application protocol",
+      "type": "identifier",
+      "description": "The application protocol of the traffic."
+    },
+    "vendor": {
+      "label": "Vendor",
+      "type": "text",
+      "description": "A fixed literal, Cisco, on every record."
+    },
+    "product": {
+      "label": "Product",
+      "type": "text",
+      "description": "A fixed literal, FTD, on every record."
+    },
+    "vendor_product": {
+      "label": "Vendor product",
+      "type": "text",
+      "description": "The vendor and product of the device generating the event; built from vendor and product."
+    },
+    "vendor_class": {
+      "label": "Vendor class",
+      "type": "enum",
+      "description": "A message-id-keyed classification Cisco's own lookup adds. The lookup's mechanism was confirmed live; its value table was not sampled, so no values are written here."
+    },
+    "vendor_definition": {
+      "label": "Vendor definition",
+      "type": "text",
+      "description": "A message-id-keyed free-text definition from the same lookup as vendor_class. Not sampled; no values table."
+    },
+    "change_type": {
+      "label": "Change type",
+      "type": "enum",
+      "description": "The category of a configuration or account change, such as filesystem or AAA."
+    },
+    "change_class": {
+      "label": "Change class",
+      "type": "enum",
+      "description": "A coarse change classifier from Cisco's own change-analysis lookup, keyed by message_id; change was the only value seen."
+    },
+    "change_description": {
+      "label": "Change description",
+      "type": "text",
+      "description": "A short, message-id-specific description of what changed, for example New user added to local dbase, from Cisco's own change-analysis lookup."
+    },
+    "command": {
+      "label": "Command",
+      "type": "command_line",
+      "description": "The command that initiated a change; the parent process name for message id 111010."
+    },
+    "object": {
+      "label": "Object",
+      "type": "text",
+      "description": "The name of the object a change affected."
+    },
+    "object_id": {
+      "label": "Object id",
+      "type": "identifier",
+      "description": "The affected object's own id, such as a user account name, where the record has one."
+    },
+    "object_attrs": {
+      "label": "Object attributes",
+      "type": "text",
+      "description": "The attributes and values a change touched, for example username, user privilege, encrypted password."
+    },
+    "object_category": {
+      "label": "Object category",
+      "type": "enum",
+      "description": "A generic class for the changed object, for example filesystem, command, configuration."
+    },
+    "object_type": {
+      "label": "Object type",
+      "type": "enum",
+      "description": "Which kind of thing object names (object, user, policy, context or module), from the same change-analysis lookup as change_class, keyed by message_id."
+    },
+    "type": {
+      "label": "Event type",
+      "type": "enum",
+      "description": "A coarse classifier (unknown, event, alert) for three message ids, else whatever type the extraction already set."
+    },
+    "ssl_is_valid": {
+      "label": "SSL validity",
+      "type": "flag",
+      "description": "Whether an SSL/TLS check passed; failed and validated are normalized to false/true, other raw values pass through unchanged."
+    },
+    "acl": {
+      "label": "ACL",
+      "type": "identifier",
+      "description": "The access-list or rule id, same value as rule."
+    }
+  },
+  "containers": {
+    "cisco:ftd": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "FTD's LINA syslog as the Splunk Add-on for Cisco ASA (Splunk_TA_cisco-asa, installed on the dev instance) indexes it: the same props.conf/transforms.conf stanza as cisco:asa, keyed on message_id, with CIM field aliases, EVAL-calculated fields and four Cisco-shipped lookups.",
+      "note": "The sample entry marks index_time_ok false: its timestamp predates capture, so time-bound searches over the sample alone are not reliable."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "message_id",
+      "concept": "message_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The message-id/log-level REPORT stanza pulls this from the %FTD-<level>-<id> token; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "Cisco_ASA_message_id",
+      "concept": "message_id",
+      "alias_of": "message_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-Cisco_ASA_message_id: message_id AS Cisco_ASA_message_id; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "log_level",
+      "concept": "log_level",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Pulled by the same REPORT stanza as message_id; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "severity_level",
+      "concept": "severity_level",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "cisco_asa_syslog_severity_lookup.csv, keyed on log_level, outputs severity_level and description; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "description",
+      "concept": "level_description",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "Same cisco_asa_syslog_severity_lookup.csv row as severity_level, keyed on log_level; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "vendor_severity",
+      "concept": "vendor_severity",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "cisco_asa_severity_lookup_600.csv, keyed on signature_id, outputs vendor_severity and severity; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "severity",
+      "concept": "severity",
+      "basis": "validated",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "EVAL-severity sets a literal for four message-id groups (informational/low/high); every other record gets severity from cisco_asa_severity_lookup_600.csv keyed on signature_id; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "action",
+      "concept": "action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "cisco_asa_action_lookup_600.csv matches the lower-cased raw action (via laction) or message_id, outputs action; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "Cisco_ASA_action",
+      "concept": "action",
+      "alias_of": "action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "Same cisco_asa_action_lookup_600.csv row as action, output a second time as Cisco_ASA_action; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "laction",
+      "concept": "action",
+      "alias_of": "action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-laction: lower(action); also the field the action lookup matches its own vendor_action column against; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "vendor_action",
+      "concept": "vendor_action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-vendor_action: a literal (blocked/flow) for two message-id groups, else coalesce(lower(vendor_action), lower(action)); read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "Cisco_ASA_vendor_action",
+      "concept": "vendor_action",
+      "alias_of": "vendor_action",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-Cisco_ASA_vendor_action: coalesce(lower(vendor_action), lower(action)); read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "category",
+      "concept": "category",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "signature",
+      "concept": "signature",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-signature sets literal vendor text for a set of message ids, else passes the extracted signature through; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "signature_id",
+      "concept": "signature_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-signature_id: message_id itself for four message ids, else the extracted signature_id; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "ids_type",
+      "concept": "ids_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-ids_type: the fixed literal network; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "status",
+      "concept": "status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-status: the literal success for a fixed list of message ids, else the extracted status; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "result",
+      "concept": "result",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-result: the command text for message id 111009, else the extracted result; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "reason",
+      "concept": "reason",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction on the 302014/302016 teardown messages; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance.",
+        "cite": {
+          "url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/Syslogs/fptd_syslog_guide/syslogs3.html",
+          "title": "Cisco Secure Firewall Threat Defense Syslog Messages: Syslog Messages 302003 to 341011",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "teardown_initiator",
+      "concept": "teardown_initiator",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction on the 302014 teardown message; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance.",
+        "cite": {
+          "url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/Syslogs/fptd_syslog_guide/syslogs3.html",
+          "title": "Cisco Secure Firewall Threat Defense Syslog Messages: Syslog Messages 302003 to 341011",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "session_id",
+      "concept": "session_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "direction",
+      "concept": "direction",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-direction: egress is rewritten to outbound, else lower(direction); read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "transport",
+      "concept": "transport",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-transport: lower(transport); read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "protocol",
+      "concept": "protocol",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-protocol: ip when transport is tcp/udp (or message id 338301), icmp when transport is icmp, else the extracted protocol; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "protocol_version",
+      "concept": "protocol_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "cisco_asa_protocol_version.csv, keyed on protocol and communication_protocol, outputs protocol_version; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "communication_protocol",
+      "concept": "communication_protocol",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-communication_protocol pattern-matches src_ip/dest_ip/src/dest for a colon or dotted-quad; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "bytes",
+      "concept": "bytes",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-bytes: the extracted bytes if present, else bytes_in plus bytes_out; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "packets",
+      "concept": "packets",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-packets: the extracted packets if present, else packets_in plus packets_out; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "duration",
+      "concept": "duration",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-duration: duration_day*86400 + duration_hour*3600 + duration_minute*60 + duration_second; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "duration_day",
+      "concept": "duration_component",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction of one unit of the duration string; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "duration_hour",
+      "concept": "duration_component",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction of one unit of the duration string; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "duration_minute",
+      "concept": "duration_component",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction of one unit of the duration string; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "duration_second",
+      "concept": "duration_component",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction of one unit of the duration string; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "dvc",
+      "concept": "dvc",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-dvc: host as dvc; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "original_device_ip",
+      "concept": "original_device_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-original_device_ip: the extracted value if present, else host for a fixed set of message ids; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "original_device_time",
+      "concept": "original_device_time",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-original_device_time: the extracted value if present, else strftime(_time) for a fixed set of message ids; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "dest",
+      "concept": "dest",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-dest: host for a long list of message ids, else coalesce(dest, dest_ip, dest_host, assigned_ipv4); read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "dest_ip",
+      "concept": "dest_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-dest_ip: host for a fixed set of message ids when it looks like an address, else coalesce(dest_ip, assigned_ipv4); read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "dest_host",
+      "concept": "dest_host",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-dest_host: host for a fixed set of message ids when it does not look like an address, else the extracted dest_host; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "dest_interface",
+      "concept": "dest_interface",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "dest_zone",
+      "concept": "dest_interface",
+      "alias_of": "dest_interface",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-dest_zone: dest_interface AS dest_zone; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "dest_port",
+      "concept": "dest_port",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-dest_port: 0 for icmp, else coalesce(dest_port, service); read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "dest_public_port",
+      "concept": "dest_public_port",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-dest_public_port: 0 for icmp, else the extracted value; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "dest_translated_ip",
+      "concept": "dest_translated_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction on NAT-carrying messages; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "dest_translated_port",
+      "concept": "dest_translated_port",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-dest_translated_port: 0 for icmp, else the extracted value; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "dest_translated_host",
+      "concept": "dest_translated_host",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "dest_user",
+      "concept": "dest_user",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-user reads dest_user for outbound 302020/302021/106023 records; otherwise dest_user is its own per-message-id extraction; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "dest_nt_domain",
+      "concept": "dest_nt_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "src",
+      "concept": "src",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-src: host for message id 212011, else coalesce(src, src_ip, src_host); read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "src_ip",
+      "concept": "src_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-src_ip: host for message ids 609001/609002 when it looks like an address, else coalesce(src_ip, assigned_ipv4); read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "src_host",
+      "concept": "src_host",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "src_interface",
+      "concept": "src_interface",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "src_zone",
+      "concept": "src_interface",
+      "alias_of": "src_interface",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-src_zone: src_interface AS src_zone; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "src_port",
+      "concept": "src_port",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-src_port: 0 for icmp, else the extracted src_port; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "src_public_port",
+      "concept": "src_public_port",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-src_public_port: 0 for icmp, else the extracted value; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "src_translated_ip",
+      "concept": "src_translated_ip",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction on NAT-carrying messages; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "src_translated_port",
+      "concept": "src_translated_port",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-src_translated_port: 0 for icmp, else the extracted value; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "src_translated_host",
+      "concept": "src_translated_host",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "src_user",
+      "concept": "src_user",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-user reads src_user for inbound 302020/302021 records and for message id 113015; otherwise src_user is its own per-message-id extraction; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "src_nt_domain",
+      "concept": "src_nt_domain",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "user",
+      "concept": "user",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-user: src_user or dest_user for a fixed set of message ids and directions, else the extracted user; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "Cisco_ASA_user",
+      "concept": "user",
+      "alias_of": "user",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-Cisco_ASA_user: user AS Cisco_ASA_user; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "Username",
+      "concept": "user",
+      "alias_of": "user",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-Cisco_ASA_user: user AS Username; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "IP",
+      "concept": "ip_address",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-IP: ip_address AS IP; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "assigned_ip",
+      "concept": "assigned_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-assigned_ip: coalesce(assigned_ipv4, assigned_ipv6); read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "group",
+      "concept": "group",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-group: Group AS group; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "rule",
+      "concept": "rule",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-rule: coalesce(rule, rule_id); read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "rule_name",
+      "concept": "rule",
+      "alias_of": "rule",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-rule_name: rule AS rule_name; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "acl",
+      "concept": "acl",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-acl: coalesce(rule, rule_id); read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "app",
+      "concept": "app",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Per-message-id extraction; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "vendor",
+      "concept": "vendor",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-vendor: the fixed literal Cisco; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "product",
+      "concept": "product",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-product: the fixed literal FTD; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "vendor_product",
+      "concept": "vendor_product",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-vendor_product: the fixed literal Cisco FTD; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "vendor_class",
+      "concept": "vendor_class",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "cisco_asa_vendor_class_lookup.csv, keyed on message_id, outputs vendor_class; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "vendor_definition",
+      "concept": "vendor_definition",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "Same cisco_asa_vendor_class_lookup.csv row as vendor_class; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "change_type",
+      "concept": "change_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "cisco_asa_change_analysis_lookup.csv, keyed on message_id, outputs change_type; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "change_class",
+      "concept": "change_class",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "Same cisco_asa_change_analysis_lookup.csv row as change_type, when present; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "change_description",
+      "concept": "change_description",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "Same cisco_asa_change_analysis_lookup.csv row as change_type; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "command",
+      "concept": "command",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-command: parent_process_name for message id 111010, else the extracted command; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "object",
+      "concept": "object",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-object: a per-message-id literal or coalesce(object, object_id); read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "object_id",
+      "concept": "object_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-object_id: a per-message-id literal or coalesce(object_id, object); read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "object_attrs",
+      "concept": "object_attrs",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-object_attrs: a per-message-id literal or the extracted object_attrs, lower-cased; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "object_category",
+      "concept": "object_category",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-object_category: a per-message-id literal or the extracted object_category, lower-cased; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "object_type",
+      "concept": "object_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "cisco_asa_change_analysis_lookup.csv, keyed on message_id, outputs object_type; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "type",
+      "concept": "type",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-type: unknown/event/alert for three message ids, else the extracted type; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "cisco:ftd",
+      "column": "ssl_is_valid",
+      "concept": "ssl_is_valid",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-ssl_is_valid: failed maps to false, validated maps to true, else passed through; read live from the Splunk Add-on for Cisco ASA's cisco:ftd stanza (props.conf/transforms.conf) on the dev Splunk instance."
+      }
+    }
+  ],
+  "hazards": {
+    "time_no_year": {
+      "level": "caution",
+      "text": "The message text carries a year (Jun 21 2020) but TIME_FORMAT on cisco:ftd is %b %d %H:%M:%S, which does not read it, and there is no timezone in the line; _time comes from whatever the indexer infers plus its configured zone, not from the text alone."
+    },
+    "severity_namespace": {
+      "level": "caution",
+      "text": "log_level, severity_level, vendor_severity, severity and description look like restatements of one fact but come from two different lookups keyed on two different fields (log_level, and signature_id); severity_level and description grade the syslog transport priority, not the event Cisco detected."
+    },
+    "protocol_layers": {
+      "level": "caution",
+      "text": "transport, protocol, protocol_version and communication_protocol all sound like the wire protocol. transport is layer 4 (tcp, udp, icmp); protocol collapses to ip or icmp on this sourcetype, not a transport name; protocol_version and communication_protocol both mean IP version, from a lookup and a pattern match respectively."
+    },
+    "nat_ports": {
+      "level": "caution",
+      "text": "src_port, src_public_port and src_translated_port (and the dest equivalents) can each hold a different port for one NATed flow; filtering on the wrong one silently returns nothing."
+    },
+    "ids_look_alike": {
+      "level": "note",
+      "text": "message_id, signature_id, session_id and object_id are four unrelated identifier spaces on this sourcetype; a bare number is not evidence of which one it is."
+    },
+    "connection_id_not_bound": {
+      "level": "note",
+      "text": "The connection id in the message text (6914 in this pack's sample) is what ties a Built line to its Teardown line, but no bound column carries it; pairing 302013/302014 records needs _raw, not a field."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

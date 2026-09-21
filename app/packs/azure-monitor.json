@@ -1,0 +1,2836 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "azure-monitor",
+  "name": "Azure Monitor",
+  "pack_version": "0.1.0",
+  "description": "Azure Monitor and Microsoft Entra diagnostic exports as the Splunk Add-on for Microsoft Cloud Services lands them: who signed in or made a change, from where, to what, and how it came out, across Entra ID, Intune, Azure Activity Log and Cosmos DB data-plane logs, plus VM performance-counter aggregates.",
+  "source": "Microsoft Entra activity log schema pages, the Microsoft Graph auditEvent (Intune) and Azure Activity Log event schema references, the Azure Cosmos DB diagnostic-log sample and the WADMetrics storage schema, read against live field captures from a Splunk instance seeded with Splunk_TA_microsoft_cloud_services data.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h",
+      "hint": "On _time, which the add-on sets from the record's own time field."
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now",
+      "hint": "Optional. Event Hub delivery can lag the source event by minutes."
+    },
+    "index": {
+      "label": "index",
+      "placeholder": "the index the record landed in",
+      "hint": "Taken from the event you clicked when known."
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    },
+    "tenant": {
+      "label": "tenant id",
+      "placeholder": "aaaabbbb-0000-cccc-1111-dddd2222eeee",
+      "from_concept": "tenant_id"
+    }
+  },
+  "feed": {
+    "id": "azure_monitor",
+    "label": "Azure Monitor",
+    "description": "Azure Monitor and Microsoft Entra diagnostic exports as the Splunk Add-on for Microsoft Cloud Services lands them: Entra sign-in and audit activity, Intune device-management audit events, Azure Activity Log administrative events, Cosmos DB data-plane requests and VM performance-counter aggregates.",
+    "tags": [
+      "azure",
+      "cloud",
+      "identity",
+      "audit"
+    ],
+    "discriminator": "category"
+  },
+  "concepts": {
+    "tenant_id": {
+      "label": "Tenant id",
+      "type": "account_id",
+      "description": "The Microsoft Entra tenant a record belongs to, a GUID. Seen as tenantId, properties.tenantId and body.tenantId across the family.",
+      "hazards": [
+        "guid_lookalikes"
+      ]
+    },
+    "correlation_id": {
+      "label": "Correlation id",
+      "type": "request_id",
+      "description": "Ties together the records one request or operation produced."
+    },
+    "category": {
+      "label": "Log category",
+      "type": "record_type",
+      "description": "Which kind of record this is: the family's discriminator (SignInLogs, AuditLogs, DataPlaneRequests and the rest)."
+    },
+    "operation_name": {
+      "label": "Operation name",
+      "type": "text",
+      "description": "The friendly name of the action the record describes, for example Add member to role or ReadFeed."
+    },
+    "actor_principal": {
+      "label": "Actor principal name",
+      "type": "principal",
+      "description": "The human-readable identity that performed the action: a UPN or email address.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "actor_id": {
+      "label": "Actor object id",
+      "type": "user_id",
+      "description": "A stable, opaque id for the user, app or service principal that performed the action."
+    },
+    "actor_ip": {
+      "label": "Actor IP address",
+      "type": "source_ip",
+      "description": "The network address the request or sign-in came from.",
+      "hazards": [
+        "ip_shared"
+      ]
+    },
+    "app_id": {
+      "label": "Application id",
+      "type": "app_id",
+      "description": "The id of the client or service principal application involved in the record."
+    },
+    "app_name": {
+      "label": "Application display name",
+      "type": "text",
+      "description": "The display name of the application involved in the record."
+    },
+    "resource_id": {
+      "label": "Azure resource id",
+      "type": "resource_id",
+      "description": "The Azure Resource Manager path of the resource the record concerns, for example /subscriptions/.../providers/Microsoft.AzureActiveDirectory."
+    },
+    "resource_id_segment": {
+      "label": "Resource id segment",
+      "type": "identifier",
+      "description": "One named segment (subscription, resource group, provider or account) that the add-on extracts out of resourceId with its own EXTRACT."
+    },
+    "event_time": {
+      "label": "Event time",
+      "type": "event_time",
+      "description": "When the action happened at the source, distinct from _time or TimeGenerated.",
+      "hazards": [
+        "time_basis"
+      ]
+    },
+    "duration_ms": {
+      "label": "Duration (ms)",
+      "type": "count",
+      "description": "How long the operation or request took, in milliseconds."
+    },
+    "outcome_result": {
+      "label": "Result",
+      "type": "outcome",
+      "description": "Whether the action succeeded, using the family's common result vocabulary."
+    },
+    "result_reason": {
+      "label": "Result reason or description",
+      "type": "text",
+      "description": "A human-readable explanation of the result: a failure reason, a display message or a detail string."
+    },
+    "target_type": {
+      "label": "Target type",
+      "type": "enum",
+      "description": "What kind of entity the record's target is."
+    },
+    "target_id": {
+      "label": "Target id",
+      "type": "identifier",
+      "description": "The id of the entity the actor acted on. A record can carry more than one target."
+    },
+    "target_name": {
+      "label": "Target display name",
+      "type": "text",
+      "description": "The display name of the entity the actor acted on."
+    },
+    "risk_level": {
+      "label": "Risk level",
+      "type": "enum",
+      "description": "Microsoft Entra ID Protection's aggregated risk rating for the user or sign-in."
+    },
+    "conditional_access_status": {
+      "label": "Conditional Access status",
+      "type": "enum",
+      "description": "Whether a Conditional Access policy applied to the sign-in, and how. The cited schema page defines the related appliedConditionalAccessPolicies section but not this field by name, so the claim stays at what the sample showed."
+    },
+    "geo_country": {
+      "label": "Sign-in country or region",
+      "type": "region",
+      "description": "The country or region Microsoft Entra's geolocation maps the client address to."
+    },
+    "geo_city": {
+      "label": "Sign-in city",
+      "type": "text",
+      "description": "The city Microsoft Entra's geolocation maps the client address to."
+    },
+    "device_id": {
+      "label": "Device id",
+      "type": "identifier",
+      "description": "The id of the device used for the sign-in, when the client reported one."
+    },
+    "audit_event_id": {
+      "label": "Audit event id",
+      "type": "event_id",
+      "description": "A unique id for one audit event."
+    },
+    "actor_role_code": {
+      "label": "Actor type code",
+      "type": "enum",
+      "description": "A numeric code for what kind of actor performed the action (seen: 1, 3).",
+      "hazards": [
+        "numeric_code_undocumented"
+      ]
+    },
+    "activity_type_code": {
+      "label": "Activity type or category code",
+      "type": "enum",
+      "description": "A numeric code the record carries for the activity's type or category (seen on ActivityType and Category).",
+      "hazards": [
+        "numeric_code_undocumented"
+      ]
+    },
+    "change_type_cim": {
+      "label": "CIM change type",
+      "type": "enum",
+      "description": "The Splunk Common Information Model's own classification of the record, written by the add-on's EVAL, not by Azure."
+    },
+    "object_category_cim": {
+      "label": "CIM object category",
+      "type": "enum",
+      "description": "The kind of object the add-on's Change/Audit CIM mapping says the record concerns."
+    },
+    "service_name": {
+      "label": "Azure service or workload category",
+      "type": "text",
+      "description": "The Azure service or admin-center category a record came from, for example Core Directory, PIM or Azure Cosmos DB."
+    },
+    "subscription_id": {
+      "label": "Subscription id",
+      "type": "account_id",
+      "description": "The Azure subscription a resource-log record belongs to.",
+      "hazards": [
+        "guid_lookalikes"
+      ]
+    },
+    "azure_region": {
+      "label": "Azure region",
+      "type": "region",
+      "description": "The Azure region the resource that emitted the record runs in."
+    },
+    "client_user_agent": {
+      "label": "Client user agent",
+      "type": "user_agent",
+      "description": "The raw HTTP User-Agent string of the client that made the request."
+    },
+    "cosmos_activity_id": {
+      "label": "Cosmos DB activity id",
+      "type": "event_id",
+      "description": "Azure Cosmos DB's own per-request id, distinct from the add-on's correlationId."
+    },
+    "http_status_code": {
+      "label": "HTTP status code",
+      "type": "enum",
+      "description": "The HTTP status code the Cosmos DB data-plane request returned."
+    },
+    "request_charge_ru": {
+      "label": "Request charge (RU)",
+      "type": "count",
+      "description": "The number of Request Units the Cosmos DB operation consumed."
+    },
+    "db_name": {
+      "label": "Database name",
+      "type": "text",
+      "description": "The Cosmos DB database the request targeted."
+    },
+    "collection_name": {
+      "label": "Collection name",
+      "type": "text",
+      "description": "The Cosmos DB container/collection the request targeted."
+    },
+    "partition_id": {
+      "label": "Partition id",
+      "type": "identifier",
+      "description": "The Cosmos DB physical partition that served the request."
+    },
+    "vm_id": {
+      "label": "VM resource id (WADMetrics)",
+      "type": "resource_id",
+      "description": "The Azure Resource Manager id of the VM the metric row belongs to, colon-hex escaped in PartitionKey."
+    },
+    "row_key": {
+      "label": "WADMetrics row key",
+      "type": "identifier",
+      "description": "Descending time tick and escaped counter path that uniquely identifies one metric row within its partition."
+    },
+    "counter_name": {
+      "label": "Performance counter name",
+      "type": "text",
+      "description": "The Windows or Linux performance counter path the row aggregates, matching the counterSpecifier in the diagnostics config."
+    },
+    "metric_stat": {
+      "label": "Metric statistic",
+      "type": "count",
+      "description": "One statistic (maximum, minimum, total, count or average) of the counter over the aggregation period; which one is named on the binding."
+    },
+    "metric_time": {
+      "label": "Metric row time",
+      "type": "event_time",
+      "description": "The TIMESTAMP the add-on parses the aggregation period from. Not itself named on the cited vendor page; read from props.conf's TIME_PREFIX stanza for this sourcetype, not from data (the sourcetype carries no sample) or vendor prose.",
+      "hazards": [
+        "time_basis"
+      ]
+    }
+  },
+  "containers": {
+    "azure:monitor:aad": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Microsoft Entra ID (Azure AD) sign-in, audit and risk records as the Splunk Add-on for Microsoft Cloud Services lands them from an Azure Event Hub diagnostic export: sign-ins (interactive, non-interactive, service principal, managed identity), directory AuditLogs, Microsoft Graph activity and Identity Protection risk events, all sharing one envelope."
+    },
+    "azure:monitor:activity": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Intune device-management audit events (Microsoft Graph's deviceManagement auditEvent resource, for example a device wipe or sync) as this Splunk Add-on for Microsoft Cloud Services input lands them. Despite the sourcetype name this is not the general-purpose Azure Activity Log (Administrative, ServiceHealth and the other categories); that schema is carried by mscs:azure:audit in this environment."
+    },
+    "mscs:azure:audit": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Two different Azure audit shapes landing on one sourcetype: a Microsoft Entra directory-audit record wrapped in a body envelope, and a genuine Azure Activity Log Administrative-category record (authorization, claims, eventName, operationName, resourceProviderName) at the top level. Which shape a given event has depends on which fields are populated."
+    },
+    "azure:monitor:resource": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Azure resource (data-plane) diagnostic logs forwarded through an Event Hub, for example Azure Cosmos DB DataPlaneRequests: one record per data-plane operation, with the caller, the resource acted on, timing and (for Cosmos DB) request-unit cost."
+    },
+    "mscs:vm:metrics": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Azure Diagnostics (WAD) per-minute or per-hour VM performance-counter aggregates, read by the Splunk Add-on for Microsoft Cloud Services from the WADMetricsPT1M*/WADMetricsPT1H* Azure Table Storage tables: one row per counter per aggregation window, with its maximum, minimum, total, count and average."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "category",
+      "concept": "category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "operationName",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "action",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "command",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "tenantId",
+      "concept": "tenant_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.tenantId",
+      "concept": "tenant_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "vendor_account",
+      "concept": "tenant_id",
+      "note": "Observed equal to tenantId on the same event.",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "correlationId",
+      "concept": "correlation_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.correlationId",
+      "concept": "correlation_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "id",
+      "concept": "audit_event_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.id",
+      "concept": "audit_event_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "resourceId",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.resourceId",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "time",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.activityDateTime",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "durationMs",
+      "concept": "duration_ms",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.durationMs",
+      "concept": "duration_ms",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "duration",
+      "concept": "duration_ms",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "callerIpAddress",
+      "concept": "actor_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.ipAddress",
+      "concept": "actor_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "src_ip",
+      "concept": "actor_ip",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "src",
+      "concept": "actor_ip",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.userPrincipalName",
+      "concept": "actor_principal",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "src_user_name",
+      "concept": "actor_principal",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "user",
+      "concept": "actor_principal",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.userId",
+      "concept": "actor_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "src_user",
+      "concept": "actor_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "user_id",
+      "concept": "actor_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.appId",
+      "concept": "app_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.initiatedBy.app.appId",
+      "concept": "app_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.appDisplayName",
+      "concept": "app_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.initiatedBy.app.displayName",
+      "concept": "app_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "app",
+      "concept": "app_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.targetResources{}.type",
+      "concept": "target_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.targetResources{}.id",
+      "concept": "target_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.targetResources{}.displayName",
+      "concept": "target_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "object",
+      "concept": "target_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "object_id",
+      "concept": "target_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "object_category",
+      "concept": "object_category_cim",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "dest",
+      "concept": "target_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "dest_type",
+      "concept": "target_type",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.result",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.resultType",
+      "concept": "outcome_result",
+      "note": "Sign-in records carry a numeric or Success/Failure result code here; the first field an analyst filters on for sign-in failure triage.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "result",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "status",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.resultReason",
+      "concept": "result_reason",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.resultDescription",
+      "concept": "result_reason",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.status.errorCode",
+      "concept": "result_reason",
+      "note": "Sign-in status sub-object; the numeric error code paired with failureReason.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.status.failureReason",
+      "concept": "result_reason",
+      "note": "Sign-in status sub-object; the human-readable failure text.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "resultDescription",
+      "concept": "result_reason",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "reason",
+      "concept": "result_reason",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "description",
+      "concept": "result_reason",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.riskLevelAggregated",
+      "concept": "risk_level",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.riskState",
+      "concept": "risk_level",
+      "note": "A separate risk facet (state of the risk finding, not its level); shares the concept for now.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.conditionalAccessStatus",
+      "concept": "conditional_access_status",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.location.countryOrRegion",
+      "concept": "geo_country",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "location",
+      "concept": "geo_country",
+      "note": "Splunk_TA_microsoft_cloud_services' top-level location differs from properties.location; both land here pending a split.",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.location.city",
+      "concept": "geo_city",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.deviceDetail.deviceId",
+      "concept": "device_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "change_type",
+      "concept": "change_type_cim",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "dvc",
+      "concept": "service_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "vendor_product",
+      "concept": "service_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "vendor_region",
+      "concept": "azure_region",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "properties.userAgent",
+      "concept": "client_user_agent",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:aad",
+      "column": "user_agent",
+      "concept": "client_user_agent",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "category",
+      "concept": "category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on's top-level category field; observed constant AuditLogs for this Intune auditEvent-shaped data."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "operationName",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on's own friendly operation string."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "action",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "command",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "correlationId",
+      "concept": "correlation_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "microsoft.graph.auditEvent / auditActor field, indexed by the add-on at this path.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/intune-auditing-auditevent",
+          "title": "auditEvent resource type - Microsoft Graph v1.0 (Intune auditing)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "identity",
+      "concept": "actor_principal",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.Actor.UPN",
+      "concept": "actor_principal",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "microsoft.graph.auditEvent / auditActor field, indexed by the add-on at this path.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/intune-auditing-auditevent",
+          "title": "auditEvent resource type - Microsoft Graph v1.0 (Intune auditing)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.Actor.Name",
+      "concept": "actor_principal",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "microsoft.graph.auditActor; observed alongside UPN as a display form of the actor."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.Actor.ObjectId",
+      "concept": "actor_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "microsoft.graph.auditEvent / auditActor field, indexed by the add-on at this path.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/intune-auditing-auditevent",
+          "title": "auditEvent resource type - Microsoft Graph v1.0 (Intune auditing)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.Actor.ActorType",
+      "concept": "actor_role_code",
+      "note": "microsoft.graph.auditActor.type / auditActorType are strings in the Graph resource; the TA writes a numeric code instead (seen: 1, 3), so the mapping to the Graph enum is not confirmed.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.Actor.ApplicationName",
+      "concept": "app_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "microsoft.graph.auditEvent / auditActor field, indexed by the add-on at this path.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/intune-auditing-auditevent",
+          "title": "auditEvent resource type - Microsoft Graph v1.0 (Intune auditing)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.Actor.Application",
+      "concept": "app_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "microsoft.graph.auditEvent / auditActor field, indexed by the add-on at this path.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/intune-auditing-auditevent",
+          "title": "auditEvent resource type - Microsoft Graph v1.0 (Intune auditing)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.ActivityDate",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "microsoft.graph.auditEvent / auditActor field, indexed by the add-on at this path.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/intune-auditing-auditevent",
+          "title": "auditEvent resource type - Microsoft Graph v1.0 (Intune auditing)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.ActivityResultStatus",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "microsoft.graph.auditEvent / auditActor field, indexed by the add-on at this path.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/intune-auditing-auditevent",
+          "title": "auditEvent resource type - Microsoft Graph v1.0 (Intune auditing)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.ActivityType",
+      "concept": "activity_type_code",
+      "note": "microsoft.graph.auditEvent.activityType is documented as a string; the TA writes a numeric code (seen: 0, 2, 3) with no confirmed mapping to the Graph values.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.Category",
+      "concept": "activity_type_code",
+      "note": "microsoft.graph.auditEvent.category is documented as a string; the TA writes a numeric code (seen: 3, 4) here as well, sharing the same undocumented-code concept.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.AuditEventId",
+      "concept": "audit_event_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "microsoft.graph.auditEvent / auditActor field, indexed by the add-on at this path.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/intune-auditing-auditevent",
+          "title": "auditEvent resource type - Microsoft Graph v1.0 (Intune auditing)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.TargetDisplayNames{}",
+      "concept": "target_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "microsoft.graph.auditEvent / auditActor field, indexed by the add-on at this path.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/intune-auditing-auditevent",
+          "title": "auditEvent resource type - Microsoft Graph v1.0 (Intune auditing)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.TargetObjectIds{}",
+      "concept": "target_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "microsoft.graph.auditEvent / auditActor field, indexed by the add-on at this path.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/intune-auditing-auditevent",
+          "title": "auditEvent resource type - Microsoft Graph v1.0 (Intune auditing)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.Targets{}.Name",
+      "concept": "target_name",
+      "note": "A second Targets array the sample carries beside TargetDisplayNames/TargetObjectIds; not in the v1.0 auditEvent JSON shown on the cited page, so bound as observed only.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "properties.Targets{}.ModifiedProperties{}.Name",
+      "concept": "target_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "microsoft.graph.auditEvent / auditActor field, indexed by the add-on at this path.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/graph/api/resources/intune-auditing-auditevent",
+          "title": "auditEvent resource type - Microsoft Graph v1.0 (Intune auditing)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "object",
+      "concept": "target_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "object_id",
+      "concept": "target_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "object_category",
+      "concept": "object_category_cim",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "dest",
+      "concept": "target_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "resourceId",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "resource_provider",
+      "concept": "service_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "dvc",
+      "concept": "service_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "vendor_product",
+      "concept": "service_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "vendor_account",
+      "concept": "tenant_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "vendor_region",
+      "concept": "azure_region",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "tenantId",
+      "concept": "tenant_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "time",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "result",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "resultType",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "resultDescription",
+      "concept": "result_reason",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "status",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "src",
+      "concept": "actor_ip",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "user",
+      "concept": "actor_principal",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "user_name",
+      "concept": "actor_principal",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:activity",
+      "column": "change_type",
+      "concept": "change_type_cim",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.category",
+      "concept": "category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.category",
+      "concept": "category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.tenantId",
+      "concept": "tenant_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.correlationId",
+      "concept": "correlation_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.correlationId",
+      "concept": "correlation_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "correlationId",
+      "concept": "correlation_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.operationName",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.activityDisplayName",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "action",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "authorization.action",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "eventName.value",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "operationName.value",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "authorization.scope",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "resourceId",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.resourceId",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "resourceUri",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "resourceuri",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "resourceGroupName",
+      "concept": "resource_id_segment",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "resourceProviderName.value",
+      "concept": "service_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "eventSource.value",
+      "concept": "service_name",
+      "note": "Not on the cited schema page; the TA appears to write this from an older Insights events-API field alongside resourceProviderName.",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "dvc",
+      "concept": "service_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "vendor_product",
+      "concept": "service_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "product",
+      "concept": "service_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "subscriptionId",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.time",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.activityDateTime",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "eventTimestamp",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "submissionTimestamp",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.durationMs",
+      "concept": "duration_ms",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.callerIpAddress",
+      "concept": "actor_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "httpRequest.clientIpAddress",
+      "concept": "actor_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "claims.ipaddr",
+      "concept": "actor_ip",
+      "note": "A claim inside the Activity Log identity.claims JWT blob; the ipaddr claim on the worked example is the caller's address.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "caller",
+      "concept": "actor_principal",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.identity",
+      "concept": "actor_principal",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "claims.http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
+      "concept": "actor_principal",
+      "note": "The name claim in the identity.claims JWT blob; the worked example carries the caller's UPN here.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "claims.name",
+      "concept": "actor_principal",
+      "note": "A flattened duplicate of the name claim seen beside the fully-qualified claims URN column.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "claims.http://schemas.microsoft.com/identity/claims/objectidentifier",
+      "concept": "actor_id",
+      "note": "The objectidentifier claim in the identity.claims JWT blob: the caller's Entra object id.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "claims.http://schemas.microsoft.com/identity/claims/tenantid",
+      "concept": "tenant_id",
+      "note": "The tenantid claim in the identity.claims JWT blob.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "claims.appid",
+      "concept": "app_id",
+      "note": "The appid claim in the identity.claims JWT blob: the client application's id.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.initiatedBy.app.appId",
+      "concept": "app_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.initiatedBy.app.displayName",
+      "concept": "app_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.initiatedBy.app.servicePrincipalId",
+      "concept": "actor_id",
+      "note": "The service principal's own object id, distinct from claims.appid.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.initiatedBy.app.servicePrincipalName",
+      "concept": "app_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.targetResources{}.type",
+      "concept": "target_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.targetResources{}.id",
+      "concept": "target_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.targetResources{}.displayName",
+      "concept": "target_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "object",
+      "concept": "target_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "object_id",
+      "concept": "target_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "object_category",
+      "concept": "object_category_cim",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "object_path",
+      "concept": "resource_id_segment",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "dest",
+      "concept": "target_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.result",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "status.value",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "result",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "status",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.resultReason",
+      "concept": "result_reason",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.resultSignature",
+      "concept": "result_reason",
+      "note": "The add-on's own field; the schema page defines resultSignature on the parallel Activity Log record, not the body-wrapped Entra one.",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "subStatus.value",
+      "concept": "result_reason",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "description",
+      "concept": "result_reason",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The record is indexed with the Azure Activity Log's own field name at this path; ingested as JSON, no TA-side rename.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log-schema",
+          "title": "Azure Activity Log event schema - Azure Monitor",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "properties.message",
+      "concept": "result_reason",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.userAgent",
+      "concept": "client_user_agent",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.operationType",
+      "concept": "change_type_cim",
+      "note": "Observed value Add on a service-principal creation record.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Splunk Add-on for Microsoft Cloud Services indexes the Azure Monitor diagnostic record as JSON (INDEXED_EXTRACTIONS = json), which flattens nested objects to dotted field names."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "change_type",
+      "concept": "change_type_cim",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "body.properties.loggedByService",
+      "concept": "service_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:azure:audit",
+      "column": "properties.statusCode",
+      "concept": "http_status_code",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "category",
+      "concept": "category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Diagnostic setting category for Cosmos DB data-plane operations.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "operationName",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cosmos DB operation, for example ReadFeed.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "action",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "command",
+      "concept": "operation_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "resourceId",
+      "concept": "resource_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Cosmos DB account resource's Azure Resource Manager id.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "SUBSCRIPTIONS",
+      "concept": "resource_id_segment",
+      "note": "EXTRACT off resourceId's SUBSCRIPTIONS:<id> path segment.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this subscription segment from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "RESOURCEGROUPS",
+      "concept": "resource_id_segment",
+      "note": "EXTRACT off resourceId's RESOURCEGROUPS:<name> path segment.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "PROVIDERS",
+      "concept": "resource_id_segment",
+      "note": "EXTRACT off resourceId's PROVIDERS:<name> path segment.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "DATABASEACCOUNTS",
+      "concept": "resource_id_segment",
+      "note": "EXTRACT off resourceId's DATABASEACCOUNTS:<name> path segment, the Cosmos DB account name.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "vendor_account",
+      "concept": "subscription_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "vendor_region",
+      "concept": "azure_region",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "properties.region",
+      "concept": "azure_region",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The Azure region the sample record's region property names, for example East US.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "time",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Diagnostic log record time.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "duration",
+      "concept": "duration_ms",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Top-level duration alongside properties.duration on the sample record.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "properties.duration",
+      "concept": "duration_ms",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Elapsed time of the request in the vendor's own sample record.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "properties.activityId",
+      "concept": "cosmos_activity_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Cosmos DB's own per-request id, in the vendor's own sample record.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "properties.clientIpAddress",
+      "concept": "actor_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Client address in the vendor's own sample record.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "user_agent",
+      "concept": "client_user_agent",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "properties.userAgent",
+      "concept": "client_user_agent",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Client user agent in the vendor's own sample record.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "properties.statusCode",
+      "concept": "http_status_code",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "HTTP status code in the vendor's own sample record (200 on the ReadFeed example).",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "result",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "status",
+      "concept": "outcome_result",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "properties.requestCharge",
+      "concept": "request_charge_ru",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Request Unit charge in the vendor's own sample record.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "properties.databaseName",
+      "concept": "db_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Database name field in the vendor's own sample record (empty on the ReadFeed example).",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "properties.collectionName",
+      "concept": "collection_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Collection name field in the vendor's own sample record (empty on the ReadFeed example).",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "properties.partitionId",
+      "concept": "partition_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Physical partition id in the vendor's own sample record.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "properties.requestResourceId",
+      "concept": "target_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The id of the specific object the request acted on, in the vendor's own sample record.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "properties.requestResourceType",
+      "concept": "target_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The kind of object the request acted on (Database on the ReadFeed example).",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/cosmos-db/monitor-resource-logs",
+          "title": "Monitor Azure Cosmos DB data by using diagnostic settings in Azure",
+          "read_on": "2026-09-17"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "dest",
+      "concept": "target_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "dest_name",
+      "concept": "target_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "object",
+      "concept": "target_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "object_id",
+      "concept": "target_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "object_category",
+      "concept": "object_category_cim",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "parent_object",
+      "concept": "target_name",
+      "note": "CIM parent-object slot; shares the target concept for now.",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "parent_object_id",
+      "concept": "target_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "parent_object_category",
+      "concept": "object_category_cim",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "dvc",
+      "concept": "service_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "vendor_product",
+      "concept": "service_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "app",
+      "concept": "app_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "detailMessage",
+      "concept": "result_reason",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Free-text add-on message field seen beside the CIM result fields."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "change_type",
+      "concept": "change_type_cim",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "azure:monitor:resource",
+      "column": "tenant_id",
+      "concept": "tenant_id",
+      "note": "Lower-case add-on field distinct from the aad/audit sourcetypes' tenantId; not populated on the ReadFeed sample.",
+      "provenance": {
+        "kind": "alias",
+        "statement": "The add-on's Common Information Model mapping (tags.conf / eventtypes.conf plus FIELDALIAS or EVAL in props.conf) derives this normalized field from the record's own properties."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vm:metrics",
+      "column": "PartitionKey",
+      "concept": "vm_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "WADMetrics tables in storage: PartitionKey.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/virtual-machines/extensions/diagnostics-template",
+          "title": "Add monitoring and diagnostics to an Azure virtual machine (WADMetrics tables in storage)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vm:metrics",
+      "column": "RowKey",
+      "concept": "row_key",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "WADMetrics tables in storage: RowKey.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/virtual-machines/extensions/diagnostics-template",
+          "title": "Add monitoring and diagnostics to an Azure virtual machine (WADMetrics tables in storage)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vm:metrics",
+      "column": "CounterName",
+      "concept": "counter_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "WADMetrics tables in storage: CounterName.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/virtual-machines/extensions/diagnostics-template",
+          "title": "Add monitoring and diagnostics to an Azure virtual machine (WADMetrics tables in storage)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vm:metrics",
+      "column": "Maximum",
+      "concept": "metric_stat",
+      "note": "The maximum value of the counter over the aggregation period.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "WADMetrics tables in storage: Maximum.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/virtual-machines/extensions/diagnostics-template",
+          "title": "Add monitoring and diagnostics to an Azure virtual machine (WADMetrics tables in storage)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vm:metrics",
+      "column": "Minimum",
+      "concept": "metric_stat",
+      "note": "The minimum value of the counter over the aggregation period.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "WADMetrics tables in storage: Minimum.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/virtual-machines/extensions/diagnostics-template",
+          "title": "Add monitoring and diagnostics to an Azure virtual machine (WADMetrics tables in storage)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vm:metrics",
+      "column": "Total",
+      "concept": "metric_stat",
+      "note": "The sum of all values of the counter over the aggregation period.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "WADMetrics tables in storage: Total.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/virtual-machines/extensions/diagnostics-template",
+          "title": "Add monitoring and diagnostics to an Azure virtual machine (WADMetrics tables in storage)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vm:metrics",
+      "column": "Count",
+      "concept": "metric_stat",
+      "note": "The total number of values reported for the counter.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "WADMetrics tables in storage: Count.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/virtual-machines/extensions/diagnostics-template",
+          "title": "Add monitoring and diagnostics to an Azure virtual machine (WADMetrics tables in storage)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vm:metrics",
+      "column": "Average",
+      "concept": "metric_stat",
+      "note": "The average (total/count) value of the counter over the aggregation period.",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "WADMetrics tables in storage: Average.",
+        "cite": {
+          "url": "https://learn.microsoft.com/en-us/azure/virtual-machines/extensions/diagnostics-template",
+          "title": "Add monitoring and diagnostics to an Azure virtual machine (WADMetrics tables in storage)",
+          "read_on": "2026-09-19"
+        }
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "mscs:vm:metrics",
+      "column": "TIMESTAMP",
+      "concept": "metric_time",
+      "note": "Not itself on the cited page; props.conf's TIME_PREFIX names this the row's own timestamp field, distinct from Table Storage's Timestamp.",
+      "provenance": {
+        "kind": "extracted"
+      }
+    }
+  ],
+  "hazards": {
+    "time_basis": {
+      "text": "Several event-time fields (time, ActivityDate, activityDateTime, TIMESTAMP, eventTimestamp) can differ from _time; delivery to the workspace or storage lags the source event by minutes."
+    },
+    "ip_shared": {
+      "text": "A NAT gateway, VPN exit or shared proxy can put many people behind one address; a match is a lead, not a link."
+    },
+    "names_not_stable": {
+      "text": "A userPrincipalName, caller or display name survives an email change less often than an object id does; use the id to pivot."
+    },
+    "guid_lookalikes": {
+      "text": "A record can carry several different GUIDs (tenant id, subscription id, app id, service principal id, correlation id, operation id) that are easy to swap by accident; check which one a query actually filters on."
+    },
+    "numeric_code_undocumented": {
+      "text": "This numeric code is not defined on any Microsoft page found; the meaning given here is inferred from which values co-occur in the sample, not read from documentation."
+    },
+    "multivalue_not_paired": {
+      "text": "Multivalue fields captured from a JSON array (the {} fields) are positional only if the source array was; a search-time operation on one {} field is not guaranteed to stay aligned with another."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

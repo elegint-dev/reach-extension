@@ -1,0 +1,4548 @@
+[
+ {
+  "id": "trace full",
+  "pivot": {
+   "kind": "trace"
+  },
+  "params": {
+   "field": "ImageFileName",
+   "value": "C:\\Windows\\System32\\rundll32.exe",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  ( ImageFileName=\"C:\\\\Windows\\\\System32\\\\rundll32.exe\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(ImageFileName=\"C:\\\\Windows\\\\System32\\\\rundll32.exe\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "trace full latest=now",
+  "pivot": {
+   "kind": "trace"
+  },
+  "params": {
+   "field": "ImageFileName",
+   "value": "C:\\Windows\\System32\\rundll32.exe",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  ( ImageFileName=\"C:\\\\Windows\\\\System32\\\\rundll32.exe\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(ImageFileName=\"C:\\\\Windows\\\\System32\\\\rundll32.exe\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "trace base",
+  "pivot": {
+   "kind": "trace"
+  },
+  "params": {
+   "field": "ImageFileName",
+   "event": "ProcessRollup2"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=$earliest$\n  ( ImageFileName=\"$value$\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(ImageFileName=\"$value$\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_trace_process scans the observable plus every process-creation event in the window. If you know the host, bind aid: orders of magnitude faster."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "value",
+    "earliest"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_trace_process(\"ImageFileName\", \"$value$\", \"$earliest$\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_trace_process scans the observable plus every process-creation event in the window. If you know the host, bind aid: orders of magnitude faster."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "value",
+    "earliest"
+   ],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "trace partial 1",
+  "pivot": {
+   "kind": "trace"
+  },
+  "params": {
+   "field": "ImageFileName",
+   "value": "x",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h\n  ( ImageFileName=\"x\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(ImageFileName=\"x\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_trace_process scans the observable plus every process-creation event in the window. If you know the host, bind aid: orders of magnitude faster."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_trace_process(\"ImageFileName\", \"x\", \"-24h\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_trace_process scans the observable plus every process-creation event in the window. If you know the host, bind aid: orders of magnitude faster."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "trace partial 2",
+  "pivot": {
+   "kind": "trace"
+  },
+  "params": {
+   "field": "ImageFileName",
+   "value": "x",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  ( ImageFileName=\"x\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(ImageFileName=\"x\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "trace partial 3",
+  "pivot": {
+   "kind": "trace"
+  },
+  "params": {
+   "field": "ImageFileName",
+   "value": "x",
+   "earliest": "-24h",
+   "latest": "now",
+   "index": "main"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  ( ImageFileName=\"x\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(ImageFileName=\"x\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_trace_process scans the observable plus every process-creation event in the window. If you know the host, bind aid: orders of magnitude faster."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_trace_process(\"ImageFileName\", \"x\", \"-24h\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_trace_process scans the observable plus every process-creation event in the window. If you know the host, bind aid: orders of magnitude faster."
+    },
+    {
+     "level": "note",
+     "text": "The macro uses cs_index internally; the index parameter applies to the inline form only."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "trace partial 4",
+  "pivot": {
+   "kind": "trace"
+  },
+  "params": {
+   "field": "Bad Field",
+   "value": "x",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "error": {
+    "name": "SplError",
+    "code": "bad_identifier",
+    "message": "field is not a valid identifier: Bad Field"
+   }
+  },
+  "macro": null
+ },
+ {
+  "id": "process_events full",
+  "pivot": {
+   "kind": "process_events"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "tpid": "255667414",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  (ContextProcessId=\"255667414\" OR TargetProcessId=\"255667414\" OR ParentProcessId=\"255667414\")\n| table _time event_simpleName ContextProcessId TargetProcessId ParentProcessId ImageFileName CommandLine\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "process_events full latest=now",
+  "pivot": {
+   "kind": "process_events"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "tpid": "255667414",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  (ContextProcessId=\"255667414\" OR TargetProcessId=\"255667414\" OR ParentProcessId=\"255667414\")\n| table _time event_simpleName ContextProcessId TargetProcessId ParentProcessId ImageFileName CommandLine\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_process_events(\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"255667414\", \"-24h\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "The macro uses cs_index internally; the index parameter applies to the inline form only."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "process_events base",
+  "pivot": {
+   "kind": "process_events"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "tpid": "255667414"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=$earliest$ latest=$latest$\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  (ContextProcessId=\"255667414\" OR TargetProcessId=\"255667414\" OR ParentProcessId=\"255667414\")\n| table _time event_simpleName ContextProcessId TargetProcessId ParentProcessId ImageFileName CommandLine\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "earliest",
+    "latest"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_process_events(\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"255667414\", \"$earliest$\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_process_events has no latest argument (the macro searches up to now); bind it in the inline form."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "earliest"
+   ],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "process_events partial 1",
+  "pivot": {
+   "kind": "process_events"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "tpid": "255667414",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=$latest$\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  (ContextProcessId=\"255667414\" OR TargetProcessId=\"255667414\" OR ParentProcessId=\"255667414\")\n| table _time event_simpleName ContextProcessId TargetProcessId ParentProcessId ImageFileName CommandLine\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "latest"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_process_events(\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"255667414\", \"-24h\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_process_events has no latest argument (the macro searches up to now); bind it in the inline form."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "process_events partial 2",
+  "pivot": {
+   "kind": "process_events"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "tpid": "255667414",
+   "earliest": "2022-07-27T10:40:00",
+   "latest": "2022-07-27T10:50:00"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=\"07/27/2022:10:40:00\" latest=\"07/27/2022:10:50:00\"\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  (ContextProcessId=\"255667414\" OR TargetProcessId=\"255667414\" OR ParentProcessId=\"255667414\")\n| table _time event_simpleName ContextProcessId TargetProcessId ParentProcessId ImageFileName CommandLine\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "process_table full",
+  "pivot": {
+   "kind": "process_table"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| stats min(_time) as start_seen, values(RawProcessId) as os_pid,\n        values(ImageFileName) as image, values(CommandLine) as command_line,\n        values(ParentProcessId) as parent_tpid,\n        values(ProcessStartTime) as process_start_time,\n        values(UserSid) as user_sid, values(SHA256HashData) as sha256\n        by aid, TargetProcessId\n| convert ctime(start_seen)\n| sort start_seen",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "process_table full latest=now",
+  "pivot": {
+   "kind": "process_table"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| stats min(_time) as start_seen, values(RawProcessId) as os_pid,\n        values(ImageFileName) as image, values(CommandLine) as command_line,\n        values(ParentProcessId) as parent_tpid,\n        values(ProcessStartTime) as process_start_time,\n        values(UserSid) as user_sid, values(SHA256HashData) as sha256\n        by aid, TargetProcessId\n| convert ctime(start_seen)\n| sort start_seen",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_process_table(\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"-24h\")`",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The macro uses cs_index internally; the index parameter applies to the inline form only."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "process_table base",
+  "pivot": {
+   "kind": "process_table"
+  },
+  "params": {},
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=$earliest$ latest=$latest$\n  aid=\"$aid$\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| stats min(_time) as start_seen, values(RawProcessId) as os_pid,\n        values(ImageFileName) as image, values(CommandLine) as command_line,\n        values(ParentProcessId) as parent_tpid,\n        values(ProcessStartTime) as process_start_time,\n        values(UserSid) as user_sid, values(SHA256HashData) as sha256\n        by aid, TargetProcessId\n| convert ctime(start_seen)\n| sort start_seen",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "aid",
+    "earliest",
+    "latest"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_process_table(\"$aid$\", \"$earliest$\")`",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "cs_process_table has no latest argument (the macro searches up to now); bind it in the inline form."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "aid",
+    "earliest"
+   ],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "process_table partial 1",
+  "pivot": {
+   "kind": "process_table"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=$latest$\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| stats min(_time) as start_seen, values(RawProcessId) as os_pid,\n        values(ImageFileName) as image, values(CommandLine) as command_line,\n        values(ParentProcessId) as parent_tpid,\n        values(ProcessStartTime) as process_start_time,\n        values(UserSid) as user_sid, values(SHA256HashData) as sha256\n        by aid, TargetProcessId\n| convert ctime(start_seen)\n| sort start_seen",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "latest"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_process_table(\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"-24h\")`",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "cs_process_table has no latest argument (the macro searches up to now); bind it in the inline form."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "process_table partial 2",
+  "pivot": {
+   "kind": "process_table"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "-24h",
+   "latest": "now",
+   "index": "main"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| stats min(_time) as start_seen, values(RawProcessId) as os_pid,\n        values(ImageFileName) as image, values(CommandLine) as command_line,\n        values(ParentProcessId) as parent_tpid,\n        values(ProcessStartTime) as process_start_time,\n        values(UserSid) as user_sid, values(SHA256HashData) as sha256\n        by aid, TargetProcessId\n| convert ctime(start_seen)\n| sort start_seen",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_process_table(\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"-24h\")`",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The macro uses cs_index internally; the index parameter applies to the inline form only."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "pid_lookup full",
+  "pivot": {
+   "kind": "pid_lookup"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "pid": "936",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" RawProcessId=\"936\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and the OS recycles it: expect multiple rows; disambiguate on ImageFileName and ProcessStartTime; carry TargetProcessId forward."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "pid_lookup full latest=now",
+  "pivot": {
+   "kind": "pid_lookup"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "pid": "936",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" RawProcessId=\"936\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and the OS recycles it: expect multiple rows; disambiguate on ImageFileName and ProcessStartTime; carry TargetProcessId forward."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_pid_lookup(\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"936\", \"-24h\")`",
+   "hazards": [
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and the OS recycles it: expect multiple rows; disambiguate on ImageFileName and ProcessStartTime; carry TargetProcessId forward."
+    },
+    {
+     "level": "note",
+     "text": "The macro uses cs_index internally; the index parameter applies to the inline form only."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "pid_lookup base",
+  "pivot": {
+   "kind": "pid_lookup"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "pid": "936"
+  },
+  "inline": {
+   "error": {
+    "name": "SplError",
+    "code": "unscoped_pid",
+    "message": "pid_lookup: a RawProcessId predicate needs aid, earliest and latest bound (placeholders are not enough). Unbound: earliest, latest."
+   }
+  },
+  "macro": null
+ },
+ {
+  "id": "pid_lookup partial 1",
+  "pivot": {
+   "kind": "pid_lookup"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "pid": "936",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "error": {
+    "name": "SplError",
+    "code": "unscoped_pid",
+    "message": "pid_lookup: a RawProcessId predicate needs aid, earliest and latest bound (placeholders are not enough). Unbound: latest."
+   }
+  },
+  "macro": null
+ },
+ {
+  "id": "pid_lookup partial 2",
+  "pivot": {
+   "kind": "pid_lookup"
+  },
+  "params": {
+   "pid": "936",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "error": {
+    "name": "SplError",
+    "code": "unscoped_pid",
+    "message": "pid_lookup: a RawProcessId predicate needs aid, earliest and latest bound (placeholders are not enough). Unbound: aid."
+   }
+  },
+  "macro": null
+ },
+ {
+  "id": "pid_lookup partial 3",
+  "pivot": {
+   "kind": "pid_lookup"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "pid": "936",
+   "earliest": "2022-07-27T10:40:00",
+   "latest": "2022-07-27T10:50:00"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=\"07/27/2022:10:40:00\" latest=\"07/27/2022:10:50:00\"\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" RawProcessId=\"936\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and the OS recycles it: expect multiple rows; disambiguate on ImageFileName and ProcessStartTime; carry TargetProcessId forward."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "pid_lookup partial 4",
+  "pivot": {
+   "kind": "pid_lookup"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "pid": "936",
+   "earliest": "$earliest$",
+   "latest": "now"
+  },
+  "inline": {
+   "error": {
+    "name": "SplError",
+    "code": "unscoped_pid",
+    "message": "pid_lookup: a RawProcessId predicate needs aid, earliest and latest bound (placeholders are not enough). Unbound: earliest."
+   }
+  },
+  "macro": null
+ },
+ {
+  "id": "tpid_to_pid full",
+  "pivot": {
+   "kind": "tpid_to_pid"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "tpid": "255667414",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"255667414\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| fields _time aid ComputerName TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime\n| head 1",
+   "hazards": [
+    {
+     "level": "caution",
+     "text": "Once you hand an OS PID to someone, it stops being reliable. If the box has rebooted or the process exited, that PID may now belong to something else entirely. Always pass the ImageFileName and start time alongside it."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "tpid_to_pid full latest=now",
+  "pivot": {
+   "kind": "tpid_to_pid"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "tpid": "255667414",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"255667414\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| fields _time aid ComputerName TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime\n| head 1",
+   "hazards": [
+    {
+     "level": "caution",
+     "text": "Once you hand an OS PID to someone, it stops being reliable. If the box has rebooted or the process exited, that PID may now belong to something else entirely. Always pass the ImageFileName and start time alongside it."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "tpid_to_pid base",
+  "pivot": {
+   "kind": "tpid_to_pid"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "tpid": "255667414"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"255667414\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| fields _time aid ComputerName TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime\n| head 1",
+   "hazards": [
+    {
+     "level": "caution",
+     "text": "Once you hand an OS PID to someone, it stops being reliable. If the box has rebooted or the process exited, that PID may now belong to something else entirely. Always pass the ImageFileName and start time alongside it."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "tpid_to_pid partial 1",
+  "pivot": {
+   "kind": "tpid_to_pid"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "tpid": "255667414",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"255667414\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| fields _time aid ComputerName TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime\n| head 1",
+   "hazards": [
+    {
+     "level": "caution",
+     "text": "Once you hand an OS PID to someone, it stops being reliable. If the box has rebooted or the process exited, that PID may now belong to something else entirely. Always pass the ImageFileName and start time alongside it."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "tpid_to_pid partial 2",
+  "pivot": {
+   "kind": "tpid_to_pid"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "tpid": "255667414",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"255667414\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| fields _time aid ComputerName TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime\n| head 1",
+   "hazards": [
+    {
+     "level": "caution",
+     "text": "Once you hand an OS PID to someone, it stops being reliable. If the box has rebooted or the process exited, that PID may now belong to something else entirely. Always pass the ImageFileName and start time alongside it."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "tpid_to_pid partial 3",
+  "pivot": {
+   "kind": "tpid_to_pid"
+  },
+  "params": {
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"$tpid$\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| fields _time aid ComputerName TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime\n| head 1",
+   "hazards": [
+    {
+     "level": "caution",
+     "text": "Once you hand an OS PID to someone, it stops being reliable. If the box has rebooted or the process exited, that PID may now belong to something else entirely. Always pass the ImageFileName and start time alongside it."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [
+    "tpid"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "host_lookup full",
+  "pivot": {
+   "kind": "host_lookup"
+  },
+  "params": {
+   "hostname": "WKSTN-0042",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:inventory:aidmaster earliest=-24h latest=-1h\n  ComputerName=\"WKSTN-0042\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "caution",
+     "text": "ComputerName is not stable (rename, reimage, DHCP); aid is. Expect more than one aid for a hostname that has been reimaged. Carry aid forward."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "host_lookup full latest=now",
+  "pivot": {
+   "kind": "host_lookup"
+  },
+  "params": {
+   "hostname": "WKSTN-0042",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:inventory:aidmaster earliest=-24h latest=now\n  ComputerName=\"WKSTN-0042\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "caution",
+     "text": "ComputerName is not stable (rename, reimage, DHCP); aid is. Expect more than one aid for a hostname that has been reimaged. Carry aid forward."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "host_lookup base",
+  "pivot": {
+   "kind": "host_lookup"
+  },
+  "params": {
+   "hostname": "WKSTN-0042"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:inventory:aidmaster\n  ComputerName=\"WKSTN-0042\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "caution",
+     "text": "ComputerName is not stable (rename, reimage, DHCP); aid is. Expect more than one aid for a hostname that has been reimaged. Carry aid forward."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "host_lookup partial 1",
+  "pivot": {
+   "kind": "host_lookup"
+  },
+  "params": {
+   "hostname": "WKSTN-0042",
+   "earliest": "-7d"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:inventory:aidmaster earliest=-7d\n  ComputerName=\"WKSTN-0042\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "caution",
+     "text": "ComputerName is not stable (rename, reimage, DHCP); aid is. Expect more than one aid for a hostname that has been reimaged. Carry aid forward."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "host_lookup partial 2",
+  "pivot": {
+   "kind": "host_lookup"
+  },
+  "params": {
+   "hostname": "a\"b\\c"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:inventory:aidmaster\n  ComputerName=\"a\\\"b\\\\c\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "caution",
+     "text": "ComputerName is not stable (rename, reimage, DHCP); aid is. Expect more than one aid for a hostname that has been reimaged. Carry aid forward."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "host_lookup partial 3",
+  "pivot": {
+   "kind": "host_lookup"
+  },
+  "params": {},
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:inventory:aidmaster\n  ComputerName=\"$hostname$\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "caution",
+     "text": "ComputerName is not stable (rename, reimage, DHCP); aid is. Expect more than one aid for a hostname that has been reimaged. Carry aid forward."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [
+    "hostname"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "event_sample full",
+  "pivot": {
+   "kind": "event_sample"
+  },
+  "params": {
+   "event": "ProcessRollup2",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "field": "ImageFileName",
+   "value": "x",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" event_simpleName=ProcessRollup2 ImageFileName=\"x\"\n| head 20\n| fields - _raw _bkt _cd _indextime _serial _si _subsecond punct",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "event_sample full latest=now",
+  "pivot": {
+   "kind": "event_sample"
+  },
+  "params": {
+   "event": "ProcessRollup2",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "field": "ImageFileName",
+   "value": "x",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" event_simpleName=ProcessRollup2 ImageFileName=\"x\"\n| head 20\n| fields - _raw _bkt _cd _indextime _serial _si _subsecond punct",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "event_sample base",
+  "pivot": {
+   "kind": "event_sample"
+  },
+  "params": {
+   "event": "ProcessRollup2"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=$earliest$\n  event_simpleName=ProcessRollup2\n| head 20\n| fields - _raw _bkt _cd _indextime _serial _si _subsecond punct",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "earliest"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "event_sample partial 1",
+  "pivot": {
+   "kind": "event_sample"
+  },
+  "params": {
+   "event": "ProcessRollup2",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h\n  event_simpleName=ProcessRollup2\n| head 20\n| fields - _raw _bkt _cd _indextime _serial _si _subsecond punct",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "event_sample partial 2",
+  "pivot": {
+   "kind": "event_sample"
+  },
+  "params": {
+   "event": "ProcessRollup2",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" event_simpleName=ProcessRollup2\n| head 20\n| fields - _raw _bkt _cd _indextime _serial _si _subsecond punct",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "event_sample partial 3",
+  "pivot": {
+   "kind": "event_sample"
+  },
+  "params": {
+   "event": "ProcessRollup2",
+   "field": "ImageFileName",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h\n  event_simpleName=ProcessRollup2\n| head 20\n| fields - _raw _bkt _cd _indextime _serial _si _subsecond punct",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "event_sample partial 4",
+  "pivot": {
+   "kind": "event_sample"
+  },
+  "params": {
+   "event": "Event_DetectionSummaryEvent",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:external earliest=-24h\n  event_simpleName=Event_DetectionSummaryEvent\n| head 20\n| fields - _raw _bkt _cd _indextime _serial _si _subsecond punct",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:external"
+  },
+  "macro": null
+ },
+ {
+  "id": "event_sample partial 5",
+  "pivot": {
+   "kind": "event_sample"
+  },
+  "params": {
+   "event": "Event_DetectionSummaryEvent",
+   "sourcetype": "crowdstrike:events:external",
+   "value": "8ae63ddace21276fa6cb4b2613468e5730fc550a1374543372972e52dc232ec6",
+   "field": "SHA256String"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:external earliest=$earliest$\n  event_simpleName=Event_DetectionSummaryEvent SHA256String=\"8ae63ddace21276fa6cb4b2613468e5730fc550a1374543372972e52dc232ec6\"\n| head 20\n| fields - _raw _bkt _cd _indextime _serial _si _subsecond punct",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "earliest"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:external"
+  },
+  "macro": null
+ },
+ {
+  "id": "event_sample partial 6",
+  "pivot": {
+   "kind": "event_sample"
+  },
+  "params": {
+   "event": "DnsRequest",
+   "sourcetype": "crowdstrike:events:sensor",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  event_simpleName=DnsRequest\n| head 20\n| fields - _raw _bkt _cd _indextime _serial _si _subsecond punct",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "event_sample partial 7",
+  "pivot": {
+   "kind": "event_sample"
+  },
+  "params": {
+   "event": "Bad Event",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "error": {
+    "name": "SplError",
+    "code": "bad_identifier",
+    "message": "event is not a valid identifier: Bad Event"
+   }
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_parent_to_target full",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_parent_to_target"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "A child process's ParentProcessId equals the parent's TargetProcessId. This is the process-tree edge. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_parent_to_target full latest=now",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_parent_to_target"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "A child process's ParentProcessId equals the parent's TargetProcessId. This is the process-tree edge. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_parent_to_target base",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_parent_to_target"
+  },
+  "params": {
+   "value": "V"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor\n  aid=\"$aid$\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "A child process's ParentProcessId equals the parent's TargetProcessId. This is the process-tree edge. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [
+    "aid"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_parent_to_target partial 1",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_parent_to_target"
+  },
+  "params": {},
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor\n  aid=\"$aid$\" TargetProcessId=\"$value$\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "A child process's ParentProcessId equals the parent's TargetProcessId. This is the process-tree edge. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [
+    "value",
+    "aid"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_parent_to_target partial 2",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_parent_to_target"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "A child process's ParentProcessId equals the parent's TargetProcessId. This is the process-tree edge. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_parent_to_target partial 3",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_parent_to_target"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h\n  aid=\"$aid$\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "A child process's ParentProcessId equals the parent's TargetProcessId. This is the process-tree edge. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "aid"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_parent_to_target partial 4",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_parent_to_target"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "A child process's ParentProcessId equals the parent's TargetProcessId. This is the process-tree edge. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_parent_to_target partial 5",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_parent_to_target"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"$aid$\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "A child process's ParentProcessId equals the parent's TargetProcessId. This is the process-tree edge. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "aid"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_parent_to_target partial 6",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_parent_to_target"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "2022-07-27T10:40:00",
+   "latest": "2022-07-27T10:50:00"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=\"07/27/2022:10:40:00\" latest=\"07/27/2022:10:50:00\"\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "A child process's ParentProcessId equals the parent's TargetProcessId. This is the process-tree edge. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_context_to_target full",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_context_to_target"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "On a non-process event (DnsRequest, file, registry...), ContextProcessId identifies the process that caused it. This is how you attribute activity to a process. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_context_to_target full latest=now",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_context_to_target"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "On a non-process event (DnsRequest, file, registry...), ContextProcessId identifies the process that caused it. This is how you attribute activity to a process. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_context_to_target base",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_context_to_target"
+  },
+  "params": {
+   "value": "V"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor\n  aid=\"$aid$\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "On a non-process event (DnsRequest, file, registry...), ContextProcessId identifies the process that caused it. This is how you attribute activity to a process. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [
+    "aid"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_context_to_target partial 1",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_context_to_target"
+  },
+  "params": {},
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor\n  aid=\"$aid$\" TargetProcessId=\"$value$\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "On a non-process event (DnsRequest, file, registry...), ContextProcessId identifies the process that caused it. This is how you attribute activity to a process. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [
+    "value",
+    "aid"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_context_to_target partial 2",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_context_to_target"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "On a non-process event (DnsRequest, file, registry...), ContextProcessId identifies the process that caused it. This is how you attribute activity to a process. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_context_to_target partial 3",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_context_to_target"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h\n  aid=\"$aid$\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "On a non-process event (DnsRequest, file, registry...), ContextProcessId identifies the process that caused it. This is how you attribute activity to a process. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "aid"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_context_to_target partial 4",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_context_to_target"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "On a non-process event (DnsRequest, file, registry...), ContextProcessId identifies the process that caused it. This is how you attribute activity to a process. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_context_to_target partial 5",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_context_to_target"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"$aid$\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "On a non-process event (DnsRequest, file, registry...), ContextProcessId identifies the process that caused it. This is how you attribute activity to a process. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "aid"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_context_to_target partial 6",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_context_to_target"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "2022-07-27T10:40:00",
+   "latest": "2022-07-27T10:50:00"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=\"07/27/2022:10:40:00\" latest=\"07/27/2022:10:50:00\"\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TargetProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "On a non-process event (DnsRequest, file, registry...), ContextProcessId identifies the process that caused it. This is how you attribute activity to a process. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_tree_grouping full",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_tree_grouping"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TreeId=\"V\"\n| table _time aid event_simpleName TreeId TargetProcessId ContextProcessId ParentProcessId ImageFileName\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "Groups an entire related activity/detection tree. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_tree_grouping full latest=now",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_tree_grouping"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TreeId=\"V\"\n| table _time aid event_simpleName TreeId TargetProcessId ContextProcessId ParentProcessId ImageFileName\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "Groups an entire related activity/detection tree. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_tree_grouping base",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_tree_grouping"
+  },
+  "params": {
+   "value": "V"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor\n  aid=\"$aid$\" TreeId=\"V\"\n| table _time aid event_simpleName TreeId TargetProcessId ContextProcessId ParentProcessId ImageFileName\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "Groups an entire related activity/detection tree. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [
+    "aid"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_tree_grouping partial 1",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_tree_grouping"
+  },
+  "params": {},
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor\n  aid=\"$aid$\" TreeId=\"$value$\"\n| table _time aid event_simpleName TreeId TargetProcessId ContextProcessId ParentProcessId ImageFileName\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "Groups an entire related activity/detection tree. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [
+    "value",
+    "aid"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_tree_grouping partial 2",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_tree_grouping"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TreeId=\"V\"\n| table _time aid event_simpleName TreeId TargetProcessId ContextProcessId ParentProcessId ImageFileName\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "Groups an entire related activity/detection tree. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_tree_grouping partial 3",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_tree_grouping"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h\n  aid=\"$aid$\" TreeId=\"V\"\n| table _time aid event_simpleName TreeId TargetProcessId ContextProcessId ParentProcessId ImageFileName\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "Groups an entire related activity/detection tree. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "aid"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_tree_grouping partial 4",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_tree_grouping"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TreeId=\"V\"\n| table _time aid event_simpleName TreeId TargetProcessId ContextProcessId ParentProcessId ImageFileName\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "Groups an entire related activity/detection tree. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_tree_grouping partial 5",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_tree_grouping"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"$aid$\" TreeId=\"V\"\n| table _time aid event_simpleName TreeId TargetProcessId ContextProcessId ParentProcessId ImageFileName\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "Groups an entire related activity/detection tree. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "aid"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_tree_grouping partial 6",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_tree_grouping"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "2022-07-27T10:40:00",
+   "latest": "2022-07-27T10:50:00"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=\"07/27/2022:10:40:00\" latest=\"07/27/2022:10:50:00\"\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" TreeId=\"V\"\n| table _time aid event_simpleName TreeId TargetProcessId ContextProcessId ParentProcessId ImageFileName\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "Groups an entire related activity/detection tree. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_raw_pid full",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_raw_pid"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" RawProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "The OS-visible PID. NOT unique over time; PIDs are recycled. Never join on this alone; always scope by aid AND a time window. Not corpus-validated."
+    },
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and is recycled: without aid AND a tight time window this matches unrelated processes. Expect multiple rows; disambiguate on ImageFileName and ProcessStartTime, then carry TargetProcessId forward."
+    },
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and the OS recycles it: expect multiple rows; disambiguate on ImageFileName and ProcessStartTime; carry TargetProcessId forward."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_raw_pid full latest=now",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_raw_pid"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" RawProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "The OS-visible PID. NOT unique over time; PIDs are recycled. Never join on this alone; always scope by aid AND a time window. Not corpus-validated."
+    },
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and is recycled: without aid AND a tight time window this matches unrelated processes. Expect multiple rows; disambiguate on ImageFileName and ProcessStartTime, then carry TargetProcessId forward."
+    },
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and the OS recycles it: expect multiple rows; disambiguate on ImageFileName and ProcessStartTime; carry TargetProcessId forward."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_pid_lookup(\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"V\", \"-24h\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "The OS-visible PID. NOT unique over time; PIDs are recycled. Never join on this alone; always scope by aid AND a time window. Not corpus-validated."
+    },
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and is recycled: without aid AND a tight time window this matches unrelated processes. Expect multiple rows; disambiguate on ImageFileName and ProcessStartTime, then carry TargetProcessId forward."
+    },
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and the OS recycles it: expect multiple rows; disambiguate on ImageFileName and ProcessStartTime; carry TargetProcessId forward."
+    },
+    {
+     "level": "note",
+     "text": "The macro uses cs_index internally; the index parameter applies to the inline form only."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "edge e_raw_pid base",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_raw_pid"
+  },
+  "params": {
+   "value": "V"
+  },
+  "inline": {
+   "error": {
+    "name": "SplError",
+    "code": "unscoped_pid",
+    "message": "edge e_raw_pid: a RawProcessId predicate needs aid, earliest and latest bound (placeholders are not enough). Unbound: aid, earliest, latest."
+   }
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_raw_pid partial 1",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_raw_pid"
+  },
+  "params": {},
+  "inline": {
+   "error": {
+    "name": "SplError",
+    "code": "unscoped_pid",
+    "message": "edge e_raw_pid: a RawProcessId predicate needs aid, earliest and latest bound (placeholders are not enough). Unbound: aid, earliest, latest."
+   }
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_raw_pid partial 2",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_raw_pid"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "inline": {
+   "error": {
+    "name": "SplError",
+    "code": "unscoped_pid",
+    "message": "edge e_raw_pid: a RawProcessId predicate needs aid, earliest and latest bound (placeholders are not enough). Unbound: earliest, latest."
+   }
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_raw_pid partial 3",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_raw_pid"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "error": {
+    "name": "SplError",
+    "code": "unscoped_pid",
+    "message": "edge e_raw_pid: a RawProcessId predicate needs aid, earliest and latest bound (placeholders are not enough). Unbound: aid, latest."
+   }
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_raw_pid partial 4",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_raw_pid"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" RawProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "The OS-visible PID. NOT unique over time; PIDs are recycled. Never join on this alone; always scope by aid AND a time window. Not corpus-validated."
+    },
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and is recycled: without aid AND a tight time window this matches unrelated processes. Expect multiple rows; disambiguate on ImageFileName and ProcessStartTime, then carry TargetProcessId forward."
+    },
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and the OS recycles it: expect multiple rows; disambiguate on ImageFileName and ProcessStartTime; carry TargetProcessId forward."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_pid_lookup(\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"V\", \"-24h\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "The OS-visible PID. NOT unique over time; PIDs are recycled. Never join on this alone; always scope by aid AND a time window. Not corpus-validated."
+    },
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and is recycled: without aid AND a tight time window this matches unrelated processes. Expect multiple rows; disambiguate on ImageFileName and ProcessStartTime, then carry TargetProcessId forward."
+    },
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and the OS recycles it: expect multiple rows; disambiguate on ImageFileName and ProcessStartTime; carry TargetProcessId forward."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "edge e_raw_pid partial 5",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_raw_pid"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "error": {
+    "name": "SplError",
+    "code": "unscoped_pid",
+    "message": "edge e_raw_pid: a RawProcessId predicate needs aid, earliest and latest bound (placeholders are not enough). Unbound: aid."
+   }
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_raw_pid partial 6",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_raw_pid"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "2022-07-27T10:40:00",
+   "latest": "2022-07-27T10:50:00"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=\"07/27/2022:10:40:00\" latest=\"07/27/2022:10:50:00\"\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" RawProcessId=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId\n| sort _time",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "The OS-visible PID. NOT unique over time; PIDs are recycled. Never join on this alone; always scope by aid AND a time window. Not corpus-validated."
+    },
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and is recycled: without aid AND a tight time window this matches unrelated processes. Expect multiple rows; disambiguate on ImageFileName and ProcessStartTime, then carry TargetProcessId forward."
+    },
+    {
+     "level": "danger",
+     "text": "RawProcessId is the OS PID and the OS recycles it: expect multiple rows; disambiguate on ImageFileName and ProcessStartTime; carry TargetProcessId forward."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_aid_to_aidmaster full",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_aid_to_aidmaster"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:inventory:aidmaster earliest=-24h latest=-1h\n  aid=\"V\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: aid_city, aid_computer_name, aid_continent, aid_country, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: aid lives on crowdstrike:events:sensor; this search runs on crowdstrike:inventory:aidmaster. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_aid_to_aidmaster full latest=now",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_aid_to_aidmaster"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:inventory:aidmaster earliest=-24h latest=now\n  aid=\"V\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: aid_city, aid_computer_name, aid_continent, aid_country, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: aid lives on crowdstrike:events:sensor; this search runs on crowdstrike:inventory:aidmaster. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_aid_to_aidmaster base",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_aid_to_aidmaster"
+  },
+  "params": {
+   "value": "V"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:inventory:aidmaster\n  aid=\"V\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: aid_city, aid_computer_name, aid_continent, aid_country, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: aid lives on crowdstrike:events:sensor; this search runs on crowdstrike:inventory:aidmaster. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_aid_to_aidmaster partial 1",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_aid_to_aidmaster"
+  },
+  "params": {},
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:inventory:aidmaster\n  aid=\"$value$\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: aid_city, aid_computer_name, aid_continent, aid_country, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: aid lives on crowdstrike:events:sensor; this search runs on crowdstrike:inventory:aidmaster. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [
+    "value"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_aid_to_aidmaster partial 2",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_aid_to_aidmaster"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:inventory:aidmaster\n  aid=\"V\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: aid_city, aid_computer_name, aid_continent, aid_country, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: aid lives on crowdstrike:events:sensor; this search runs on crowdstrike:inventory:aidmaster. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_aid_to_aidmaster partial 3",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_aid_to_aidmaster"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:inventory:aidmaster earliest=-24h\n  aid=\"V\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: aid_city, aid_computer_name, aid_continent, aid_country, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: aid lives on crowdstrike:events:sensor; this search runs on crowdstrike:inventory:aidmaster. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_aid_to_aidmaster partial 4",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_aid_to_aidmaster"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:inventory:aidmaster earliest=-24h latest=now\n  aid=\"V\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: aid_city, aid_computer_name, aid_continent, aid_country, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: aid lives on crowdstrike:events:sensor; this search runs on crowdstrike:inventory:aidmaster. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_aid_to_aidmaster partial 5",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_aid_to_aidmaster"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:inventory:aidmaster earliest=-24h latest=-1h\n  aid=\"V\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: aid_city, aid_computer_name, aid_continent, aid_country, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: aid lives on crowdstrike:events:sensor; this search runs on crowdstrike:inventory:aidmaster. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_aid_to_aidmaster partial 6",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_aid_to_aidmaster"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "2022-07-27T10:40:00",
+   "latest": "2022-07-27T10:50:00"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:inventory:aidmaster earliest=\"07/27/2022:10:40:00\" latest=\"07/27/2022:10:50:00\"\n  aid=\"V\"\n| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,\n        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,\n        latest(event_platform) as platform, latest(Version) as os_version,\n        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen\n        by aid\n| convert ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: aid_city, aid_computer_name, aid_continent, aid_country, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: aid lives on crowdstrike:events:sensor; this search runs on crowdstrike:inventory:aidmaster. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:inventory:aidmaster"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256_to_appinfo full",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256_to_appinfo"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:appinfo earliest=-24h latest=-1h\n  SHA256HashData=\"V\"\n| stats latest(FileName) as FileName, latest(CompanyName) as CompanyName,\n        latest(FileDescription) as FileDescription, latest(ProductName) as ProductName,\n        latest(ProductVersion) as ProductVersion, latest(FileVersion) as FileVersion,\n        latest(detectioncount) as detection_count\n        by SHA256HashData",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:external and crowdstrike:events:sensor: SHA256HashData_meaning, appinfo_company_name, appinfo_detection_count, appinfo_file_description, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256HashData lives on crowdstrike:events:sensor; this search runs on crowdstrike:appinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:appinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256_to_appinfo full latest=now",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256_to_appinfo"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:appinfo earliest=-24h latest=now\n  SHA256HashData=\"V\"\n| stats latest(FileName) as FileName, latest(CompanyName) as CompanyName,\n        latest(FileDescription) as FileDescription, latest(ProductName) as ProductName,\n        latest(ProductVersion) as ProductVersion, latest(FileVersion) as FileVersion,\n        latest(detectioncount) as detection_count\n        by SHA256HashData",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:external and crowdstrike:events:sensor: SHA256HashData_meaning, appinfo_company_name, appinfo_detection_count, appinfo_file_description, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256HashData lives on crowdstrike:events:sensor; this search runs on crowdstrike:appinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:appinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256_to_appinfo base",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256_to_appinfo"
+  },
+  "params": {
+   "value": "V"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:appinfo\n  SHA256HashData=\"V\"\n| stats latest(FileName) as FileName, latest(CompanyName) as CompanyName,\n        latest(FileDescription) as FileDescription, latest(ProductName) as ProductName,\n        latest(ProductVersion) as ProductVersion, latest(FileVersion) as FileVersion,\n        latest(detectioncount) as detection_count\n        by SHA256HashData",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:external and crowdstrike:events:sensor: SHA256HashData_meaning, appinfo_company_name, appinfo_detection_count, appinfo_file_description, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256HashData lives on crowdstrike:events:sensor; this search runs on crowdstrike:appinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:appinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256_to_appinfo partial 1",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256_to_appinfo"
+  },
+  "params": {},
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:appinfo\n  SHA256HashData=\"$value$\"\n| stats latest(FileName) as FileName, latest(CompanyName) as CompanyName,\n        latest(FileDescription) as FileDescription, latest(ProductName) as ProductName,\n        latest(ProductVersion) as ProductVersion, latest(FileVersion) as FileVersion,\n        latest(detectioncount) as detection_count\n        by SHA256HashData",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:external and crowdstrike:events:sensor: SHA256HashData_meaning, appinfo_company_name, appinfo_detection_count, appinfo_file_description, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256HashData lives on crowdstrike:events:sensor; this search runs on crowdstrike:appinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [
+    "value"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:appinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256_to_appinfo partial 2",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256_to_appinfo"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:appinfo\n  SHA256HashData=\"V\"\n| stats latest(FileName) as FileName, latest(CompanyName) as CompanyName,\n        latest(FileDescription) as FileDescription, latest(ProductName) as ProductName,\n        latest(ProductVersion) as ProductVersion, latest(FileVersion) as FileVersion,\n        latest(detectioncount) as detection_count\n        by SHA256HashData",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:external and crowdstrike:events:sensor: SHA256HashData_meaning, appinfo_company_name, appinfo_detection_count, appinfo_file_description, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256HashData lives on crowdstrike:events:sensor; this search runs on crowdstrike:appinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:appinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256_to_appinfo partial 3",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256_to_appinfo"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:appinfo earliest=-24h\n  SHA256HashData=\"V\"\n| stats latest(FileName) as FileName, latest(CompanyName) as CompanyName,\n        latest(FileDescription) as FileDescription, latest(ProductName) as ProductName,\n        latest(ProductVersion) as ProductVersion, latest(FileVersion) as FileVersion,\n        latest(detectioncount) as detection_count\n        by SHA256HashData",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:external and crowdstrike:events:sensor: SHA256HashData_meaning, appinfo_company_name, appinfo_detection_count, appinfo_file_description, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256HashData lives on crowdstrike:events:sensor; this search runs on crowdstrike:appinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:appinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256_to_appinfo partial 4",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256_to_appinfo"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:appinfo earliest=-24h latest=now\n  SHA256HashData=\"V\"\n| stats latest(FileName) as FileName, latest(CompanyName) as CompanyName,\n        latest(FileDescription) as FileDescription, latest(ProductName) as ProductName,\n        latest(ProductVersion) as ProductVersion, latest(FileVersion) as FileVersion,\n        latest(detectioncount) as detection_count\n        by SHA256HashData",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:external and crowdstrike:events:sensor: SHA256HashData_meaning, appinfo_company_name, appinfo_detection_count, appinfo_file_description, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256HashData lives on crowdstrike:events:sensor; this search runs on crowdstrike:appinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:appinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256_to_appinfo partial 5",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256_to_appinfo"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:appinfo earliest=-24h latest=-1h\n  SHA256HashData=\"V\"\n| stats latest(FileName) as FileName, latest(CompanyName) as CompanyName,\n        latest(FileDescription) as FileDescription, latest(ProductName) as ProductName,\n        latest(ProductVersion) as ProductVersion, latest(FileVersion) as FileVersion,\n        latest(detectioncount) as detection_count\n        by SHA256HashData",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:external and crowdstrike:events:sensor: SHA256HashData_meaning, appinfo_company_name, appinfo_detection_count, appinfo_file_description, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256HashData lives on crowdstrike:events:sensor; this search runs on crowdstrike:appinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:appinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256_to_appinfo partial 6",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256_to_appinfo"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "2022-07-27T10:40:00",
+   "latest": "2022-07-27T10:50:00"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:appinfo earliest=\"07/27/2022:10:40:00\" latest=\"07/27/2022:10:50:00\"\n  SHA256HashData=\"V\"\n| stats latest(FileName) as FileName, latest(CompanyName) as CompanyName,\n        latest(FileDescription) as FileDescription, latest(ProductName) as ProductName,\n        latest(ProductVersion) as ProductVersion, latest(FileVersion) as FileVersion,\n        latest(detectioncount) as detection_count\n        by SHA256HashData",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:external and crowdstrike:events:sensor: SHA256HashData_meaning, appinfo_company_name, appinfo_detection_count, appinfo_file_description, … are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256HashData lives on crowdstrike:events:sensor; this search runs on crowdstrike:appinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:appinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_usersid_to_userinfo full",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_usersid_to_userinfo"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:userinfo earliest=-24h latest=-1h\n  UserSid_readable=\"V\"\n| stats latest(UserName) as UserName, latest(DomainUser) as DomainUser,\n        latest(AccountType) as AccountType, latest(LastLoggedOnHost) as LastLoggedOnHost,\n        latest(LocalAdminAccess) as LocalAdminAccess, latest(LoggedOnHostCount) as LoggedOnHostCount\n        by UserSid_readable",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: UserSid_meaning, userinfo_account_type, userinfo_user, userinfo_user_name are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: UserSid lives on crowdstrike:events:sensor; this search runs on crowdstrike:userinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:userinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_usersid_to_userinfo full latest=now",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_usersid_to_userinfo"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:userinfo earliest=-24h latest=now\n  UserSid_readable=\"V\"\n| stats latest(UserName) as UserName, latest(DomainUser) as DomainUser,\n        latest(AccountType) as AccountType, latest(LastLoggedOnHost) as LastLoggedOnHost,\n        latest(LocalAdminAccess) as LocalAdminAccess, latest(LoggedOnHostCount) as LoggedOnHostCount\n        by UserSid_readable",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: UserSid_meaning, userinfo_account_type, userinfo_user, userinfo_user_name are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: UserSid lives on crowdstrike:events:sensor; this search runs on crowdstrike:userinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:userinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_usersid_to_userinfo base",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_usersid_to_userinfo"
+  },
+  "params": {
+   "value": "V"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:userinfo\n  UserSid_readable=\"V\"\n| stats latest(UserName) as UserName, latest(DomainUser) as DomainUser,\n        latest(AccountType) as AccountType, latest(LastLoggedOnHost) as LastLoggedOnHost,\n        latest(LocalAdminAccess) as LocalAdminAccess, latest(LoggedOnHostCount) as LoggedOnHostCount\n        by UserSid_readable",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: UserSid_meaning, userinfo_account_type, userinfo_user, userinfo_user_name are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: UserSid lives on crowdstrike:events:sensor; this search runs on crowdstrike:userinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:userinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_usersid_to_userinfo partial 1",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_usersid_to_userinfo"
+  },
+  "params": {},
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:userinfo\n  UserSid_readable=\"$value$\"\n| stats latest(UserName) as UserName, latest(DomainUser) as DomainUser,\n        latest(AccountType) as AccountType, latest(LastLoggedOnHost) as LastLoggedOnHost,\n        latest(LocalAdminAccess) as LocalAdminAccess, latest(LoggedOnHostCount) as LoggedOnHostCount\n        by UserSid_readable",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: UserSid_meaning, userinfo_account_type, userinfo_user, userinfo_user_name are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: UserSid lives on crowdstrike:events:sensor; this search runs on crowdstrike:userinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [
+    "value"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:userinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_usersid_to_userinfo partial 2",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_usersid_to_userinfo"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:userinfo\n  UserSid_readable=\"V\"\n| stats latest(UserName) as UserName, latest(DomainUser) as DomainUser,\n        latest(AccountType) as AccountType, latest(LastLoggedOnHost) as LastLoggedOnHost,\n        latest(LocalAdminAccess) as LocalAdminAccess, latest(LoggedOnHostCount) as LoggedOnHostCount\n        by UserSid_readable",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: UserSid_meaning, userinfo_account_type, userinfo_user, userinfo_user_name are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: UserSid lives on crowdstrike:events:sensor; this search runs on crowdstrike:userinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:userinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_usersid_to_userinfo partial 3",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_usersid_to_userinfo"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:userinfo earliest=-24h\n  UserSid_readable=\"V\"\n| stats latest(UserName) as UserName, latest(DomainUser) as DomainUser,\n        latest(AccountType) as AccountType, latest(LastLoggedOnHost) as LastLoggedOnHost,\n        latest(LocalAdminAccess) as LocalAdminAccess, latest(LoggedOnHostCount) as LoggedOnHostCount\n        by UserSid_readable",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: UserSid_meaning, userinfo_account_type, userinfo_user, userinfo_user_name are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: UserSid lives on crowdstrike:events:sensor; this search runs on crowdstrike:userinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:userinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_usersid_to_userinfo partial 4",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_usersid_to_userinfo"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:userinfo earliest=-24h latest=now\n  UserSid_readable=\"V\"\n| stats latest(UserName) as UserName, latest(DomainUser) as DomainUser,\n        latest(AccountType) as AccountType, latest(LastLoggedOnHost) as LastLoggedOnHost,\n        latest(LocalAdminAccess) as LocalAdminAccess, latest(LoggedOnHostCount) as LoggedOnHostCount\n        by UserSid_readable",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: UserSid_meaning, userinfo_account_type, userinfo_user, userinfo_user_name are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: UserSid lives on crowdstrike:events:sensor; this search runs on crowdstrike:userinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:userinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_usersid_to_userinfo partial 5",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_usersid_to_userinfo"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:userinfo earliest=-24h latest=-1h\n  UserSid_readable=\"V\"\n| stats latest(UserName) as UserName, latest(DomainUser) as DomainUser,\n        latest(AccountType) as AccountType, latest(LastLoggedOnHost) as LastLoggedOnHost,\n        latest(LocalAdminAccess) as LocalAdminAccess, latest(LoggedOnHostCount) as LoggedOnHostCount\n        by UserSid_readable",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: UserSid_meaning, userinfo_account_type, userinfo_user, userinfo_user_name are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: UserSid lives on crowdstrike:events:sensor; this search runs on crowdstrike:userinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:userinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_usersid_to_userinfo partial 6",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_usersid_to_userinfo"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "2022-07-27T10:40:00",
+   "latest": "2022-07-27T10:50:00"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:userinfo earliest=\"07/27/2022:10:40:00\" latest=\"07/27/2022:10:50:00\"\n  UserSid_readable=\"V\"\n| stats latest(UserName) as UserName, latest(DomainUser) as DomainUser,\n        latest(AccountType) as AccountType, latest(LastLoggedOnHost) as LastLoggedOnHost,\n        latest(LocalAdminAccess) as LocalAdminAccess, latest(LoggedOnHostCount) as LoggedOnHostCount\n        by UserSid_readable",
+   "hazards": [
+    {
+     "level": "note",
+     "text": "The TA applies this lookup automatically at search time on crowdstrike:events:sensor: UserSid_meaning, userinfo_account_type, userinfo_user, userinfo_user_name are already on those records. Run this only if that LOOKUP stanza is disabled or you are on another sourcetype."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: UserSid lives on crowdstrike:events:sensor; this search runs on crowdstrike:userinfo. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:userinfo"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256string_to_sha256hashdata full",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256string_to_sha256hashdata"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  ( SHA256HashData=\"V\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(SHA256HashData=\"V\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "SHA256String on a detection summary event is the same SHA256 value space as SHA256HashData on sensor telemetry; pivot on the hash to find every process and file event that touched the file. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256String lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256string_to_sha256hashdata full latest=now",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256string_to_sha256hashdata"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  ( SHA256HashData=\"V\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(SHA256HashData=\"V\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "SHA256String on a detection summary event is the same SHA256 value space as SHA256HashData on sensor telemetry; pivot on the hash to find every process and file event that touched the file. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256String lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256string_to_sha256hashdata base",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256string_to_sha256hashdata"
+  },
+  "params": {
+   "value": "V"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=$earliest$\n  ( SHA256HashData=\"V\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(SHA256HashData=\"V\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "SHA256String on a detection summary event is the same SHA256 value space as SHA256HashData on sensor telemetry; pivot on the hash to find every process and file event that touched the file. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256String lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_trace_process scans the observable plus every process-creation event in the window. If you know the host, bind aid: orders of magnitude faster."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "earliest"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_trace_process(\"SHA256HashData\", \"V\", \"$earliest$\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "SHA256String on a detection summary event is the same SHA256 value space as SHA256HashData on sensor telemetry; pivot on the hash to find every process and file event that touched the file. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256String lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_trace_process scans the observable plus every process-creation event in the window. If you know the host, bind aid: orders of magnitude faster."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "earliest"
+   ],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "edge e_sha256string_to_sha256hashdata partial 1",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256string_to_sha256hashdata"
+  },
+  "params": {},
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=$earliest$\n  ( SHA256HashData=\"$value$\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(SHA256HashData=\"$value$\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "SHA256String on a detection summary event is the same SHA256 value space as SHA256HashData on sensor telemetry; pivot on the hash to find every process and file event that touched the file. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256String lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_trace_process scans the observable plus every process-creation event in the window. If you know the host, bind aid: orders of magnitude faster."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "value",
+    "earliest"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_trace_process(\"SHA256HashData\", \"$value$\", \"$earliest$\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "SHA256String on a detection summary event is the same SHA256 value space as SHA256HashData on sensor telemetry; pivot on the hash to find every process and file event that touched the file. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256String lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_trace_process scans the observable plus every process-creation event in the window. If you know the host, bind aid: orders of magnitude faster."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "value",
+    "earliest"
+   ],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "edge e_sha256string_to_sha256hashdata partial 2",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256string_to_sha256hashdata"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=$earliest$\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  ( SHA256HashData=\"V\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(SHA256HashData=\"V\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "SHA256String on a detection summary event is the same SHA256 value space as SHA256HashData on sensor telemetry; pivot on the hash to find every process and file event that touched the file. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256String lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "earliest"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256string_to_sha256hashdata partial 3",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256string_to_sha256hashdata"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h\n  ( SHA256HashData=\"V\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(SHA256HashData=\"V\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "SHA256String on a detection summary event is the same SHA256 value space as SHA256HashData on sensor telemetry; pivot on the hash to find every process and file event that touched the file. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256String lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_trace_process scans the observable plus every process-creation event in the window. If you know the host, bind aid: orders of magnitude faster."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_trace_process(\"SHA256HashData\", \"V\", \"-24h\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "SHA256String on a detection summary event is the same SHA256 value space as SHA256HashData on sensor telemetry; pivot on the hash to find every process and file event that touched the file. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256String lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_trace_process scans the observable plus every process-creation event in the window. If you know the host, bind aid: orders of magnitude faster."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "edge e_sha256string_to_sha256hashdata partial 4",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256string_to_sha256hashdata"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  ( SHA256HashData=\"V\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(SHA256HashData=\"V\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "SHA256String on a detection summary event is the same SHA256 value space as SHA256HashData on sensor telemetry; pivot on the hash to find every process and file event that touched the file. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256String lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256string_to_sha256hashdata partial 5",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256string_to_sha256hashdata"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  ( SHA256HashData=\"V\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(SHA256HashData=\"V\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "SHA256String on a detection summary event is the same SHA256 value space as SHA256HashData on sensor telemetry; pivot on the hash to find every process and file event that touched the file. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256String lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "cs_trace_process scans the observable plus every process-creation event in the window. If you know the host, bind aid: orders of magnitude faster."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_sha256string_to_sha256hashdata partial 6",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_sha256string_to_sha256hashdata"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "2022-07-27T10:40:00",
+   "latest": "2022-07-27T10:50:00"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=\"07/27/2022:10:40:00\" latest=\"07/27/2022:10:50:00\"\n  aid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n  ( SHA256HashData=\"V\"\n    OR event_simpleName=ProcessRollup2\n    OR event_simpleName=SyntheticProcessRollup2 )\n| eval _pid = coalesce(ContextProcessId, TargetProcessId)\n| where isnotnull(_pid)\n| eval _hit = if(SHA256HashData=\"V\", 1, 0),\n       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)\n| stats max(_hit) as matched, max(_anchor) as has_anchor,\n        min(_time) as first_seen, max(_time) as last_seen,\n        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,\n        values(eval(if(_anchor=1, ImageFileName, null()))) as image,\n        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,\n        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,\n        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid\n        by aid, _pid\n| where matched=1\n| rename _pid as TargetProcessId\n| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")\n| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved\n| convert ctime(first_seen) ctime(last_seen)\n| sort - last_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "SHA256String on a detection summary event is the same SHA256 value space as SHA256HashData on sensor telemetry; pivot on the hash to find every process and file event that touched the file. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: SHA256String lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "asserted",
+     "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_agentidstring_to_aid full",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_agentidstring_to_aid"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| stats min(_time) as start_seen, values(RawProcessId) as os_pid,\n        values(ImageFileName) as image, values(CommandLine) as command_line,\n        values(ParentProcessId) as parent_tpid,\n        values(ProcessStartTime) as process_start_time,\n        values(UserSid) as user_sid, values(SHA256HashData) as sha256\n        by aid, TargetProcessId\n| convert ctime(start_seen)\n| sort start_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_agentidstring_to_aid full latest=now",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_agentidstring_to_aid"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "index": "main",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=main sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| stats min(_time) as start_seen, values(RawProcessId) as os_pid,\n        values(ImageFileName) as image, values(CommandLine) as command_line,\n        values(ParentProcessId) as parent_tpid,\n        values(ProcessStartTime) as process_start_time,\n        values(UserSid) as user_sid, values(SHA256HashData) as sha256\n        by aid, TargetProcessId\n| convert ctime(start_seen)\n| sort start_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_process_table(\"V\", \"-24h\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "The macro uses cs_index internally; the index parameter applies to the inline form only."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "edge e_agentidstring_to_aid base",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_agentidstring_to_aid"
+  },
+  "params": {
+   "value": "V"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=$earliest$ latest=$latest$\n  aid=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| stats min(_time) as start_seen, values(RawProcessId) as os_pid,\n        values(ImageFileName) as image, values(CommandLine) as command_line,\n        values(ParentProcessId) as parent_tpid,\n        values(ProcessStartTime) as process_start_time,\n        values(UserSid) as user_sid, values(SHA256HashData) as sha256\n        by aid, TargetProcessId\n| convert ctime(start_seen)\n| sort start_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "earliest",
+    "latest"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_process_table(\"V\", \"$earliest$\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "cs_process_table has no latest argument (the macro searches up to now); bind it in the inline form."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "earliest"
+   ],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "edge e_agentidstring_to_aid partial 1",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_agentidstring_to_aid"
+  },
+  "params": {},
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=$earliest$ latest=$latest$\n  aid=\"$value$\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| stats min(_time) as start_seen, values(RawProcessId) as os_pid,\n        values(ImageFileName) as image, values(CommandLine) as command_line,\n        values(ParentProcessId) as parent_tpid,\n        values(ProcessStartTime) as process_start_time,\n        values(UserSid) as user_sid, values(SHA256HashData) as sha256\n        by aid, TargetProcessId\n| convert ctime(start_seen)\n| sort start_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "value",
+    "earliest",
+    "latest"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_process_table(\"$value$\", \"$earliest$\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "cs_process_table has no latest argument (the macro searches up to now); bind it in the inline form."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "value",
+    "earliest"
+   ],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "edge e_agentidstring_to_aid partial 2",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_agentidstring_to_aid"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=$earliest$ latest=$latest$\n  aid=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| stats min(_time) as start_seen, values(RawProcessId) as os_pid,\n        values(ImageFileName) as image, values(CommandLine) as command_line,\n        values(ParentProcessId) as parent_tpid,\n        values(ProcessStartTime) as process_start_time,\n        values(UserSid) as user_sid, values(SHA256HashData) as sha256\n        by aid, TargetProcessId\n| convert ctime(start_seen)\n| sort start_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "earliest",
+    "latest"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_process_table(\"V\", \"$earliest$\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "cs_process_table has no latest argument (the macro searches up to now); bind it in the inline form."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "earliest"
+   ],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "edge e_agentidstring_to_aid partial 3",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_agentidstring_to_aid"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=$latest$\n  aid=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| stats min(_time) as start_seen, values(RawProcessId) as os_pid,\n        values(ImageFileName) as image, values(CommandLine) as command_line,\n        values(ParentProcessId) as parent_tpid,\n        values(ProcessStartTime) as process_start_time,\n        values(UserSid) as user_sid, values(SHA256HashData) as sha256\n        by aid, TargetProcessId\n| convert ctime(start_seen)\n| sort start_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [
+    "latest"
+   ],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_process_table(\"V\", \"-24h\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "cs_process_table has no latest argument (the macro searches up to now); bind it in the inline form."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "edge e_agentidstring_to_aid partial 4",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_agentidstring_to_aid"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "-24h",
+   "latest": "now"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=now\n  aid=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| stats min(_time) as start_seen, values(RawProcessId) as os_pid,\n        values(ImageFileName) as image, values(CommandLine) as command_line,\n        values(ParentProcessId) as parent_tpid,\n        values(ProcessStartTime) as process_start_time,\n        values(UserSid) as user_sid, values(SHA256HashData) as sha256\n        by aid, TargetProcessId\n| convert ctime(start_seen)\n| sort start_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": {
+   "spl": "`cs_process_table(\"V\", \"-24h\")`",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "macro",
+   "sourcetype": "crowdstrike:events:sensor"
+  }
+ },
+ {
+  "id": "edge e_agentidstring_to_aid partial 5",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_agentidstring_to_aid"
+  },
+  "params": {
+   "value": "V",
+   "earliest": "-24h",
+   "latest": "-1h"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=-24h latest=-1h\n  aid=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| stats min(_time) as start_seen, values(RawProcessId) as os_pid,\n        values(ImageFileName) as image, values(CommandLine) as command_line,\n        values(ParentProcessId) as parent_tpid,\n        values(ProcessStartTime) as process_start_time,\n        values(UserSid) as user_sid, values(SHA256HashData) as sha256\n        by aid, TargetProcessId\n| convert ctime(start_seen)\n| sort start_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ },
+ {
+  "id": "edge e_agentidstring_to_aid partial 6",
+  "pivot": {
+   "kind": "edge",
+   "edge": "e_agentidstring_to_aid"
+  },
+  "params": {
+   "value": "V",
+   "aid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "earliest": "2022-07-27T10:40:00",
+   "latest": "2022-07-27T10:50:00"
+  },
+  "inline": {
+   "spl": "search index=`cs_index` sourcetype=crowdstrike:events:sensor earliest=\"07/27/2022:10:40:00\" latest=\"07/27/2022:10:50:00\"\n  aid=\"V\"\n  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)\n| stats min(_time) as start_seen, values(RawProcessId) as os_pid,\n        values(ImageFileName) as image, values(CommandLine) as command_line,\n        values(ParentProcessId) as parent_tpid,\n        values(ProcessStartTime) as process_start_time,\n        values(UserSid) as user_sid, values(SHA256HashData) as sha256\n        by aid, TargetProcessId\n| convert ctime(start_seen)\n| sort start_seen",
+   "hazards": [
+    {
+     "level": "asserted",
+     "text": "AgentIdString on a detection summary event is the host's aid as a string; pivot on it to reach every sensor event and the aidmaster host record. Not corpus-validated."
+    },
+    {
+     "level": "note",
+     "text": "Sourcetype change: AgentIdString lives on crowdstrike:events:external; this search runs on crowdstrike:events:sensor. Field names and CIM coverage differ across the boundary."
+    },
+    {
+     "level": "note",
+     "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    {
+     "level": "note",
+     "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    }
+   ],
+   "missing": [],
+   "form": "inline",
+   "sourcetype": "crowdstrike:events:sensor"
+  },
+  "macro": null
+ }
+]

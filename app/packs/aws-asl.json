@@ -1,0 +1,1235 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "aws-asl",
+  "name": "Amazon Security Lake CloudTrail (OCSF)",
+  "pack_version": "0.1.0",
+  "description": "AWS CloudTrail management events as Amazon Security Lake normalizes them to OCSF API Activity (class_uid 6003), pulled by the Splunk Add-on for AWS's Security Lake input (SQS-based S3, Parquet, s3_file_decoder=AmazonSecurityLake).",
+  "source": "The OCSF 1.3.0 schema (API Activity class and its Actor, API, Cloud, Metadata, Network Endpoint, Observable, Resource Details, Session, User, Identity Provider, HTTP Request and Authorization Result objects) for the OCSF-shaped fields; the AWS CloudTrail user guide's record-contents and userIdentity pages for the fields CloudTrail keeps under unmapped; the Splunk Add-on for AWS docs for the sourcetype and input. Checked against a metadata-only field list captured from a dev Splunk instance (no CloudTrail sample data available for aws:asl).",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "aws_asl",
+    "label": "Amazon Security Lake CloudTrail",
+    "description": "AWS CloudTrail activity normalized to OCSF by Amazon Security Lake: who called which API, on what resource, from where, and whether it succeeded.",
+    "tags": [
+      "aws",
+      "cloud",
+      "ocsf",
+      "cloudtrail",
+      "security-lake"
+    ],
+    "discriminator": "ocsf_class"
+  },
+  "concepts": {
+    "asl_account_id": {
+      "label": "AWS account id",
+      "type": "account_id",
+      "description": "The AWS account the event or the resource it names belongs to.",
+      "tags": [
+        "account"
+      ],
+      "hazards": [
+        "asl_recipient_vs_actor_account"
+      ]
+    },
+    "ocsf_activity": {
+      "label": "Activity",
+      "type": "enum",
+      "description": "The normalized CRUD activity the API call performed, as an id and its caption.",
+      "tags": [
+        "record_type"
+      ]
+    },
+    "ocsf_category": {
+      "label": "Category",
+      "type": "enum",
+      "description": "The event's OCSF category: for aws:asl this is always Application Activity (category_uid 6).",
+      "tags": [
+        "record_type"
+      ]
+    },
+    "ocsf_class": {
+      "label": "Class",
+      "type": "enum",
+      "description": "The event's OCSF class: for aws:asl this is always API Activity (class_uid 6003), OCSF's class for CRUD API calls such as AWS CloudTrail.",
+      "tags": [
+        "record_type"
+      ]
+    },
+    "ocsf_type": {
+      "label": "Type",
+      "type": "enum",
+      "description": "The derived event type: type_uid = class_uid * 100 + activity_id, type_name joins class_name and activity_name with a colon.",
+      "tags": [
+        "record_type"
+      ]
+    },
+    "ocsf_severity": {
+      "label": "Severity",
+      "type": "enum",
+      "description": "The event's normalized severity, as an id and its caption."
+    },
+    "ocsf_status": {
+      "label": "Status",
+      "type": "outcome",
+      "description": "The event status, normalized to the caption of the (unobserved) status_id value: whether the API call succeeded."
+    },
+    "event_time": {
+      "label": "Event time",
+      "type": "event_time",
+      "description": "The normalized event occurrence time, as epoch (time) and ISO datetime (time_dt).",
+      "hazards": [
+        "asl_time_lookalike"
+      ]
+    },
+    "idp_name": {
+      "label": "Identity provider name",
+      "type": "text",
+      "description": "The name of the identity provider used, when the caller authenticated through one."
+    },
+    "invoked_by": {
+      "label": "Invoked by",
+      "type": "event_source",
+      "description": "The name of the AWS service that invoked the activity, when a service (not a person) made the call."
+    },
+    "session_created_time": {
+      "label": "Session created time",
+      "type": "event_time",
+      "description": "The time the session's temporary credentials were created, not the event time.",
+      "hazards": [
+        "asl_time_lookalike"
+      ]
+    },
+    "session_is_mfa": {
+      "label": "Session MFA used",
+      "type": "flag",
+      "description": "Whether multi-factor authentication was used to establish the session."
+    },
+    "session_issuer": {
+      "label": "Session issuer",
+      "type": "text",
+      "description": "The identifier of the entity that issued the session (the role or user session context came from).",
+      "hazards": [
+        "asl_flattened_top_level"
+      ]
+    },
+    "credential_uid": {
+      "label": "Credential id",
+      "type": "access_key",
+      "description": "The id of the credential used, for example an AWS access key id.",
+      "hazards": [
+        "asl_id_lookalike",
+        "asl_flattened_top_level"
+      ]
+    },
+    "actor_user_name": {
+      "label": "Actor user name",
+      "type": "user_name",
+      "description": "The human-readable name of the user or role that made the call.",
+      "hazards": [
+        "asl_flattened_top_level"
+      ]
+    },
+    "actor_user_type": {
+      "label": "Actor user type",
+      "type": "enum",
+      "description": "The type of identity that made the call: OCSF's caption of the CloudTrail userIdentity.type value (Root, IAMUser, AssumedRole, Role, FederatedUser, Directory, AWSAccount, AWSService, IdentityCenterUser or Unknown)."
+    },
+    "actor_user_uid": {
+      "label": "Actor user id",
+      "type": "principal",
+      "description": "The stable identifier of the user or role that made the call; for CloudTrail-sourced events this is the caller's ARN or principal id.",
+      "hazards": [
+        "asl_id_lookalike",
+        "asl_flattened_top_level"
+      ]
+    },
+    "actor_user_uid_alt": {
+      "label": "Actor user alternate id",
+      "type": "user_id",
+      "description": "An alternate identifier for the same user or role.",
+      "hazards": [
+        "asl_flattened_top_level"
+      ]
+    },
+    "session_uid": {
+      "label": "Session id",
+      "type": "session_id",
+      "description": "The unique identifier of the session; uid_alt carries the session's ARN form for an assumed role, for example arn:aws:sts::123344444444:assumed-role/Admin/example-session.",
+      "hazards": [
+        "asl_flattened_top_level"
+      ]
+    },
+    "api_operation": {
+      "label": "API operation",
+      "type": "identifier",
+      "description": "The verb or operation the request performed; for CloudTrail-sourced events this is the eventName."
+    },
+    "api_request_data": {
+      "label": "API request data",
+      "type": "raw_object",
+      "description": "The request's own parameters, nested as reported by the source."
+    },
+    "api_request_uid": {
+      "label": "API request id",
+      "type": "request_id",
+      "description": "The id assigned to the request by the service that handled it."
+    },
+    "api_response_data": {
+      "label": "API response data",
+      "type": "raw_object",
+      "description": "The response's own elements, nested as reported by the source."
+    },
+    "api_response_error": {
+      "label": "API response error",
+      "type": "text",
+      "description": "The service error code, when the call failed."
+    },
+    "api_response_message": {
+      "label": "API response message",
+      "type": "text",
+      "description": "The description of the event, as OCSF's response.message reports it; carries the failure text when the API call did not succeed."
+    },
+    "api_service_name": {
+      "label": "API service name",
+      "type": "event_source",
+      "description": "The AWS service the call was made to."
+    },
+    "api_version": {
+      "label": "API version",
+      "type": "version",
+      "description": "The version of the API the call used."
+    },
+    "asl_version": {
+      "label": "ASL schema version",
+      "type": "version",
+      "description": "Amazon Security Lake's own mapping/schema version for the record, distinct from metadata.version (the OCSF schema version)."
+    },
+    "cloud_provider": {
+      "label": "Cloud provider",
+      "type": "identifier",
+      "description": "The cloud provider name; always AWS for this sourcetype."
+    },
+    "cloud_region": {
+      "label": "Cloud region",
+      "type": "region",
+      "description": "The AWS region the call was made in."
+    },
+    "endpoint_svc_name": {
+      "label": "Destination service name",
+      "type": "identifier",
+      "description": "The service name on the destination side of a service-to-service call."
+    },
+    "http_user_agent": {
+      "label": "HTTP user agent",
+      "type": "user_agent",
+      "description": "The client's self-reported user agent string on the underlying HTTP request."
+    },
+    "metadata_event_code": {
+      "label": "Event code",
+      "type": "identifier",
+      "description": "The event id or code the source product uses to describe the event."
+    },
+    "metadata_product_feature": {
+      "label": "Product feature name",
+      "type": "text",
+      "description": "The name of the product feature that reported the event."
+    },
+    "metadata_product_name": {
+      "label": "Product name",
+      "type": "text",
+      "description": "The name of the product that reported the event."
+    },
+    "metadata_product_vendor": {
+      "label": "Product vendor name",
+      "type": "text",
+      "description": "The vendor of the product that reported the event."
+    },
+    "metadata_product_version": {
+      "label": "Product version",
+      "type": "version",
+      "description": "The version of the product that reported the event."
+    },
+    "metadata_profiles": {
+      "label": "OCSF profiles",
+      "type": "text",
+      "description": "The list of OCSF profiles used to build the event."
+    },
+    "metadata_uid": {
+      "label": "Event id",
+      "type": "event_id",
+      "description": "The logging system's own unique id for the event instance; for CloudTrail-sourced events this is the CloudTrail eventID GUID.",
+      "hazards": [
+        "asl_id_lookalike"
+      ]
+    },
+    "metadata_version": {
+      "label": "OCSF schema version",
+      "type": "version",
+      "description": "The version of the OCSF schema the event was built against."
+    },
+    "observable_name": {
+      "label": "Observable name",
+      "type": "text",
+      "description": "The event field the observable points to, for example file.name."
+    },
+    "observable_type": {
+      "label": "Observable type",
+      "type": "enum",
+      "description": "The kind of value the observable carries, as an id and its caption (Hostname, IP Address, Resource UID, User Credential ID and others)."
+    },
+    "observable_value": {
+      "label": "Observable value",
+      "type": "text",
+      "description": "The value itself; its meaning depends on the sibling type."
+    },
+    "policy_uid": {
+      "label": "Policy id",
+      "type": "resource_id",
+      "description": "The id of an IAM policy applicable to the authorization decision, when one is reported."
+    },
+    "resources_raw": {
+      "label": "Resources",
+      "type": "raw_object",
+      "description": "The list of resources the activity affected, nested as reported by the source."
+    },
+    "resources_type": {
+      "label": "Resource type",
+      "type": "text",
+      "description": "The resource's type as reported by the event source, for example AWS::IAM::Role."
+    },
+    "resources_uid": {
+      "label": "Resource id",
+      "type": "resource_id",
+      "description": "The unique identifier of the resource, typically its ARN.",
+      "hazards": [
+        "asl_id_lookalike"
+      ]
+    },
+    "src_domain": {
+      "label": "Source domain",
+      "type": "domain",
+      "description": "The domain name of the request's source endpoint."
+    },
+    "src_ip": {
+      "label": "Source IP",
+      "type": "source_ip",
+      "description": "The IP address the request came from."
+    },
+    "src_endpoint_uid": {
+      "label": "Source endpoint id",
+      "type": "identifier",
+      "description": "The unique identifier of the source endpoint."
+    },
+    "unmapped_addl_auth_method": {
+      "label": "Additional data: authentication method",
+      "type": "text",
+      "description": "A CloudTrail additionalEventData key preserved unmapped; AWS documents additionalEventData's content as service- and event-specific and variable, and does not itself define AuthenticationMethod on the record-contents page."
+    },
+    "unmapped_addl_cipher_suite": {
+      "label": "Additional data: cipher suite",
+      "type": "text",
+      "description": "A CloudTrail additionalEventData key preserved unmapped; content is service- and event-specific."
+    },
+    "unmapped_addl_signature_version": {
+      "label": "Additional data: signature version",
+      "type": "text",
+      "description": "A CloudTrail additionalEventData key preserved unmapped; content is service- and event-specific."
+    },
+    "unmapped_addl_bytes_in": {
+      "label": "Additional data: bytes transferred in",
+      "type": "count",
+      "description": "A CloudTrail additionalEventData key preserved unmapped; content is service- and event-specific."
+    },
+    "unmapped_addl_bytes_out": {
+      "label": "Additional data: bytes transferred out",
+      "type": "count",
+      "description": "A CloudTrail additionalEventData key preserved unmapped; content is service- and event-specific."
+    },
+    "unmapped_addl_amz_id2": {
+      "label": "Additional data: x-amz-id-2",
+      "type": "identifier",
+      "description": "An S3 request trace id. AWS's record-contents page documents this same field name under responseElements: 'Both x-amz-request-id and x-amz-id-2 contain information that helps you trace a request with Support.' It is preserved here under additionalEventData rather than responseElements."
+    },
+    "unmapped_management_event": {
+      "label": "Management event flag",
+      "type": "flag",
+      "description": "Whether the event is a management event, per CloudTrail's own managementEvent field."
+    },
+    "unmapped_read_only": {
+      "label": "Read-only operation flag",
+      "type": "flag",
+      "description": "Whether the operation is read-only, per CloudTrail's own readOnly field."
+    },
+    "unmapped_recipient_account_id": {
+      "label": "Recipient account id",
+      "type": "account_id",
+      "description": "The account that received the CloudTrail event; can differ from the actor's account in cross-account resource access.",
+      "hazards": [
+        "asl_recipient_vs_actor_account"
+      ]
+    },
+    "unmapped_session_cred_console": {
+      "label": "Console session credential flag",
+      "type": "flag",
+      "description": "Whether the API call's credentials originated from an AWS Management Console session, per CloudTrail's own sessionCredentialFromConsole field."
+    },
+    "unmapped_tls_cipher_suite": {
+      "label": "TLS cipher suite",
+      "type": "text",
+      "description": "The cipher suite used for the underlying TLS connection, per CloudTrail's own tlsDetails.cipherSuite."
+    },
+    "unmapped_tls_host_header": {
+      "label": "TLS client-provided host header",
+      "type": "domain",
+      "description": "The client-provided host name used in the API call, typically the service endpoint's FQDN, per CloudTrail's own tlsDetails.clientProvidedHostHeader."
+    },
+    "unmapped_tls_version": {
+      "label": "TLS version",
+      "type": "text",
+      "description": "The TLS version of the request, per CloudTrail's own tlsDetails.tlsVersion."
+    },
+    "unmapped_session_issuer_account": {
+      "label": "Session issuer account id",
+      "type": "account_id",
+      "description": "The account that owns the role or user used to obtain the session's temporary credentials, per CloudTrail's own userIdentity.sessionContext.sessionIssuer.accountId."
+    },
+    "unmapped_session_issuer_principal": {
+      "label": "Session issuer principal id",
+      "type": "identifier",
+      "description": "The internal id of the role or user used to obtain the session's credentials; not the id of the session itself.",
+      "hazards": [
+        "asl_id_lookalike"
+      ]
+    },
+    "unmapped_session_issuer_type": {
+      "label": "Session issuer type",
+      "type": "enum",
+      "description": "The type of identity that issued the session's credentials (Root, IAMUser or Role)."
+    },
+    "unmapped_session_issuer_username": {
+      "label": "Session issuer user name",
+      "type": "user_name",
+      "description": "The friendly name of the role or user that issued the session's credentials."
+    }
+  },
+  "containers": {
+    "aws:asl": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "AWS API dataset data collected from Amazon Security Lake by the Splunk Add-on for AWS (SQS-Based S3 input, s3_file_decoder=AmazonSecurityLake, Apache Parquet source files). Each event is one OCSF API Activity record: the CloudTrail management event as Security Lake maps it, with fields CloudTrail itself defines but OCSF does not map kept verbatim under unmapped.",
+      "note": "No sample dataset ships with this pack for this container: no vendor-published worked sample was found. Column names below are read from a field list captured from a live Splunk instance (metadata only, no event values); every value and example in this pack's dictionary is read from a vendor documentation page, not from a sample or a live event.",
+      "hazards": [
+        "asl_id_lookalike",
+        "asl_flattened_top_level"
+      ]
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "accountid",
+      "concept": "asl_account_id",
+      "note": "Top-level convenience column; not itself in OCSF's API Activity class field list, presumed a Security Lake or add-on flattening.",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "activity_id",
+      "concept": "ocsf_activity",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "activity_name",
+      "concept": "ocsf_activity",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "actor.idp.name",
+      "concept": "idp_name",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "actor.invoked_by",
+      "concept": "invoked_by",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "actor.session.created_time_dt",
+      "concept": "session_created_time",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "actor.session.is_mfa",
+      "concept": "session_is_mfa",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "actor.session.issuer",
+      "concept": "session_issuer",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "actor.user.account.uid",
+      "concept": "asl_account_id",
+      "note": "actor.user.account is the User object's Account sub-object; its uid is the AWS account id.",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "actor.user.credential_uid",
+      "concept": "credential_uid",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "actor.user.name",
+      "concept": "actor_user_name",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "actor.user.type",
+      "concept": "actor_user_type",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "actor.user.uid",
+      "concept": "actor_user_uid",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "actor.user.uid_alt",
+      "concept": "actor_user_uid_alt",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "api.operation",
+      "concept": "api_operation",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "api.request.data",
+      "concept": "api_request_data",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "api.request.uid",
+      "concept": "api_request_uid",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "api.response.data",
+      "concept": "api_response_data",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "api.response.error",
+      "concept": "api_response_error",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "api.response.message",
+      "concept": "api_response_message",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "api.service.name",
+      "concept": "api_service_name",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "api.version",
+      "concept": "api_version",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "asl_version",
+      "concept": "asl_version",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "category_name",
+      "concept": "ocsf_category",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "category_uid",
+      "concept": "ocsf_category",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "class_name",
+      "concept": "ocsf_class",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "class_uid",
+      "concept": "ocsf_class",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "cloud.provider",
+      "concept": "cloud_provider",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "cloud.region",
+      "concept": "cloud_region",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "dst_endpoint.svc_name",
+      "concept": "endpoint_svc_name",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "http_request.user_agent",
+      "concept": "http_user_agent",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "is_mfa",
+      "concept": "session_is_mfa",
+      "note": "Top-level duplicate of actor.session.is_mfa; not in the class's own field list.",
+      "alias_of": "actor.session.is_mfa",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "metadata.event_code",
+      "concept": "metadata_event_code",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "metadata.product.feature.name",
+      "concept": "metadata_product_feature",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "metadata.product.name",
+      "concept": "metadata_product_name",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "metadata.product.vendor_name",
+      "concept": "metadata_product_vendor",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "metadata.product.version",
+      "concept": "metadata_product_version",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "metadata.profiles",
+      "concept": "metadata_profiles",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "metadata.uid",
+      "concept": "metadata_uid",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "metadata.version",
+      "concept": "metadata_version",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "observables.name",
+      "concept": "observable_name",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "observables.type",
+      "concept": "observable_type",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "observables.type_id",
+      "concept": "observable_type",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "observables.value",
+      "concept": "observable_value",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "policy.uid",
+      "concept": "policy_uid",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "region",
+      "concept": "cloud_region",
+      "note": "Top-level duplicate of cloud.region.",
+      "alias_of": "cloud.region",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "resources",
+      "concept": "resources_raw",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "resources.owner.account.uid",
+      "concept": "asl_account_id",
+      "note": "Resource Details' owner is a User object; owner.account.uid is that user's account id.",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "resources.type",
+      "concept": "resources_type",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "resources.uid",
+      "concept": "resources_uid",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "session.credential_uid",
+      "concept": "credential_uid",
+      "note": "Top-level column, not in the class's own field list; presumed to mirror actor.user.credential_uid or a session-scoped credential_uid not otherwise observed.",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "session.issuer",
+      "concept": "session_issuer",
+      "note": "Top-level duplicate of actor.session.issuer.",
+      "alias_of": "actor.session.issuer",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "session.uid",
+      "concept": "session_uid",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "session.uid_alt",
+      "concept": "session_uid",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "severity",
+      "concept": "ocsf_severity",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "severity_id",
+      "concept": "ocsf_severity",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "src_endpoint.domain",
+      "concept": "src_domain",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "src_endpoint.ip",
+      "concept": "src_ip",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "src_endpoint.uid",
+      "concept": "src_endpoint_uid",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "status",
+      "concept": "ocsf_status",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "time",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "time_dt",
+      "concept": "event_time",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "type_name",
+      "concept": "ocsf_type",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "type_uid",
+      "concept": "ocsf_type",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.additionalEventData.AuthenticationMethod",
+      "concept": "unmapped_addl_auth_method",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.additionalEventData.CipherSuite",
+      "concept": "unmapped_addl_cipher_suite",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.additionalEventData.SignatureVersion",
+      "concept": "unmapped_addl_signature_version",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.additionalEventData.bytesTransferredIn",
+      "concept": "unmapped_addl_bytes_in",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.additionalEventData.bytesTransferredOut",
+      "concept": "unmapped_addl_bytes_out",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.additionalEventData.x-amz-id-2",
+      "concept": "unmapped_addl_amz_id2",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.managementEvent",
+      "concept": "unmapped_management_event",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.readOnly",
+      "concept": "unmapped_read_only",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.recipientAccountId",
+      "concept": "unmapped_recipient_account_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.sessionCredentialFromConsole",
+      "concept": "unmapped_session_cred_console",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.tlsDetails.cipherSuite",
+      "concept": "unmapped_tls_cipher_suite",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.tlsDetails.clientProvidedHostHeader",
+      "concept": "unmapped_tls_host_header",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.tlsDetails.tlsVersion",
+      "concept": "unmapped_tls_version",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.userIdentity.sessionContext.sessionIssuer.accountId",
+      "concept": "unmapped_session_issuer_account",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.userIdentity.sessionContext.sessionIssuer.principalId",
+      "concept": "unmapped_session_issuer_principal",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.userIdentity.sessionContext.sessionIssuer.type",
+      "concept": "unmapped_session_issuer_type",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "unmapped.userIdentity.sessionContext.sessionIssuer.userName",
+      "concept": "unmapped_session_issuer_username",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "user.name",
+      "concept": "actor_user_name",
+      "note": "Top-level duplicate of actor.user.name.",
+      "alias_of": "actor.user.name",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "user.uid",
+      "concept": "actor_user_uid",
+      "note": "Top-level duplicate of actor.user.uid.",
+      "alias_of": "actor.user.uid",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:asl",
+      "column": "user.uid_alt",
+      "concept": "actor_user_uid_alt",
+      "note": "Top-level duplicate of actor.user.uid_alt.",
+      "alias_of": "actor.user.uid_alt",
+      "provenance": {
+        "kind": "indexed"
+      }
+    }
+  ],
+  "hazards": {
+    "asl_id_lookalike": {
+      "level": "danger",
+      "text": "aws:asl carries several same-shaped identifiers that are not interchangeable: actor.user.uid (the caller's ARN or principal id), actor.user.uid_alt, metadata.uid (a CloudTrail-assigned event GUID), resources.uid (a resource ARN), unmapped.userIdentity.sessionContext.sessionIssuer.principalId (the role that issued the session, not the session itself) and actor.user.credential_uid (an access key id). Two of these can be the same string shape (an ARN or a 21-character AKIA/AROA id) while naming different entities; do not treat any pair as interchangeable without checking the field."
+    },
+    "asl_flattened_top_level": {
+      "level": "warning",
+      "text": "session.uid, session.uid_alt, session.issuer, session.credential_uid and user.name, user.uid, user.uid_alt appear at the top level of aws:asl events, but OCSF's API Activity class (schema.ocsf.io/1.3.0/classes/api_activity, read 2026-09-19) nests session and user only under actor (actor.session.*, actor.user.*); no top-level session or user field is in that page's own field list. These top-level columns are presumed a Security Lake or Splunk add-on flattening of the actor sub-object, not confirmed against the add-on's own source; actor.session.* and actor.user.* are the citable path."
+    },
+    "asl_time_lookalike": {
+      "level": "warning",
+      "text": "time/time_dt is the OCSF-normalized event occurrence time (schema.ocsf.io/1.3.0/classes/api_activity: 'The normalized event occurrence time...'). actor.session.created_time_dt is a different time: when the session's temporary credentials were issued, which can be hours before the API call the event records. Do not use created_time_dt as the event time."
+    },
+    "asl_recipient_vs_actor_account": {
+      "level": "warning",
+      "text": "unmapped.recipientAccountId can differ from accountid / actor.user.account.uid in cross-account resource access: AWS's own record-contents page states 'The recipientAccountID may be different from the CloudTrail userIdentity element accountId. This can occur in cross-account resource access.' (read 2026-09-19). Do not assume the two name the same account."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

@@ -1,0 +1,3817 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "aws-cloudtrail",
+  "name": "AWS CloudTrail",
+  "pack_version": "0.2.0",
+  "description": "AWS CloudTrail management and data events as the Splunk Add-on for AWS ingests them (sourcetype aws:cloudtrail): who called what, from where, with which credentials, and what it touched, with the pivots between identities, sessions, keys, requests and resources.",
+  "source": "AWS CloudTrail record contents reference; Splunk Add-on for AWS 8.3.0 props/transforms (aliases, EVALs, lookups) as read from a live instance",
+  "commands": [],
+  "macros": [],
+  "params": {
+    "earliest": {
+      "label": "earliest",
+      "placeholder": "-24h",
+      "hint": "On _time, which the TA sets from eventTime.",
+      "platform": {
+        "sentinel": {
+          "label": "since",
+          "placeholder": "-24h",
+          "hint": "On TimeGenerated (replay time for these samples, the connector's event time in production). SourceEventTime keeps the capture's own timestamp."
+        }
+      }
+    },
+    "latest": {
+      "label": "latest",
+      "placeholder": "now",
+      "hint": "Optional. Delivery lags minutes behind eventTime.",
+      "platform": {
+        "sentinel": {
+          "label": "until",
+          "placeholder": "now",
+          "hint": "Optional. Ingestion lags event time by minutes; a tight bound can miss the newest rows."
+        }
+      }
+    },
+    "index": {
+      "label": "index",
+      "placeholder": "the index CloudTrail lands in",
+      "hint": "Taken from the event you clicked when known.",
+      "platform": {
+        "sentinel": {
+          "label": "workspace",
+          "placeholder": "unused on Sentinel",
+          "hint": "The table name opens the query; the workspace is the page you are on."
+        }
+      }
+    },
+    "account": {
+      "label": "account",
+      "placeholder": "123456789012",
+      "hint": "Optional: restrict to one recipientAccountId.",
+      "from_concept": "recipient_account_id",
+      "platform": {
+        "sentinel": {
+          "hint": "Optional: restrict to one RecipientAccountId."
+        }
+      }
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    },
+    "arn": {
+      "label": "principal ARN",
+      "placeholder": "arn:aws:sts::123456789012:assumed-role/Admin/alice",
+      "hint": "userIdentity.arn as CloudTrail wrote it. An assumed-role ARN names the session; the role's own ARN is in sessionContext.sessionIssuer.arn."
+    },
+    "key": {
+      "label": "access key id",
+      "placeholder": "ASIA…",
+      "hint": "userIdentity.accessKeyId. ASIA keys are temporary (STS); AKIA keys are long-lived IAM user keys."
+    },
+    "ip": {
+      "label": "source address",
+      "placeholder": "203.0.113.7",
+      "hint": "sourceIPAddress. A service name (e.g. cloudformation.amazonaws.com) means AWS made the call on the principal's behalf."
+    }
+  },
+  "feed": {
+    "id": "aws_cloudtrail",
+    "label": "AWS CloudTrail",
+    "description": "AWS CloudTrail records: one event per API call, console action or service event across an AWS account. Every record names the caller (userIdentity), the operation (eventSource + eventName), where it came from (sourceIPAddress, userAgent), the request and response, and the outcome (errorCode). Data events (S3 objects, Lambda invocations) appear only if the trail records them.",
+    "tags": [
+      "aws",
+      "cloud",
+      "audit"
+    ],
+    "discriminator": "event_name"
+  },
+  "concepts": {
+    "event_version": {
+      "label": "Event version",
+      "type": "version",
+      "description": "Version of the CloudTrail record format (e.g. 1.08, 1.09). Newer versions add fields; a filter that keys on an absent field should check this first.",
+      "role": "version"
+    },
+    "event_time": {
+      "label": "Event time",
+      "type": "event_time",
+      "description": "When the API call was made, UTC, ISO 8601. The TA sets _time from it. Delivery to S3/Splunk lags by minutes, so _indextime is later. Alert windows should be on _time.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_basis"
+      ]
+    },
+    "event_source": {
+      "label": "Event source",
+      "type": "event_source",
+      "description": "The AWS service the request went to, as a DNS-style name: iam.amazonaws.com, ec2.amazonaws.com, s3.amazonaws.com, sts.amazonaws.com. Pair with eventName to name an API operation.",
+      "role": "enum",
+      "tags": [
+        "service"
+      ],
+      "cim": {
+        "targets": [
+          "change_type",
+          "dvc"
+        ]
+      }
+    },
+    "event_name": {
+      "label": "Event name",
+      "type": "record_type",
+      "description": "The API operation that was called (CreateUser, RunInstances, AssumeRole, GetObject…). The record type of a CloudTrail event: which other fields are present depends on it. The TA's lookups decode it to object_category, change_type and action/status.",
+      "role": "event_name",
+      "tags": [
+        "record-type"
+      ],
+      "cim": {
+        "targets": [
+          "action",
+          "change_type",
+          "command",
+          "object_category",
+          "signature",
+          "status"
+        ]
+      }
+    },
+    "event_type": {
+      "label": "Event type",
+      "type": "enum",
+      "description": "Kind of event: AwsApiCall (an API request), AwsServiceEvent (a service-initiated event), AwsConsoleAction, AwsConsoleSignIn (a console login), or AwsCloudTrailInsight.",
+      "role": "enum",
+      "cim": {
+        "targets": [
+          "app"
+        ]
+      },
+      "decode": {
+        "lookup": "cloudtrail-event-type",
+        "meaning_field": "kind",
+        "values": {
+          "AwsApiCall": "An API request",
+          "AwsServiceEvent": "An event a service initiated",
+          "AwsConsoleAction": "An action taken in the console",
+          "AwsConsoleSignIn": "A console sign-in",
+          "AwsCloudTrailInsight": "A CloudTrail Insights anomaly event"
+        }
+      }
+    },
+    "event_category": {
+      "label": "Event category",
+      "type": "enum",
+      "description": "Management (control-plane), Data (S3 object / Lambda invoke / DynamoDB item operations, only if data events are enabled on the trail), or Insight.",
+      "role": "enum"
+    },
+    "event_id": {
+      "label": "Event id",
+      "type": "event_id",
+      "description": "GUID unique to this CloudTrail record. Use it to deduplicate records delivered twice; never reused.",
+      "role": "event_id"
+    },
+    "request_id": {
+      "label": "Request id",
+      "type": "request_id",
+      "description": "The request's ID as assigned by the service: the value the caller received in the response and can quote to AWS Support. One request can produce several records (e.g. a cross-account event), which share it.",
+      "role": "identifier",
+      "tags": [
+        "join"
+      ]
+    },
+    "shared_event_id": {
+      "label": "Shared event id",
+      "type": "request_id",
+      "description": "Set when one action produced records in more than one account (the caller's and the resource owner's). Both records carry the same sharedEventID, the join across accounts.",
+      "role": "identifier",
+      "tags": [
+        "join"
+      ],
+      "hazards": [
+        "cross_account"
+      ]
+    },
+    "management_event": {
+      "label": "Management event",
+      "type": "flag",
+      "description": "true for control-plane operations (creating users, changing security groups); false for data events.",
+      "role": "bool"
+    },
+    "read_only": {
+      "label": "Read only",
+      "type": "flag",
+      "description": "true when the operation reads without changing anything (Describe*, Get*, List*). A false with an errorCode is an attempted change that failed.",
+      "role": "bool"
+    },
+    "api_version": {
+      "label": "API version",
+      "type": "version",
+      "description": "API version of the service the request used, when the service versions its API (EC2 does; IAM does not).",
+      "role": "version"
+    },
+    "recipient_account_id": {
+      "label": "Recipient account id",
+      "type": "account_id",
+      "description": "The account that received and recorded this event. Differs from userIdentity.accountId on cross-account calls; this is the resource side.",
+      "role": "identifier",
+      "tags": [
+        "account"
+      ],
+      "cim": {
+        "targets": [
+          "vendor_account"
+        ]
+      }
+    },
+    "aws_region": {
+      "label": "AWS region",
+      "type": "region",
+      "description": "Region the request was made to. Global services (IAM, STS, CloudFront) record us-east-1 regardless of the caller's location.",
+      "role": "enum",
+      "tags": [
+        "region"
+      ],
+      "cim": {
+        "targets": [
+          "region",
+          "vendor_region"
+        ]
+      }
+    },
+    "vpc_endpoint_id": {
+      "label": "VPC endpoint id",
+      "type": "resource_id",
+      "description": "Present when the request came through a VPC endpoint (PrivateLink). sourceIPAddress is then a private IP inside the VPC.",
+      "role": "identifier"
+    },
+    "session_credential_from_console": {
+      "label": "Session credential from console",
+      "type": "flag",
+      "description": "true when the credentials used came from a console session: the call was made by the console on the user's behalf, not from a CLI/SDK.",
+      "role": "bool"
+    },
+    "identity_type": {
+      "label": "Identity type",
+      "type": "enum",
+      "description": "How the caller authenticated: Root, IAMUser, AssumedRole, FederatedUser, AWSAccount (another account's principal), AWSService (a service calling on your behalf), Directory, SAMLUser, WebIdentityUser, Unknown, IdentityCenterUser.",
+      "role": "enum",
+      "tags": [
+        "identity"
+      ],
+      "decode": {
+        "lookup": "cloudtrail-identity-type",
+        "meaning_field": "caller",
+        "values": {
+          "Root": "The account's root user",
+          "IAMUser": "An IAM user with long-term credentials",
+          "AssumedRole": "Temporary credentials from AssumeRole (the session ARN is the caller)",
+          "FederatedUser": "Temporary credentials from GetFederationToken",
+          "AWSAccount": "A principal from another AWS account",
+          "AWSService": "An AWS service acting on the account's behalf",
+          "SAMLUser": "Federated through SAML",
+          "WebIdentityUser": "Federated through a web identity provider",
+          "IdentityCenterUser": "IAM Identity Center (SSO) user",
+          "Unknown": "Identity not determined"
+        }
+      }
+    },
+    "principal_id": {
+      "label": "Principal id",
+      "type": "user_id",
+      "description": "Unique ID of the principal. For an IAM user the AIDA… id; for an assumed role AROA…:session-name. Stable across renames, unlike userName.",
+      "role": "user_id",
+      "tags": [
+        "identity"
+      ]
+    },
+    "principal_arn": {
+      "label": "Principal ARN",
+      "type": "principal",
+      "description": "ARN of the caller. For an assumed role it is the session ARN (arn:aws:sts::<acct>:assumed-role/<role>/<session>), not the role's ARN. The role is in userIdentity.sessionContext.sessionIssuer.arn. The best single key for 'everything this principal did'.",
+      "role": "user_id",
+      "tags": [
+        "identity",
+        "join"
+      ],
+      "sensitivity": "internal",
+      "cim": {
+        "targets": [
+          "user",
+          "user_arn"
+        ]
+      },
+      "hazards": [
+        "temp_creds"
+      ]
+    },
+    "caller_account_id": {
+      "label": "Caller account id",
+      "type": "account_id",
+      "description": "The account the caller belongs to. On a cross-account call this is the caller's account; recipientAccountId is the resource's.",
+      "role": "identifier",
+      "tags": [
+        "account"
+      ],
+      "cim": {
+        "targets": [
+          "user_group_id",
+          "vendor_account"
+        ]
+      }
+    },
+    "access_key_id": {
+      "label": "Access key id",
+      "type": "access_key",
+      "description": "Access key used to sign the request: AKIA… for a long-term IAM user key, ASIA… for temporary credentials (an assumed role or session). Absent for console sign-in and some service events.",
+      "notes": "An ASIA key here is the same value an earlier AssumeRole/GetSessionToken returned in responseElements.credentials.accessKeyId. Follow that to see where the session came from.",
+      "role": "identifier",
+      "tags": [
+        "credential",
+        "join"
+      ],
+      "sensitivity": "confidential",
+      "hazards": [
+        "temp_creds"
+      ]
+    },
+    "user_name": {
+      "label": "User name",
+      "type": "user_name",
+      "description": "IAM user name, for IAMUser and Root callers. Absent for assumed roles. Look at sessionIssuer.userName (the role) and the session name in the ARN instead. Users can be renamed; principalId cannot.",
+      "role": "user_id",
+      "tags": [
+        "identity"
+      ],
+      "sensitivity": "pii",
+      "cim": {
+        "targets": [
+          "user"
+        ]
+      }
+    },
+    "invoked_by": {
+      "label": "Invoked by",
+      "type": "event_source",
+      "description": "For AWSService callers, the service that made the request on the principal's behalf (e.g. cloudformation.amazonaws.com, config.amazonaws.com).",
+      "role": "enum",
+      "tags": [
+        "service"
+      ]
+    },
+    "session_issuer_type": {
+      "label": "Session issuer type",
+      "type": "enum",
+      "description": "What issued the temporary credentials for this session: Role, IAMUser (GetSessionToken/GetFederationToken) or Root.",
+      "role": "enum",
+      "tags": [
+        "identity"
+      ]
+    },
+    "session_issuer_arn": {
+      "label": "Session issuer ARN",
+      "type": "principal",
+      "description": "ARN of the role (or user) that issued the session's credentials: the role's own ARN, arn:aws:iam::<acct>:role/<name>. The stable identity behind an assumed-role session.",
+      "role": "user_id",
+      "tags": [
+        "identity",
+        "join"
+      ]
+    },
+    "session_issuer_user_name": {
+      "label": "Session issuer user name",
+      "type": "user_name",
+      "description": "Name of the role or user that issued the session. The TA's user/userName EVALs fall back to this when userIdentity.userName is absent.",
+      "role": "user_id",
+      "tags": [
+        "identity"
+      ]
+    },
+    "session_issuer_principal_id": {
+      "label": "Session issuer principal id",
+      "type": "user_id",
+      "description": "Principal ID of the issuing role (AROA…) or user.",
+      "role": "user_id",
+      "tags": [
+        "identity"
+      ]
+    },
+    "session_issuer_account_id": {
+      "label": "Session issuer account id",
+      "type": "account_id",
+      "description": "Account that owns the issuing role or user.",
+      "role": "identifier",
+      "tags": [
+        "account"
+      ]
+    },
+    "session_mfa_authenticated": {
+      "label": "Session MFA authenticated",
+      "type": "flag",
+      "description": "\"true\" when the session was established with MFA. A privileged AssumedRole session with false here is worth a look.",
+      "role": "bool",
+      "tags": [
+        "auth"
+      ]
+    },
+    "session_creation_date": {
+      "label": "Session creation date",
+      "type": "event_time",
+      "description": "When the session's temporary credentials were issued.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ]
+    },
+    "federated_provider": {
+      "label": "Federated provider",
+      "type": "enum",
+      "description": "For WebIdentityUser sessions, the identity provider (e.g. cognito-identity.amazonaws.com, an OIDC issuer).",
+      "role": "enum",
+      "tags": [
+        "identity"
+      ]
+    },
+    "ec2_role_delivery": {
+      "label": "EC2 role delivery",
+      "type": "version",
+      "description": "Version of the instance metadata service used to obtain an instance role's credentials: 1.0 (IMDSv1) or 2.0 (IMDSv2).",
+      "role": "version"
+    },
+    "identity_provider": {
+      "label": "Identity provider",
+      "type": "enum",
+      "description": "For federated users, the provider that authenticated them.",
+      "role": "enum",
+      "tags": [
+        "identity"
+      ]
+    },
+    "on_behalf_of_user_id": {
+      "label": "On behalf of user id",
+      "type": "user_id",
+      "description": "For IAM Identity Center callers, the identity-store user the session acts for.",
+      "role": "user_id",
+      "tags": [
+        "identity"
+      ]
+    },
+    "source_ip": {
+      "label": "Source IP address",
+      "type": "source_ip",
+      "description": "IP address the request came from. When an AWS service made the call on your behalf it is the service's DNS name instead (cloudformation.amazonaws.com), and for console actions the IP is the user's browser. Not an IP for every record. Check before treating it as one.",
+      "role": "ip",
+      "tags": [
+        "network"
+      ],
+      "cim": {
+        "targets": [
+          "src",
+          "src_ip"
+        ]
+      },
+      "hazards": [
+        "ip_may_be_service"
+      ]
+    },
+    "user_agent": {
+      "label": "User agent",
+      "type": "user_agent",
+      "description": "The client's User-Agent: aws-cli/2.x, Boto3/1.x, console.amazonaws.com, Terraform/1.x, a service name… Client-supplied and trivially spoofed; useful for baselining, not for attribution.",
+      "notes": "A sudden new user agent for a principal (aws-cli where only the console was seen) is a common first sign of a stolen key.",
+      "role": "other",
+      "tags": [
+        "client"
+      ],
+      "hazards": [
+        "ua_client_supplied"
+      ]
+    },
+    "tls_version": {
+      "label": "TLS version",
+      "type": "version",
+      "description": "TLS version negotiated by the client, when the service records it (TLSv1.2, TLSv1.3).",
+      "role": "version",
+      "tags": [
+        "network"
+      ]
+    },
+    "tls_cipher_suite": {
+      "label": "TLS cipher suite",
+      "type": "text",
+      "description": "TLS cipher suite the client negotiated.",
+      "role": "other",
+      "tags": [
+        "network"
+      ]
+    },
+    "tls_client_host_header": {
+      "label": "TLS client host header",
+      "type": "domain",
+      "description": "The Host header the client sent: which endpoint it thought it was talking to (a regional endpoint, a VPC endpoint DNS name, a custom domain).",
+      "role": "domain",
+      "tags": [
+        "network"
+      ]
+    },
+    "request_parameters": {
+      "label": "Request parameters",
+      "type": "raw_object",
+      "description": "The request's parameters, as a nested object whose shape depends on eventName. Splunk flattens it: requestParameters.userName, requestParameters.instancesSet.items{}.instanceId, requestParameters.bucketName. Sensitive values (passwords, keys) are omitted or redacted by CloudTrail.",
+      "role": "other",
+      "tags": [
+        "payload"
+      ],
+      "cim": {
+        "targets": [
+          "desc",
+          "rule_action"
+        ]
+      }
+    },
+    "target_user_name": {
+      "label": "Target IAM user name",
+      "type": "user_name",
+      "description": "For IAM user operations, the user being created, deleted or changed: the target, not the caller.",
+      "role": "user_id",
+      "tags": [
+        "target"
+      ],
+      "sensitivity": "pii",
+      "cim": {
+        "targets": [
+          "user"
+        ]
+      }
+    },
+    "requested_role_arn": {
+      "label": "Requested role ARN",
+      "type": "principal",
+      "description": "For AssumeRole, the role being assumed. Joined with responseElements.assumedRoleUser.arn (the resulting session) and later userIdentity.sessionContext.sessionIssuer.arn.",
+      "role": "user_id",
+      "tags": [
+        "target",
+        "join"
+      ],
+      "cim": {
+        "targets": [
+          "user_arn"
+        ]
+      }
+    },
+    "role_session_name": {
+      "label": "Role session name",
+      "type": "text",
+      "description": "For AssumeRole, the session name the caller chose. Free text; conventions (a username, a CI job id) are worth knowing but not trusting.",
+      "role": "identifier",
+      "tags": [
+        "target"
+      ],
+      "hazards": [
+        "session_name_chosen"
+      ]
+    },
+    "policy_arn": {
+      "label": "Policy ARN",
+      "type": "resource_id",
+      "description": "For Attach/DetachUserPolicy and role/group policy operations, the managed policy involved. arn:aws:iam::aws:policy/AdministratorAccess attached to anything is worth a look.",
+      "role": "identifier",
+      "tags": [
+        "target"
+      ]
+    },
+    "bucket_name": {
+      "label": "Bucket name",
+      "type": "resource_id",
+      "description": "For S3 operations, the bucket. Data events (GetObject, PutObject) also carry requestParameters.key.",
+      "role": "identifier",
+      "tags": [
+        "target"
+      ]
+    },
+    "object_key": {
+      "label": "Object key",
+      "type": "file_path",
+      "description": "For S3 data events, the object key.",
+      "role": "file_path",
+      "tags": [
+        "target"
+      ]
+    },
+    "instance_type": {
+      "label": "Instance type",
+      "type": "text",
+      "description": "For RunInstances, the instance type requested.",
+      "role": "other",
+      "tags": [
+        "target"
+      ],
+      "cim": {
+        "targets": [
+          "instance_type"
+        ]
+      }
+    },
+    "requested_instance_id": {
+      "label": "Requested instance id",
+      "type": "resource_id",
+      "description": "For EC2 instance operations, the instance IDs involved (Start/Stop/TerminateInstances name them here; RunInstances names the new IDs in responseElements).",
+      "role": "identifier",
+      "tags": [
+        "target"
+      ]
+    },
+    "security_group_id": {
+      "label": "Security group id",
+      "type": "resource_id",
+      "description": "For security-group operations, the group being changed.",
+      "role": "identifier",
+      "tags": [
+        "target"
+      ]
+    },
+    "cidr_ip": {
+      "label": "CIDR range",
+      "type": "text",
+      "description": "For AuthorizeSecurityGroupIngress/Egress, the CIDR ranges being opened. 0.0.0.0/0 on an ingress rule is the classic finding.",
+      "role": "other",
+      "tags": [
+        "target",
+        "network"
+      ]
+    },
+    "response_elements": {
+      "label": "Response elements",
+      "type": "raw_object",
+      "description": "What the service returned, nested by eventName: the created user, the new instance IDs, the temporary credentials. null for failed calls and for most read-only calls.",
+      "role": "other",
+      "tags": [
+        "payload"
+      ]
+    },
+    "issued_temp_key_id": {
+      "label": "Issued temporary key id",
+      "type": "access_key",
+      "description": "For AssumeRole, GetSessionToken and GetFederationToken, the temporary access key that was issued (ASIA…). Every later call made with it carries this value as userIdentity.accessKeyId.",
+      "role": "identifier",
+      "tags": [
+        "credential",
+        "join"
+      ],
+      "sensitivity": "confidential",
+      "hazards": [
+        "temp_creds"
+      ]
+    },
+    "issued_credential_expiration": {
+      "label": "Issued credential expiration",
+      "type": "event_time",
+      "description": "When the issued temporary credentials expire.",
+      "role": "timestamp",
+      "tags": [
+        "credential",
+        "time"
+      ]
+    },
+    "assumed_role_session_arn": {
+      "label": "Assumed-role session ARN",
+      "type": "principal",
+      "description": "For AssumeRole, the session ARN that resulted: the exact userIdentity.arn the session's later calls will carry.",
+      "role": "user_id",
+      "tags": [
+        "identity",
+        "join"
+      ],
+      "hazards": [
+        "session_name_chosen"
+      ]
+    },
+    "assumed_role_session_id": {
+      "label": "Assumed role session id",
+      "type": "user_id",
+      "description": "For AssumeRole, the session's principal ID (AROA…:session-name).",
+      "role": "user_id",
+      "tags": [
+        "identity"
+      ]
+    },
+    "created_user_name": {
+      "label": "Created user name",
+      "type": "user_name",
+      "description": "For CreateUser, the user that was created.",
+      "role": "user_id",
+      "tags": [
+        "target"
+      ],
+      "sensitivity": "pii"
+    },
+    "created_access_key_id": {
+      "label": "Created access key id",
+      "type": "access_key",
+      "description": "For CreateAccessKey, the new long-term key (AKIA…). Its secret is never logged; its later use shows up as userIdentity.accessKeyId.",
+      "role": "identifier",
+      "tags": [
+        "credential",
+        "join"
+      ],
+      "sensitivity": "confidential"
+    },
+    "launched_instance_id": {
+      "label": "Launched instance id",
+      "type": "resource_id",
+      "description": "For RunInstances, the IDs of the instances that were launched.",
+      "role": "identifier",
+      "tags": [
+        "target"
+      ]
+    },
+    "console_login_result": {
+      "label": "Console login result",
+      "type": "outcome",
+      "description": "For ConsoleLogin events, Success or Failure.",
+      "role": "enum",
+      "tags": [
+        "auth"
+      ]
+    },
+    "additional_event_data": {
+      "label": "Additional event data",
+      "type": "raw_object",
+      "description": "Service-specific extras: for ConsoleLogin, MFAUsed and LoginTo; for S3, bytes transferred and signature version; for STS, the identity provider.",
+      "role": "other",
+      "tags": [
+        "payload"
+      ]
+    },
+    "console_mfa_used": {
+      "label": "Console MFA used",
+      "type": "enum",
+      "description": "For ConsoleLogin, whether MFA was used: Yes or No.",
+      "role": "enum",
+      "tags": [
+        "auth"
+      ]
+    },
+    "console_login_to": {
+      "label": "Console login to",
+      "type": "text",
+      "description": "For ConsoleLogin, the console URL the user landed on.",
+      "role": "other",
+      "tags": [
+        "auth"
+      ]
+    },
+    "resource_arn": {
+      "label": "Resource ARN",
+      "type": "resource_id",
+      "description": "ARNs of the resources the operation touched, when the service reports them (IAM, KMS, Lambda, S3 buckets…). Not every service fills this in.",
+      "role": "identifier",
+      "tags": [
+        "target",
+        "join"
+      ]
+    },
+    "resource_type": {
+      "label": "Resource type",
+      "type": "enum",
+      "description": "Resource types matching resources{}.ARN (AWS::IAM::User, AWS::KMS::Key, AWS::S3::Bucket…).",
+      "role": "enum",
+      "tags": [
+        "target"
+      ]
+    },
+    "resource_account_id": {
+      "label": "Resource account id",
+      "type": "account_id",
+      "description": "Owner account of each resource in resources{}.ARN.",
+      "role": "identifier",
+      "tags": [
+        "account"
+      ]
+    },
+    "service_event_details": {
+      "label": "Service event details",
+      "type": "raw_object",
+      "description": "For AwsServiceEvent records, what the service did on its own (e.g. a scheduled key rotation, a Config rule evaluation).",
+      "role": "other",
+      "tags": [
+        "payload"
+      ]
+    },
+    "error_code": {
+      "label": "Error code",
+      "type": "outcome",
+      "description": "Present only when the call failed: AccessDenied, UnauthorizedOperation, NoSuchEntity, Client.InvalidInstanceID.NotFound… A burst of AccessDenied from one principal across services is enumeration.",
+      "role": "enum",
+      "tags": [
+        "outcome"
+      ],
+      "cim": {
+        "targets": [
+          "action",
+          "result_id",
+          "status"
+        ]
+      }
+    },
+    "error_message": {
+      "label": "Error message",
+      "type": "text",
+      "description": "Human-readable failure reason. For AccessDenied it names the principal and the action that was refused, including the exact IAM permission missing.",
+      "role": "other",
+      "tags": [
+        "outcome"
+      ],
+      "cim": {
+        "targets": [
+          "reason"
+        ]
+      }
+    },
+    "insight_details": {
+      "label": "Insight details",
+      "type": "raw_object",
+      "description": "For AwsCloudTrailInsight events, the unusual-activity analysis (API call rate or error rate anomalies).",
+      "role": "other",
+      "tags": [
+        "payload"
+      ]
+    },
+    "cim_user": {
+      "label": "CIM user",
+      "type": "principal",
+      "description": "TA-computed CIM user: the caller for most events, the target user for IAM user operations (CreateUser, DeleteUser, CreateAccessKey…), derived from a long EVAL keyed on eventName. Check the EVAL before trusting it for a given eventName.",
+      "notes": "Provenance on this sourcetype shows the exact case() the TA uses.",
+      "role": "user_id",
+      "tags": [
+        "cim",
+        "identity"
+      ],
+      "cim": {
+        "data_models": [
+          "Change",
+          "Authentication"
+        ],
+        "from": [
+          "userIdentity.userName",
+          "userIdentity.arn",
+          "requestParameters.userName"
+        ]
+      }
+    },
+    "cim_user_arn": {
+      "label": "CIM user ARN",
+      "type": "principal",
+      "description": "TA: coalesce(userIdentity.arn, requestParameters.roleArn).",
+      "role": "user_id",
+      "tags": [
+        "cim",
+        "identity"
+      ],
+      "cim": {
+        "data_models": [
+          "Change"
+        ],
+        "from": [
+          "userIdentity.arn",
+          "requestParameters.roleArn"
+        ]
+      }
+    },
+    "caller_name": {
+      "label": "Caller name",
+      "type": "user_name",
+      "description": "TA: the best human-readable caller name, userIdentity.userName, else the session issuer's name, else the last segment of the ARN.",
+      "role": "user_id",
+      "tags": [
+        "identity"
+      ]
+    },
+    "cim_vendor_account": {
+      "label": "CIM vendor account",
+      "type": "account_id",
+      "description": "TA: coalesce(userIdentity.accountId, recipientAccountId), the account id CIM searches use.",
+      "role": "identifier",
+      "tags": [
+        "cim",
+        "account"
+      ],
+      "cim": {
+        "data_models": [
+          "Change",
+          "Authentication"
+        ],
+        "from": [
+          "userIdentity.accountId",
+          "recipientAccountId"
+        ]
+      }
+    },
+    "account_of_record": {
+      "label": "Account of record",
+      "type": "account_id",
+      "description": "TA: the account of record, recipientAccountId for AWSAccount/AWSService callers, else userIdentity.accountId.",
+      "role": "identifier",
+      "tags": [
+        "account"
+      ]
+    },
+    "cim_object_category": {
+      "label": "CIM object category",
+      "type": "enum",
+      "description": "TA lookup on eventName (aws_cloudtrail_eventname_lookup): the kind of object the operation is about, instance, user, bucket, policy, key…",
+      "role": "enum",
+      "tags": [
+        "cim"
+      ],
+      "cim": {
+        "data_models": [
+          "Change"
+        ],
+        "from": [
+          "eventName"
+        ]
+      }
+    },
+    "cim_change_type": {
+      "label": "CIM change type",
+      "type": "enum",
+      "description": "TA lookup on eventName / eventSource: the CIM Change type (AAA, EC2, network, storage, KMS…).",
+      "role": "enum",
+      "tags": [
+        "cim"
+      ],
+      "cim": {
+        "data_models": [
+          "Change"
+        ],
+        "from": [
+          "eventName",
+          "eventSource"
+        ]
+      }
+    },
+    "cim_action": {
+      "label": "CIM action",
+      "type": "outcome",
+      "description": "TA lookup on eventName+errorCode (aws-cloudtrail-action-status-lookup): CIM action, created, deleted, modified, read… or 'failure'.",
+      "role": "enum",
+      "tags": [
+        "cim",
+        "outcome"
+      ],
+      "cim": {
+        "data_models": [
+          "Change",
+          "Authentication"
+        ],
+        "from": [
+          "eventName",
+          "errorCode"
+        ]
+      }
+    },
+    "cim_status": {
+      "label": "CIM status",
+      "type": "outcome",
+      "description": "TA lookup on eventName+errorCode: success or failure.",
+      "role": "enum",
+      "tags": [
+        "cim",
+        "outcome"
+      ],
+      "cim": {
+        "data_models": [
+          "Change",
+          "Authentication"
+        ],
+        "from": [
+          "eventName",
+          "errorCode"
+        ]
+      }
+    },
+    "outcome_message": {
+      "label": "Outcome message",
+      "type": "outcome",
+      "description": "TA: coalesce(errorCode, \"success\").",
+      "role": "enum",
+      "tags": [
+        "outcome"
+      ]
+    },
+    "result_message": {
+      "label": "Result message",
+      "type": "text",
+      "description": "TA: the error message, or for a few eventNames a response message.",
+      "role": "other",
+      "tags": [
+        "outcome"
+      ]
+    },
+    "authentication_method": {
+      "label": "Authentication method",
+      "type": "enum",
+      "description": "TA: MFA or SFA, from additionalEventData.MFAUsed and the session's mfaAuthenticated attribute.",
+      "role": "enum",
+      "tags": [
+        "auth"
+      ]
+    },
+    "rule_action": {
+      "label": "Rule action",
+      "type": "enum",
+      "description": "TA: for network ACL changes, the rule action (allow/deny).",
+      "role": "enum",
+      "tags": [
+        "cim",
+        "network"
+      ],
+      "cim": {
+        "data_models": [
+          "Change"
+        ],
+        "from": [
+          "requestParameters"
+        ]
+      }
+    },
+    "image_id": {
+      "label": "Image id",
+      "type": "resource_id",
+      "description": "TA alias of requestParameters.instancesSet.items{}.imageId (CIM Change image_id).",
+      "role": "identifier",
+      "tags": [
+        "cim"
+      ],
+      "cim": {
+        "data_models": [
+          "Change"
+        ],
+        "from": []
+      }
+    },
+    "user_identity": {
+      "label": "User identity",
+      "type": "raw_object",
+      "description": "The nested userIdentity object: type, principalId, arn, accountId, accessKeyId, userName, and sessionContext (sessionIssuer, attributes, mfaAuthenticated) for assumed roles. The flattened columns above are its common leaves.",
+      "role": "other"
+    },
+    "tls_details": {
+      "label": "TLS details",
+      "type": "raw_object",
+      "description": "Nested TLS details of the request: tlsVersion, cipherSuite, clientProvidedHostHeader.",
+      "role": "other"
+    }
+  },
+  "containers": {
+    "aws:cloudtrail": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "tags": [
+        "cim:Change",
+        "cim:Authentication"
+      ],
+      "description": "AWS CloudTrail records: one event per API call, console action or service event across an AWS account, delivered through the Splunk Add-on for AWS. Every record names the caller (userIdentity), the operation (eventSource + eventName), where it came from (sourceIPAddress, userAgent), the request and response, and the outcome (errorCode). Data events (S3 objects, Lambda invocations) appear only if the trail records them.",
+      "note": "The Splunk Add-on for AWS: nested JSON flattened to dotted field names, plus the TA's CIM aliases and lookups."
+    },
+    "AWSCloudTrail": {
+      "platform": "sentinel",
+      "kind": "vendor",
+      "description": "AWS CloudTrail records, one per API call, console action or service event, as Sentinel's Amazon Web Services S3 connector lands them: the caller flattened into UserIdentity* and SessionIssuer* columns, the operation (EventSource + EventName), where it came from (SourceIpAddress, UserAgent), RequestParameters and ResponseElements as JSON strings, and the outcome (ErrorCode).",
+      "note": "Sentinel's Amazon Web Services connector table. The nested identity is flattened into UserIdentity* and SessionIssuer* columns; requestParameters and responseElements arrive as JSON strings."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "eventVersion",
+      "concept": "event_version"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "eventTime",
+      "concept": "event_time"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "eventSource",
+      "concept": "event_source"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "eventName",
+      "concept": "event_name"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "eventType",
+      "concept": "event_type"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "eventCategory",
+      "concept": "event_category"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "eventID",
+      "concept": "event_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "requestID",
+      "concept": "request_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "sharedEventID",
+      "concept": "shared_event_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "managementEvent",
+      "concept": "management_event"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "readOnly",
+      "concept": "read_only"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "apiVersion",
+      "concept": "api_version"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "recipientAccountId",
+      "concept": "recipient_account_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "awsRegion",
+      "concept": "aws_region"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "vpcEndpointId",
+      "concept": "vpc_endpoint_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "sessionCredentialFromConsole",
+      "concept": "session_credential_from_console"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.type",
+      "concept": "identity_type"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.principalId",
+      "concept": "principal_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.arn",
+      "concept": "principal_arn"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.accountId",
+      "concept": "caller_account_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.accessKeyId",
+      "concept": "access_key_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.userName",
+      "concept": "user_name"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.invokedBy",
+      "concept": "invoked_by"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.sessionContext.sessionIssuer.type",
+      "concept": "session_issuer_type"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.sessionContext.sessionIssuer.arn",
+      "concept": "session_issuer_arn"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.sessionContext.sessionIssuer.userName",
+      "concept": "session_issuer_user_name"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.sessionContext.sessionIssuer.principalId",
+      "concept": "session_issuer_principal_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.sessionContext.sessionIssuer.accountId",
+      "concept": "session_issuer_account_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.sessionContext.attributes.mfaAuthenticated",
+      "concept": "session_mfa_authenticated"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.sessionContext.attributes.creationDate",
+      "concept": "session_creation_date"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.sessionContext.webIdFederationData.federatedProvider",
+      "concept": "federated_provider"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.sessionContext.ec2RoleDelivery",
+      "concept": "ec2_role_delivery"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.identityProvider",
+      "concept": "identity_provider"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userIdentity.onBehalfOf.userId",
+      "concept": "on_behalf_of_user_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "sourceIPAddress",
+      "concept": "source_ip",
+      "note": "The TA aliases it to src and src_ip, so CIM searches see it even when it is a service name."
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userAgent",
+      "concept": "user_agent"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "tlsDetails.tlsVersion",
+      "concept": "tls_version"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "tlsDetails.cipherSuite",
+      "concept": "tls_cipher_suite"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "tlsDetails.clientProvidedHostHeader",
+      "concept": "tls_client_host_header"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "requestParameters",
+      "concept": "request_parameters"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "requestParameters.userName",
+      "concept": "target_user_name"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "requestParameters.roleArn",
+      "concept": "requested_role_arn"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "requestParameters.roleSessionName",
+      "concept": "role_session_name"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "requestParameters.policyArn",
+      "concept": "policy_arn"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "requestParameters.bucketName",
+      "concept": "bucket_name"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "requestParameters.key",
+      "concept": "object_key"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "requestParameters.instanceType",
+      "concept": "instance_type"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "requestParameters.instancesSet.items{}.instanceId",
+      "concept": "requested_instance_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "requestParameters.groupId",
+      "concept": "security_group_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "requestParameters.ipPermissions.items{}.ipRanges.items{}.cidrIp",
+      "concept": "cidr_ip"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "responseElements",
+      "concept": "response_elements"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "responseElements.credentials.accessKeyId",
+      "concept": "issued_temp_key_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "responseElements.credentials.expiration",
+      "concept": "issued_credential_expiration"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "responseElements.assumedRoleUser.arn",
+      "concept": "assumed_role_session_arn"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "responseElements.assumedRoleUser.assumedRoleId",
+      "concept": "assumed_role_session_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "responseElements.user.userName",
+      "concept": "created_user_name"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "responseElements.accessKey.accessKeyId",
+      "concept": "created_access_key_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "responseElements.instancesSet.items{}.instanceId",
+      "concept": "launched_instance_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "responseElements.ConsoleLogin",
+      "concept": "console_login_result"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "additionalEventData",
+      "concept": "additional_event_data"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "additionalEventData.MFAUsed",
+      "concept": "console_mfa_used"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "additionalEventData.LoginTo",
+      "concept": "console_login_to"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "resources{}.ARN",
+      "concept": "resource_arn"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "resources{}.type",
+      "concept": "resource_type"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "resources{}.accountId",
+      "concept": "resource_account_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "serviceEventDetails",
+      "concept": "service_event_details"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "errorCode",
+      "concept": "error_code"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "errorMessage",
+      "concept": "error_message"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "insightDetails",
+      "concept": "insight_details"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "user",
+      "concept": "cim_user"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "user_arn",
+      "concept": "cim_user_arn"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "userName",
+      "concept": "caller_name"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "vendor_account",
+      "concept": "cim_vendor_account"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "aws_account_id",
+      "concept": "account_of_record"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "object_category",
+      "concept": "cim_object_category"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "change_type",
+      "concept": "cim_change_type"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "action",
+      "concept": "cim_action"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "status",
+      "concept": "cim_status"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "msg",
+      "concept": "outcome_message"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "result",
+      "concept": "result_message"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "authentication_method",
+      "concept": "authentication_method"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "rule_action",
+      "concept": "rule_action"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "image_id",
+      "concept": "image_id"
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "src",
+      "concept": "source_ip",
+      "alias_of": "sourceIPAddress",
+      "note": "TA alias of sourceIPAddress (CIM). May be a service DNS name, not an IP.",
+      "cim": {
+        "data_models": [
+          "Change",
+          "Authentication"
+        ],
+        "from": [
+          "sourceIPAddress"
+        ]
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "src_ip",
+      "concept": "source_ip",
+      "alias_of": "sourceIPAddress",
+      "note": "TA alias of sourceIPAddress (CIM).",
+      "cim": {
+        "data_models": [
+          "Change",
+          "Authentication"
+        ],
+        "from": [
+          "sourceIPAddress"
+        ]
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "signature",
+      "concept": "event_name",
+      "alias_of": "eventName",
+      "note": "TA alias of eventName (CIM Change/Authentication signature).",
+      "cim": {
+        "data_models": [
+          "Change",
+          "Authentication"
+        ],
+        "from": [
+          "eventName"
+        ]
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "command",
+      "concept": "event_name",
+      "alias_of": "eventName",
+      "note": "TA alias of eventName (CIM Change command).",
+      "cim": {
+        "data_models": [
+          "Change"
+        ],
+        "from": [
+          "eventName"
+        ]
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "region",
+      "concept": "aws_region",
+      "alias_of": "awsRegion",
+      "note": "TA alias of awsRegion (CIM).",
+      "cim": {
+        "data_models": [
+          "Change"
+        ],
+        "from": [
+          "awsRegion"
+        ]
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "vendor_region",
+      "concept": "aws_region",
+      "alias_of": "awsRegion",
+      "note": "TA alias of awsRegion.",
+      "cim": {
+        "data_models": [
+          "Change"
+        ],
+        "from": [
+          "awsRegion"
+        ]
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "dvc",
+      "concept": "event_source",
+      "alias_of": "eventSource",
+      "note": "TA alias of eventSource (CIM device = the service).",
+      "cim": {
+        "data_models": [
+          "Change",
+          "Authentication"
+        ],
+        "from": [
+          "eventSource"
+        ]
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "app",
+      "concept": "event_type",
+      "alias_of": "eventType",
+      "note": "TA alias of eventType (CIM app).",
+      "cim": {
+        "data_models": [
+          "Change",
+          "Authentication"
+        ],
+        "from": [
+          "eventType"
+        ]
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "reason",
+      "concept": "error_message",
+      "alias_of": "errorMessage",
+      "note": "TA alias of errorMessage (CIM Authentication reason).",
+      "cim": {
+        "data_models": [
+          "Authentication"
+        ],
+        "from": [
+          "errorMessage"
+        ]
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "user_access_key",
+      "concept": "access_key_id",
+      "alias_of": "userIdentity.accessKeyId",
+      "note": "TA alias of userIdentity.accessKeyId."
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "temp_access_key",
+      "concept": "issued_temp_key_id",
+      "alias_of": "responseElements.credentials.accessKeyId",
+      "note": "TA alias of responseElements.credentials.accessKeyId."
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "start_time",
+      "concept": "event_time",
+      "alias_of": "eventTime",
+      "note": "TA alias of eventTime."
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "user_group_id",
+      "concept": "caller_account_id",
+      "alias_of": "userIdentity.accountId",
+      "note": "TA alias of userIdentity.accountId (CIM user_group_id).",
+      "cim": {
+        "data_models": [
+          "Change"
+        ],
+        "from": [
+          "userIdentity.accountId"
+        ]
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "result_id",
+      "concept": "error_code",
+      "alias_of": "errorCode",
+      "note": "TA alias of errorCode (CIM Change result_id).",
+      "cim": {
+        "data_models": [
+          "Change"
+        ],
+        "from": [
+          "errorCode"
+        ]
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "instance_type",
+      "concept": "instance_type",
+      "alias_of": "requestParameters.instanceType",
+      "note": "TA alias of requestParameters.instanceType.",
+      "cim": {
+        "data_models": [
+          "Change"
+        ],
+        "from": [
+          "requestParameters.instanceType"
+        ]
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudtrail",
+      "column": "desc",
+      "concept": "request_parameters",
+      "alias_of": "requestParameters",
+      "note": "TA alias of requestParameters (CIM description).",
+      "cim": {
+        "data_models": [
+          "Change"
+        ],
+        "from": [
+          "requestParameters"
+        ]
+      }
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "TimeGenerated",
+      "concept": "event_time",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "The connector sets it from the record's eventTime."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "AdditionalEventData",
+      "concept": "additional_event_data",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "APIVersion",
+      "concept": "api_version",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "AwsEventId",
+      "concept": "event_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "AWSRegion",
+      "concept": "aws_region",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "AwsRequestId_",
+      "concept": "request_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "AwsRequestId",
+      "concept": "request_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "Deprecated by Microsoft; AwsRequestId_ is the current column."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "Category",
+      "concept": "event_category",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "CidrIp",
+      "concept": "cidr_ip",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "Lifted out of requestParameters by the connector."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "CipherSuite",
+      "concept": "tls_cipher_suite",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "ClientProvidedHostHeader",
+      "concept": "tls_client_host_header",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "EC2RoleDelivery",
+      "concept": "ec2_role_delivery",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "ErrorCode",
+      "concept": "error_code",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "ErrorMessage",
+      "concept": "error_message",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "EventName",
+      "concept": "event_name",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "EventSource",
+      "concept": "event_source",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "EventTypeName",
+      "concept": "event_type",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "EventVersion",
+      "concept": "event_version",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "ManagementEvent",
+      "concept": "management_event",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "ReadOnly",
+      "concept": "read_only",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "RecipientAccountId",
+      "concept": "recipient_account_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "RequestParameters",
+      "concept": "request_parameters",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "A JSON string here, not a dynamic column: parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "Resources",
+      "concept": "resource_arn",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "The whole resources list as a string; the ARNs are inside it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "ResponseElements",
+      "concept": "response_elements",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "A JSON string here, not a dynamic column: parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "ServiceEventDetails",
+      "concept": "service_event_details",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "SessionCreationDate",
+      "concept": "session_creation_date",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "SessionIssuerAccountId",
+      "concept": "session_issuer_account_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "SessionIssuerArn",
+      "concept": "session_issuer_arn",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "SessionIssuerPrincipalId",
+      "concept": "session_issuer_principal_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "SessionIssuerType",
+      "concept": "session_issuer_type",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "SessionIssuerUserName",
+      "concept": "session_issuer_user_name",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "SessionMfaAuthenticated",
+      "concept": "session_mfa_authenticated",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "SharedEventId",
+      "concept": "shared_event_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "SourceIpAddress",
+      "concept": "source_ip",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "TlsVersion",
+      "concept": "tls_version",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "UserAgent",
+      "concept": "user_agent",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "UserIdentityAccessKeyId",
+      "concept": "access_key_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "UserIdentityAccountId",
+      "concept": "caller_account_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "UserIdentityArn",
+      "concept": "principal_arn",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "UserIdentityInvokedBy",
+      "concept": "invoked_by",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "UserIdentityPrincipalid",
+      "concept": "principal_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "Microsoft's spelling, lower-case id."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "UserIdentityType",
+      "concept": "identity_type",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "UserIdentityUserName",
+      "concept": "user_name",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "VpcEndpointId",
+      "concept": "vpc_endpoint_id",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17"
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "RequestParameters.userName",
+      "concept": "target_user_name",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "RequestParameters is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "RequestParameters.roleArn",
+      "concept": "requested_role_arn",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "RequestParameters is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "RequestParameters.roleSessionName",
+      "concept": "role_session_name",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "RequestParameters is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "RequestParameters.policyArn",
+      "concept": "policy_arn",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "RequestParameters is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "RequestParameters.bucketName",
+      "concept": "bucket_name",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "RequestParameters is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "RequestParameters.key",
+      "concept": "object_key",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "RequestParameters is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "RequestParameters.instanceType",
+      "concept": "instance_type",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "RequestParameters is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "RequestParameters.groupId",
+      "concept": "security_group_id",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "RequestParameters is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "ResponseElements.credentials.accessKeyId",
+      "concept": "issued_temp_key_id",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "ResponseElements is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "ResponseElements.credentials.expiration",
+      "concept": "issued_credential_expiration",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "ResponseElements is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "ResponseElements.assumedRoleUser.arn",
+      "concept": "assumed_role_session_arn",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "ResponseElements is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "ResponseElements.assumedRoleUser.assumedRoleId",
+      "concept": "assumed_role_session_id",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "ResponseElements is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "ResponseElements.user.userName",
+      "concept": "created_user_name",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "ResponseElements is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "ResponseElements.accessKey.accessKeyId",
+      "concept": "created_access_key_id",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "ResponseElements is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "ResponseElements.ConsoleLogin",
+      "concept": "console_login_result",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "ResponseElements is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "AdditionalEventData.MFAUsed",
+      "concept": "console_mfa_used",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "AdditionalEventData is a JSON string on this table; parse_json() before reaching into it."
+    },
+    {
+      "platform": "sentinel",
+      "container": "AWSCloudTrail",
+      "column": "AdditionalEventData.LoginTo",
+      "concept": "console_login_to",
+      "encoding": "json_string",
+      "basis": "documented",
+      "basis_ref": "Azure Monitor Logs reference: AWSCloudTrail table (learn.microsoft.com), read 2026-09-17",
+      "note": "AdditionalEventData is a JSON string on this table; parse_json() before reaching into it."
+    }
+  ],
+  "hazards": {
+    "temp_creds": {
+      "level": "caution",
+      "text": "Temporary credentials (ASIA… keys) expire and are re-issued freely; the key alone does not identify a human. Follow the session's userIdentity.arn and, behind it, sessionIssuer.arn.",
+      "platform": {
+        "sentinel": {
+          "text": "Temporary credentials (ASIA… keys) expire and are re-issued freely; the key alone does not identify a human. Follow the session's PrincipalArn and, behind it, UserIdentity.sessionContext.sessionIssuer.arn."
+        }
+      }
+    },
+    "ip_may_be_service": {
+      "level": "note",
+      "text": "sourceIPAddress is a service DNS name (e.g. cloudformation.amazonaws.com) when an AWS service made the call on a principal's behalf. The 'from this IP' pivot then groups by that service, not a host.",
+      "platform": {
+        "sentinel": {
+          "text": "SourceIpAddress is a service DNS name (e.g. cloudformation.amazonaws.com) when an AWS service made the call on a principal's behalf. The pivot then groups by that service, not a host."
+        }
+      }
+    },
+    "ua_client_supplied": {
+      "level": "caution",
+      "text": "userAgent is set by the client and trivially spoofed. Use it to notice change, not to attribute."
+    },
+    "session_name_chosen": {
+      "level": "note",
+      "text": "The session name in an assumed-role ARN is chosen by the caller (roleSessionName). Conventions are informative; they are not authentication."
+    },
+    "time_basis": {
+      "level": "note",
+      "text": "Time bounds are on _time, which the TA sets from eventTime (when the call was made). Delivery lags by minutes; a short latest= can miss the newest records.",
+      "platform": {
+        "sentinel": {
+          "text": "Time bounds are on TimeGenerated, the connector's event time (replay time in the dev workspace). Ingestion lags event time by minutes; a tight upper bound can miss the newest rows."
+        }
+      }
+    },
+    "cross_account": {
+      "level": "note",
+      "text": "A cross-account action writes a record in both accounts; if only one account's trail reaches this index, you see half. sharedEventID ties the halves together."
+    },
+    "ip_shared": {
+      "level": "note",
+      "text": "One address is many people behind NAT, a proxy or a VPN egress. 'From this address' groups a network, not a person."
+    }
+  },
+  "edges": [
+    {
+      "id": "ct_principal_activity",
+      "kind": "actor",
+      "label": "Everything this principal did",
+      "src": {
+        "concept": "principal_arn"
+      },
+      "dst": {
+        "concept": "principal_arn"
+      },
+      "basis": "confirmed",
+      "basis_ref": "AWS CloudTrail record contents reference",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "time_basis"
+      ],
+      "note": "userIdentity.arn is the caller of every record; the same session ARN appears on every call that session made.",
+      "intent": {
+        "filter": [
+          {
+            "concept": "principal_arn",
+            "op": "eq",
+            "value": "$value"
+          },
+          {
+            "concept": "recipient_account_id",
+            "op": "eq",
+            "value": "$account",
+            "needs": [
+              "account"
+            ]
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "summary",
+          "by": [
+            "event_source",
+            "event_name"
+          ],
+          "measures": [
+            {
+              "fn": "count",
+              "as": "calls"
+            },
+            {
+              "fn": "count_where_exists",
+              "concept": "error_code",
+              "as": "failures"
+            },
+            {
+              "fn": "min_time",
+              "as": "first_seen"
+            },
+            {
+              "fn": "max_time",
+              "as": "last_seen"
+            },
+            {
+              "fn": "values",
+              "concept": "source_ip",
+              "as": "addresses",
+              "limit": 10
+            }
+          ],
+          "order": {
+            "by": "calls",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "ct_principal_calls",
+      "kind": "actor",
+      "label": "This principal's calls, in order",
+      "src": {
+        "concept": "principal_arn"
+      },
+      "dst": {
+        "concept": "principal_arn"
+      },
+      "basis": "confirmed",
+      "basis_ref": "AWS CloudTrail record contents reference",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "time_basis"
+      ],
+      "intent": {
+        "filter": [
+          {
+            "concept": "principal_arn",
+            "op": "eq",
+            "value": "$value"
+          },
+          {
+            "concept": "recipient_account_id",
+            "op": "eq",
+            "value": "$account",
+            "needs": [
+              "account"
+            ]
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "event_time",
+            "event_source",
+            "event_name",
+            "aws_region",
+            "source_ip",
+            "user_agent",
+            "error_code",
+            "request_id"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "ct_principal_failures",
+      "kind": "actor",
+      "label": "What this principal was refused",
+      "src": {
+        "concept": "principal_arn"
+      },
+      "dst": {
+        "concept": "error_code"
+      },
+      "basis": "confirmed",
+      "basis_ref": "AWS CloudTrail record contents reference",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "time_basis"
+      ],
+      "note": "A spread of AccessDenied across services from one principal is enumeration; the same eventName failing repeatedly is a broken automation.",
+      "intent": {
+        "filter": [
+          {
+            "concept": "principal_arn",
+            "op": "eq",
+            "value": "$value"
+          },
+          {
+            "concept": "error_code",
+            "op": "exists"
+          },
+          {
+            "concept": "recipient_account_id",
+            "op": "eq",
+            "value": "$account",
+            "needs": [
+              "account"
+            ]
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "summary",
+          "by": [
+            "error_code",
+            "event_name"
+          ],
+          "measures": [
+            {
+              "fn": "count",
+              "as": "refused"
+            },
+            {
+              "fn": "values",
+              "concept": "event_source",
+              "as": "services",
+              "limit": 10
+            },
+            {
+              "fn": "min_time",
+              "as": "first_seen"
+            },
+            {
+              "fn": "max_time",
+              "as": "last_seen"
+            }
+          ],
+          "order": {
+            "by": "refused",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "ct_assumed_role_session",
+      "kind": "actor",
+      "label": "What this assumed-role session did",
+      "src": {
+        "concept": "assumed_role_session_arn"
+      },
+      "dst": {
+        "concept": "principal_arn"
+      },
+      "basis": "confirmed",
+      "basis_ref": "AWS CloudTrail record contents reference: AssumeRole responseElements.assumedRoleUser.arn is the userIdentity.arn of the session's subsequent calls",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "session_name_chosen",
+        "time_basis"
+      ],
+      "note": "The AssumeRole response names the session ARN; every call the session then makes carries it as userIdentity.arn.",
+      "intent": {
+        "filter": [
+          {
+            "concept": "principal_arn",
+            "op": "eq",
+            "value": "$value"
+          },
+          {
+            "concept": "recipient_account_id",
+            "op": "eq",
+            "value": "$account",
+            "needs": [
+              "account"
+            ]
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "summary",
+          "by": [
+            "principal_arn"
+          ],
+          "measures": [
+            {
+              "fn": "count",
+              "as": "calls"
+            },
+            {
+              "fn": "min_time",
+              "as": "first_seen"
+            },
+            {
+              "fn": "max_time",
+              "as": "last_seen"
+            },
+            {
+              "fn": "dcount",
+              "concept": "event_name",
+              "as": "distinct_calls"
+            },
+            {
+              "fn": "values",
+              "concept": "event_source",
+              "as": "services"
+            },
+            {
+              "fn": "values",
+              "concept": "source_ip",
+              "as": "src_ips"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ct_tempkey_use",
+      "kind": "credential",
+      "label": "Later calls made with this temporary key",
+      "src": {
+        "concept": "issued_temp_key_id"
+      },
+      "dst": {
+        "concept": "access_key_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "AWS CloudTrail record contents reference: credentials.accessKeyId issued by STS is the userIdentity.accessKeyId of the calls signed with it",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "temp_creds",
+        "time_basis"
+      ],
+      "intent": {
+        "filter": [
+          {
+            "concept": "access_key_id",
+            "op": "eq",
+            "value": "$value"
+          },
+          {
+            "concept": "recipient_account_id",
+            "op": "eq",
+            "value": "$account",
+            "needs": [
+              "account"
+            ]
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "event_time",
+            "event_source",
+            "event_name",
+            "principal_arn",
+            "source_ip",
+            "user_agent",
+            "error_code",
+            "request_id"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "ct_accesskey_use",
+      "kind": "credential",
+      "label": "Calls signed with this access key",
+      "src": {
+        "concept": "access_key_id"
+      },
+      "dst": {
+        "concept": "access_key_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "AWS CloudTrail record contents reference",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "temp_creds",
+        "time_basis"
+      ],
+      "note": "For an AKIA key: a new source IP or user agent against a long-stable baseline is the stolen-key signature.",
+      "intent": {
+        "filter": [
+          {
+            "concept": "access_key_id",
+            "op": "eq",
+            "value": "$value"
+          },
+          {
+            "concept": "recipient_account_id",
+            "op": "eq",
+            "value": "$account",
+            "needs": [
+              "account"
+            ]
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "summary",
+          "by": [
+            "access_key_id"
+          ],
+          "measures": [
+            {
+              "fn": "count",
+              "as": "calls"
+            },
+            {
+              "fn": "min_time",
+              "as": "first_seen"
+            },
+            {
+              "fn": "max_time",
+              "as": "last_seen"
+            },
+            {
+              "fn": "values",
+              "concept": "principal_arn",
+              "as": "principals"
+            },
+            {
+              "fn": "values",
+              "concept": "source_ip",
+              "as": "src_ips"
+            },
+            {
+              "fn": "values",
+              "concept": "user_agent",
+              "as": "user_agents"
+            },
+            {
+              "fn": "dcount",
+              "concept": "event_name",
+              "as": "distinct_calls"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ct_key_issued",
+      "kind": "credential",
+      "label": "Where this temporary key came from",
+      "src": {
+        "concept": "access_key_id"
+      },
+      "dst": {
+        "concept": "issued_temp_key_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "AWS CloudTrail record contents reference",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "temp_creds"
+      ],
+      "note": "Only for ASIA… keys: the AssumeRole / GetSessionToken / GetFederationToken call that issued it, and who made that call.",
+      "intent": {
+        "filter": [
+          {
+            "concept": "issued_temp_key_id",
+            "op": "eq",
+            "value": "$value"
+          },
+          {
+            "concept": "recipient_account_id",
+            "op": "eq",
+            "value": "$account",
+            "needs": [
+              "account"
+            ]
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "event_name",
+            "principal_arn",
+            "identity_type",
+            "requested_role_arn",
+            "role_session_name",
+            "source_ip",
+            "issued_credential_expiration"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "ct_role_assumers",
+      "kind": "actor",
+      "label": "Who assumed this role",
+      "src": {
+        "concept": "session_issuer_arn"
+      },
+      "dst": {
+        "concept": "requested_role_arn"
+      },
+      "basis": "confirmed",
+      "basis_ref": "AWS CloudTrail record contents reference: AssumeRole requestParameters.roleArn is the role that becomes sessionIssuer.arn",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "session_name_chosen",
+        "time_basis"
+      ],
+      "note": "The session issuer's ARN is the role; AssumeRole records with that role as requestParameters.roleArn are its assumptions.",
+      "intent": {
+        "filter": [
+          {
+            "concept": "requested_role_arn",
+            "op": "eq",
+            "value": "$value"
+          },
+          {
+            "concept": "recipient_account_id",
+            "op": "eq",
+            "value": "$account",
+            "needs": [
+              "account"
+            ]
+          }
+        ],
+        "record_types": [
+          "AssumeRole"
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "summary",
+          "by": [
+            "principal_arn",
+            "identity_type"
+          ],
+          "measures": [
+            {
+              "fn": "count",
+              "as": "calls"
+            },
+            {
+              "fn": "min_time",
+              "as": "first_seen"
+            },
+            {
+              "fn": "max_time",
+              "as": "last_seen"
+            },
+            {
+              "fn": "values",
+              "concept": "role_session_name",
+              "as": "session_names"
+            },
+            {
+              "fn": "values",
+              "concept": "source_ip",
+              "as": "src_ips"
+            },
+            {
+              "fn": "values",
+              "concept": "error_code",
+              "as": "errors"
+            }
+          ],
+          "order": {
+            "by": "calls",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "ct_source_ip",
+      "kind": "origin",
+      "label": "Everything from this source address",
+      "src": {
+        "concept": "source_ip"
+      },
+      "dst": {
+        "concept": "source_ip"
+      },
+      "basis": "confirmed",
+      "basis_ref": "AWS CloudTrail record contents reference",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "ip_may_be_service",
+        "time_basis"
+      ],
+      "intent": {
+        "filter": [
+          {
+            "concept": "source_ip",
+            "op": "eq",
+            "value": "$value"
+          },
+          {
+            "concept": "recipient_account_id",
+            "op": "eq",
+            "value": "$account",
+            "needs": [
+              "account"
+            ]
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "summary",
+          "by": [
+            "principal_arn"
+          ],
+          "measures": [
+            {
+              "fn": "count",
+              "as": "calls"
+            },
+            {
+              "fn": "dcount",
+              "concept": "event_name",
+              "as": "distinct_calls"
+            },
+            {
+              "fn": "min_time",
+              "as": "first_seen"
+            },
+            {
+              "fn": "max_time",
+              "as": "last_seen"
+            },
+            {
+              "fn": "values",
+              "concept": "event_source",
+              "as": "services",
+              "limit": 10
+            },
+            {
+              "fn": "values",
+              "concept": "user_agent",
+              "as": "user_agents",
+              "limit": 10
+            },
+            {
+              "fn": "values",
+              "concept": "error_code",
+              "as": "errors",
+              "limit": 10
+            }
+          ],
+          "order": {
+            "by": "calls",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "ct_user_agent",
+      "kind": "origin",
+      "label": "Principals using this client",
+      "src": {
+        "concept": "user_agent"
+      },
+      "dst": {
+        "concept": "user_agent"
+      },
+      "basis": "asserted",
+      "basis_ref": "Client-supplied header; grouping by it is a baseline, not an identity",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "ua_client_supplied",
+        "time_basis"
+      ],
+      "note": "userAgent is client-supplied.",
+      "intent": {
+        "filter": [
+          {
+            "concept": "user_agent",
+            "op": "eq",
+            "value": "$value"
+          },
+          {
+            "concept": "recipient_account_id",
+            "op": "eq",
+            "value": "$account",
+            "needs": [
+              "account"
+            ]
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "summary",
+          "by": [
+            "principal_arn"
+          ],
+          "measures": [
+            {
+              "fn": "count",
+              "as": "calls"
+            },
+            {
+              "fn": "min_time",
+              "as": "first_seen"
+            },
+            {
+              "fn": "max_time",
+              "as": "last_seen"
+            },
+            {
+              "fn": "values",
+              "concept": "source_ip",
+              "as": "src_ips",
+              "limit": 10
+            },
+            {
+              "fn": "dcount",
+              "concept": "event_name",
+              "as": "distinct_calls"
+            }
+          ],
+          "order": {
+            "by": "calls",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "ct_request",
+      "kind": "record",
+      "label": "Every record of this request",
+      "src": {
+        "concept": "request_id"
+      },
+      "dst": {
+        "concept": "request_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "AWS CloudTrail record contents reference",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "cross_account",
+        "time_basis"
+      ],
+      "intent": {
+        "filter": [
+          {
+            "concept": "request_id",
+            "op": "eq",
+            "value": "$value"
+          },
+          {
+            "concept": "recipient_account_id",
+            "op": "eq",
+            "value": "$account",
+            "needs": [
+              "account"
+            ]
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "event_time",
+            "recipient_account_id",
+            "event_source",
+            "event_name",
+            "principal_arn",
+            "shared_event_id",
+            "error_code",
+            "event_id",
+            "request_parameters",
+            "response_elements"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "asc"
+          }
+        }
+      }
+    },
+    {
+      "id": "ct_shared_event",
+      "kind": "record",
+      "label": "The other side of this cross-account event",
+      "src": {
+        "concept": "shared_event_id"
+      },
+      "dst": {
+        "concept": "shared_event_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "AWS CloudTrail record contents reference",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "cross_account"
+      ],
+      "intent": {
+        "filter": [
+          {
+            "concept": "shared_event_id",
+            "op": "eq",
+            "value": "$value"
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "recipient_account_id",
+            "caller_account_id",
+            "event_source",
+            "event_name",
+            "principal_arn",
+            "error_code",
+            "request_id",
+            "event_id"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "asc"
+          }
+        }
+      }
+    },
+    {
+      "id": "ct_console_logins",
+      "kind": "auth",
+      "label": "This principal's console sign-ins",
+      "src": {
+        "concept": "principal_arn"
+      },
+      "dst": {
+        "concept": "principal_arn"
+      },
+      "basis": "confirmed",
+      "basis_ref": "AWS CloudTrail record contents reference: ConsoleLogin is recorded by signin.amazonaws.com with the outcome in responseElements.ConsoleLogin",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "time_basis"
+      ],
+      "intent": {
+        "filter": [
+          {
+            "concept": "principal_arn",
+            "op": "eq",
+            "value": "$value"
+          },
+          {
+            "concept": "recipient_account_id",
+            "op": "eq",
+            "value": "$account",
+            "needs": [
+              "account"
+            ]
+          }
+        ],
+        "record_types": [
+          "ConsoleLogin"
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "event_time",
+            "console_login_result",
+            "console_mfa_used",
+            "source_ip",
+            "user_agent",
+            "error_message"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "ct_resource_touched",
+      "kind": "target",
+      "label": "Everything that touched this resource",
+      "src": {
+        "concept": "resource_arn"
+      },
+      "dst": {
+        "concept": "resource_arn"
+      },
+      "basis": "confirmed",
+      "basis_ref": "AWS CloudTrail record contents reference: resources is filled by services that report it (IAM, KMS, Lambda, S3 buckets); others leave it empty",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "time_basis"
+      ],
+      "note": "Only services that fill in resources{} are covered; EC2 largely does not.",
+      "intent": {
+        "filter": [
+          {
+            "concept": "resource_arn",
+            "op": "eq",
+            "value": "$value"
+          },
+          {
+            "concept": "recipient_account_id",
+            "op": "eq",
+            "value": "$account",
+            "needs": [
+              "account"
+            ]
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "summary",
+          "by": [
+            "principal_arn"
+          ],
+          "measures": [
+            {
+              "fn": "count",
+              "as": "calls"
+            },
+            {
+              "fn": "min_time",
+              "as": "first_seen"
+            },
+            {
+              "fn": "max_time",
+              "as": "last_seen"
+            },
+            {
+              "fn": "values",
+              "concept": "event_name",
+              "as": "operations"
+            },
+            {
+              "fn": "values",
+              "concept": "error_code",
+              "as": "errors"
+            }
+          ],
+          "order": {
+            "by": "last_seen",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "ct_iam_target_user",
+      "kind": "target",
+      "label": "Everything done to this IAM user",
+      "src": {
+        "concept": "target_user_name"
+      },
+      "dst": {
+        "concept": "target_user_name"
+      },
+      "basis": "confirmed",
+      "basis_ref": "AWS CloudTrail record contents reference",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "time_basis"
+      ],
+      "note": "The user as a target: created, keys issued, policies attached, deleted. Their own activity is under userIdentity.userName / userIdentity.arn.",
+      "intent": {
+        "filter": [
+          {
+            "concept": "event_source",
+            "op": "eq",
+            "value": "iam.amazonaws.com"
+          },
+          {
+            "concept": "target_user_name",
+            "op": "eq",
+            "value": "$value"
+          },
+          {
+            "concept": "recipient_account_id",
+            "op": "eq",
+            "value": "$account",
+            "needs": [
+              "account"
+            ]
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "event_name",
+            "principal_arn",
+            "policy_arn",
+            "error_code",
+            "source_ip",
+            "response_elements"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "ct_key_created_use",
+      "kind": "credential",
+      "label": "Calls later signed with the key this call created",
+      "src": {
+        "concept": "created_access_key_id"
+      },
+      "dst": {
+        "concept": "access_key_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "CloudTrail: CreateAccessKey responseElements.accessKey.accessKeyId is the userIdentity.accessKeyId of calls that follow",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [],
+      "note": "The key CreateAccessKey handed out, then used.",
+      "intent": {
+        "filter": [
+          {
+            "concept": "access_key_id",
+            "op": "eq",
+            "value": "$value"
+          }
+        ],
+        "window": {
+          "since": "$earliest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "event_source",
+            "event_name",
+            "principal_arn",
+            "source_ip",
+            "error_code"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "asc"
+          }
+        }
+      }
+    },
+    {
+      "id": "ct_ip_elsewhere",
+      "kind": "source",
+      "label": "This address in other feeds",
+      "src": {
+        "concept": "source_ip"
+      },
+      "dst": {
+        "type": "source_ip"
+      },
+      "basis": "asserted",
+      "basis_ref": "Same address string; a NAT or proxy can put many people behind it",
+      "cardinality": "n:m",
+      "scope": [],
+      "hazards": [
+        "ip_shared",
+        "ip_may_be_service"
+      ],
+      "note": "Sign-ins and API calls from the same address are a lead, not a link.",
+      "intent": {
+        "scope": "type",
+        "filter": [
+          {
+            "concept": "source_ip",
+            "op": "eq",
+            "value": "$value"
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "event_name",
+            "principal_arn",
+            "error_code",
+            "user_agent"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "desc"
+          },
+          "take": 200
+        }
+      }
+    }
+  ],
+  "templates": [],
+  "workflows": [
+    {
+      "id": "ct_principal",
+      "title": "I have a principal and need everything it did",
+      "kicker": "userIdentity.arn → its calls, refusals and console sign-ins",
+      "entries": [
+        {
+          "concept": "principal_arn",
+          "param": "arn"
+        },
+        {
+          "concept": "cim_user_arn",
+          "param": "arn"
+        },
+        {
+          "concept": "assumed_role_session_arn",
+          "param": "arn"
+        }
+      ],
+      "when": "You are holding an ARN, from a GuardDuty finding, an access-key alert, a ticket, or another CloudTrail event, and you need what that identity did across the account.",
+      "lead": "CloudTrail names the caller in userIdentity.arn on every record. For an assumed role that ARN is the session (arn:aws:sts::…:assumed-role/<role>/<session>), so the same human shows up under a fresh ARN each time they assume; the role itself is in userIdentity.sessionContext.sessionIssuer.arn. Start from the ARN you have, then widen to the issuer if the picture is thin.",
+      "steps": [
+        {
+          "title": "The principal ARN",
+          "why": "The join key on every record. Paste it exactly: ARNs are case-sensitive and a trailing session name is part of the value.",
+          "required": true,
+          "names": [
+            "arn"
+          ]
+        },
+        {
+          "title": "Which window?",
+          "why": "On _time, which the TA sets from eventTime. Delivery lags eventTime by minutes; a window ending at now can miss the last few calls. Name the index CloudTrail lands in, or leave it for the paste to take every index.",
+          "required": true,
+          "names": [
+            "earliest",
+            "latest",
+            "index"
+          ],
+          "optional": [
+            "latest",
+            "index"
+          ]
+        },
+        {
+          "title": "Which account, if you know it",
+          "why": "recipientAccountId. Cross-account calls land in both accounts' trails; naming one keeps the timeline to that side.",
+          "required": false,
+          "names": [
+            "account"
+          ],
+          "optional": [
+            "account"
+          ]
+        }
+      ],
+      "expect": "One row per API call: eventTime, eventSource, eventName, the request parameters, the source address and user agent, and errorCode when it was refused. Refusals (AccessDenied, UnauthorizedOperation) are the enumeration signal; console sign-ins are separate events on signin.amazonaws.com.",
+      "disambiguate": [
+        "Calls with a service in sourceIPAddress (cloudformation.amazonaws.com, …) were made by AWS on the principal's behalf, not from the principal's machine.",
+        "An assumed-role ARN with a different session name is a different session of the same role: pivot to the issuer ARN to see them all.",
+        "userIdentity.invokedBy names the service that made the call for a user; those are not interactive."
+      ],
+      "troubleshooting": [
+        {
+          "symptom": "Nothing comes back",
+          "causes": [
+            "The ARN is a session ARN and the session has expired: search the role's sessionIssuer.arn instead.",
+            "The trail may not deliver to this index for that region or account.",
+            "Data events (S3 object, Lambda invoke) are only in the trail if it records them."
+          ]
+        },
+        {
+          "symptom": "Too much",
+          "causes": [
+            "Start with the refusals result: it is smaller and usually the interesting part.",
+            "Bind the account."
+          ]
+        }
+      ],
+      "results": [
+        {
+          "id": "activity",
+          "label": "Everything this principal did",
+          "note": "Every record where userIdentity.arn is this value, in the window.",
+          "edge": "ct_principal_activity",
+          "params": {
+            "value": "$arn",
+            "earliest": "$earliest",
+            "latest": "$latest",
+            "account": "$account",
+            "index": "$index"
+          }
+        },
+        {
+          "id": "calls",
+          "label": "Its calls, in order",
+          "note": "The same records as a timeline of eventName by eventSource.",
+          "edge": "ct_principal_calls",
+          "params": {
+            "value": "$arn",
+            "earliest": "$earliest",
+            "latest": "$latest",
+            "account": "$account",
+            "index": "$index"
+          }
+        },
+        {
+          "id": "refused",
+          "label": "What it was refused",
+          "note": "Only records with an errorCode: enumeration and privilege probing look like this.",
+          "edge": "ct_principal_failures",
+          "params": {
+            "value": "$arn",
+            "earliest": "$earliest",
+            "latest": "$latest",
+            "account": "$account",
+            "index": "$index"
+          }
+        },
+        {
+          "id": "logins",
+          "label": "Its console sign-ins",
+          "note": "ConsoleLogin events for this principal: where from, with MFA or not.",
+          "edge": "ct_console_logins",
+          "params": {
+            "value": "$arn",
+            "earliest": "$earliest",
+            "latest": "$latest",
+            "account": "$account",
+            "index": "$index"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ct_key",
+      "title": "I have an access key and need who used it and where it came from",
+      "kicker": "accessKeyId → the calls it signed, and the AssumeRole that issued it",
+      "entries": [
+        {
+          "concept": "access_key_id",
+          "param": "key"
+        },
+        {
+          "concept": "issued_temp_key_id",
+          "param": "key"
+        }
+      ],
+      "when": "A key id turned up, in a leaked-credential alert, a GuardDuty finding, a repository scan, and you need to know whether it was used and by whom.",
+      "lead": "Every signed call carries the key in userIdentity.accessKeyId. A temporary key (ASIA…) was minted by an AssumeRole, GetSessionToken or a federation call whose response carries it in responseElements.credentials.accessKeyId: that record says who obtained it and from where. A long-lived key (AKIA…) belongs to an IAM user and has no issuing event.",
+      "steps": [
+        {
+          "title": "The access key id",
+          "why": "The join key. The prefix tells you the kind: ASIA temporary, AKIA long-lived.",
+          "required": true,
+          "names": [
+            "key"
+          ]
+        },
+        {
+          "title": "Which window?",
+          "why": "Temporary keys live an hour to twelve; start with a day around the alert and widen backwards for the issuing call. Name the index CloudTrail lands in, or leave it for the paste to take every index.",
+          "required": true,
+          "names": [
+            "earliest",
+            "latest",
+            "index"
+          ],
+          "optional": [
+            "latest",
+            "index"
+          ]
+        }
+      ],
+      "expect": "The use result is one row per call signed with the key. The issue result is the single STS call that minted it, when it is a temporary key and the window reaches back to it: the caller and source address there are the origin of the session.",
+      "disambiguate": [
+        "Calls from a new source address or user agent with a key that was previously used from one place are the classic leak signature.",
+        "An AKIA key with no results in the window is not proof it is unused: widen the window; CloudTrail keeps 90 days in the console, longer in Splunk."
+      ],
+      "troubleshooting": [
+        {
+          "symptom": "The issuing call is missing",
+          "causes": [
+            "The window does not reach back to the AssumeRole.",
+            "Keys from GetFederationToken or console federation are issued by different APIs: the same edge still finds them if the window covers it."
+          ]
+        }
+      ],
+      "results": [
+        {
+          "id": "use",
+          "label": "Calls signed with this key",
+          "note": "userIdentity.accessKeyId is this value.",
+          "edge": "ct_accesskey_use",
+          "params": {
+            "value": "$key",
+            "earliest": "$earliest",
+            "latest": "$latest",
+            "index": "$index"
+          }
+        },
+        {
+          "id": "issued",
+          "label": "Where the key came from",
+          "note": "The call whose responseElements.credentials.accessKeyId is this value.",
+          "edge": "ct_key_issued",
+          "params": {
+            "value": "$key",
+            "earliest": "$earliest",
+            "latest": "$latest",
+            "index": "$index"
+          }
+        }
+      ],
+      "chain": {
+        "workflow": "ct_principal",
+        "text": "Carry the principal the issuing call names into “everything this principal did”",
+        "why": "The key is one session; the principal is the identity behind it. Once the issuing record names who assumed the role, that ARN is the one to follow.",
+        "carry": {
+          "arn": "$arn",
+          "earliest": "$earliest",
+          "latest": "$latest"
+        }
+      }
+    },
+    {
+      "id": "ct_source",
+      "title": "I have a source address and need what it did in the account",
+      "kicker": "sourceIPAddress → every call from it, then the principals behind them",
+      "entries": [
+        {
+          "concept": "source_ip",
+          "param": "ip"
+        }
+      ],
+      "when": "An IP from threat intel, a firewall log or another account's trail, and you need to know whether it touched this account.",
+      "lead": "sourceIPAddress is the address the API request came from, or an AWS service name when a service made the call on someone's behalf. A single address can carry many principals (a VPN egress, a CI runner); the useful next step is almost always the principal set, not the call list.",
+      "steps": [
+        {
+          "title": "The address",
+          "why": "Exact match on sourceIPAddress. CIDR needs a different search: narrow to an address first.",
+          "required": true,
+          "names": [
+            "ip"
+          ]
+        },
+        {
+          "title": "Which window?",
+          "why": "On _time. Widen backwards: the first call from a new address is usually the interesting one. Name the index CloudTrail lands in, or leave it for the paste to take every index.",
+          "required": true,
+          "names": [
+            "earliest",
+            "latest",
+            "index"
+          ],
+          "optional": [
+            "latest",
+            "index"
+          ]
+        }
+      ],
+      "expect": "One row per call from the address with the principal, the operation and whether it was refused. Group by userIdentity.arn to see how many identities used it.",
+      "disambiguate": [
+        "A service name in the field is AWS calling for a principal: the principal's real source is on the call that triggered it.",
+        "Refusals from an address that also has successes are normal for automation probing permissions; refusals only is the enumeration shape."
+      ],
+      "troubleshooting": [
+        {
+          "symptom": "Nothing comes back",
+          "causes": [
+            "The address may have been NAT'd: CloudTrail records the public source.",
+            "IPv6 addresses are recorded in full, uncompressed form in some regions."
+          ]
+        }
+      ],
+      "results": [
+        {
+          "id": "calls",
+          "label": "Everything from this source address",
+          "note": "sourceIPAddress is this value.",
+          "edge": "ct_source_ip",
+          "params": {
+            "value": "$ip",
+            "earliest": "$earliest",
+            "latest": "$latest",
+            "index": "$index"
+          }
+        }
+      ],
+      "chain": {
+        "workflow": "ct_principal",
+        "text": "Carry a principal from the results into “everything this principal did”",
+        "why": "The address is where; the ARN is who. Once one identity from this address stands out, follow it.",
+        "carry": {
+          "arn": "$arn",
+          "earliest": "$earliest",
+          "latest": "$latest"
+        }
+      }
+    }
+  ]
+}

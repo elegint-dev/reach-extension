@@ -1,0 +1,3145 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "crowdstrike-falcon",
+  "name": "CrowdStrike Falcon sensor telemetry",
+  "pack_version": "0.2.0",
+  "description": "Falcon sensor events as one feed: the process, file, user and host keys that recur across event types, written once for the Splunk FDR sourcetype and the dev sample table, with the add-on's full per-event field catalogue, its join graph and the guided workflows as the pack's fields sidecar on Splunk.",
+  "source": "CrowdStrike Falcon Data Replicator field reference; Splunk Add-on for CrowdStrike FDR; curated notes written for the Reach sample table",
+  "params": {
+    "earliest": {
+      "label": "earliest",
+      "placeholder": "-24h",
+      "hint": "Relative (-24h, -7d@d, now), an epoch, or an ISO stamp (2022-07-27T10:40:00; with Z or an offset it is taken as that instant). Index time (_time), not the sensor's timestamp.",
+      "platform": {
+        "sentinel": {
+          "label": "since",
+          "hint": "On TimeGenerated (replay time for these samples, the connector's event time in production). SourceEventTime keeps the capture's own timestamp."
+        }
+      }
+    },
+    "latest": {
+      "label": "latest",
+      "placeholder": "now",
+      "hint": "Relative (-24h, -7d@d, now), an epoch, or an ISO stamp (2022-07-27T10:40:00; with Z or an offset it is taken as that instant). Index time (_time), not the sensor's timestamp.",
+      "platform": {
+        "sentinel": {
+          "label": "until",
+          "hint": "Optional. Ingestion lags event time by minutes; a tight bound can miss the newest rows."
+        }
+      }
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the observable you are holding"
+    },
+    "aid": {
+      "label": "aid",
+      "placeholder": "32-hex sensor id",
+      "hint": "The host. Process IDs are per host, and ComputerName is not stable; Aid is.",
+      "from_concept": "aid"
+    },
+    "window": {
+      "label": "window",
+      "placeholder": "-7d",
+      "hint": "How far back the hunt looks, relative to now (-7d, -30d, -24h). Left empty it is seven days; the saved search keeps whichever you set.",
+      "platform": {
+        "sentinel": {
+          "hint": "How far back the hunt looks on TimeGenerated (-7d, -30d, -24h). Left empty it is seven days; the analytics rule keeps whichever you set."
+        }
+      }
+    },
+    "pid": {
+      "label": "RawProcessId",
+      "placeholder": "4820",
+      "from_field": "RawProcessId"
+    },
+    "tpid": {
+      "label": "TargetProcessId",
+      "placeholder": "1234567890123456789",
+      "from_field": "TargetProcessId"
+    },
+    "hostname": {
+      "label": "ComputerName",
+      "placeholder": "WKSTN-0042",
+      "from_field": "ComputerName"
+    },
+    "field": {
+      "label": "field",
+      "placeholder": "ImageFileName"
+    },
+    "sha256": {
+      "label": "SHA256String",
+      "placeholder": "64 hex characters",
+      "from_field": "SHA256String"
+    },
+    "processid": {
+      "label": "ProcessId (from the detection)",
+      "placeholder": "the detection's PID"
+    }
+  },
+  "feed": {
+    "id": "falcon_sensor",
+    "label": "Falcon sensor telemetry",
+    "description": "CrowdStrike Falcon sensor telemetry, one row per sensor event; EventSimpleName says which kind (ProcessRollup2 for a process start, DmpFileWritten for a memory dump landing on disk…).",
+    "tags": [
+      "endpoint",
+      "crowdstrike",
+      "edr"
+    ],
+    "discriminator": "event_simple_name"
+  },
+  "concepts": {
+    "event_time": {
+      "label": "Sensor event time",
+      "type": "event_time",
+      "description": "The sensor's own timestamp for the event (the capture's `timestamp`, epoch milliseconds). TimeGenerated is replay time in this dev workspace.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ]
+    },
+    "event_simple_name": {
+      "label": "Event simple name",
+      "type": "record_type",
+      "description": "Which kind of sensor event this row is: ProcessRollup2 (process start), SyntheticProcessRollup2, ProcessHandleOpDetectInfo (a handle opened on a process; LSASS access lands here), DmpFileWritten (a memory dump written to disk), FileDeleteInfo. Which other columns are filled depends on it.",
+      "role": "enum",
+      "decode": {
+        "lookup": "falcon-event-simple-name",
+        "meaning_field": "event",
+        "values": {
+          "ProcessRollup2": "A process started (the sensor's one-per-process summary event)",
+          "SyntheticProcessRollup2": "A process the sensor learned about after it started (already running at sensor start, or reconstructed)",
+          "ProcessHandleOpDetectInfo": "A process opened a handle on another process; access to LSASS lands here",
+          "DmpFileWritten": "A memory-dump file was written to disk",
+          "FileDeleteInfo": "A file was deleted"
+        }
+      }
+    },
+    "aid": {
+      "label": "Agent id (aid)",
+      "type": "host_id",
+      "description": "Agent id: the sensor's 32-hex identifier for the host. The only stable host key; hostnames repeat and change, aid does not. Every per-host pivot scopes on it.",
+      "role": "agent_id"
+    },
+    "aip": {
+      "label": "Sensor egress IP (aip)",
+      "type": "source_ip",
+      "description": "The sensor's public IP as seen by the CrowdStrike cloud at the time of the event: the egress address, not the host's interface.",
+      "role": "ip"
+    },
+    "event_platform": {
+      "label": "Event platform",
+      "type": "enum",
+      "description": "Operating system family of the sensor: Win, Mac or Lin. Decides which process-id conventions and file paths apply.",
+      "role": "enum",
+      "decode": {
+        "lookup": "falcon-event-platform",
+        "meaning_field": "platform",
+        "values": {
+          "Win": "Windows sensor",
+          "Mac": "macOS sensor",
+          "Lin": "Linux sensor"
+        }
+      }
+    },
+    "computer_name": {
+      "label": "Computer name",
+      "type": "hostname",
+      "description": "The host's name as the sensor reports it. Not stable (renames, reimaging, duplicates across domains); scope on Aid and show this.",
+      "role": "hostname",
+      "hazards": [
+        "hostname_unstable"
+      ]
+    },
+    "user_sid": {
+      "label": "User SID",
+      "type": "user_id",
+      "description": "Windows SID of the account the process ran as. Stable per account; UserName is not.",
+      "role": "user_id"
+    },
+    "user_name": {
+      "label": "User name",
+      "type": "user_name",
+      "description": "Account name the process ran as, without domain. Ambiguous across domains; pair with UserSid.",
+      "role": "user_id",
+      "sensitivity": "pii"
+    },
+    "raw_process_id": {
+      "label": "Raw process id",
+      "type": "process_id",
+      "description": "The OS process id (what Task Manager and ps show). Recycled by the OS: safe only together with Aid and a time window.",
+      "role": "pid",
+      "hazards": [
+        "pid_recycling"
+      ]
+    },
+    "target_process_id": {
+      "label": "Target process id",
+      "type": "process_uid",
+      "description": "The sensor's own id for the process this event is about. Unique per sensor session, never recycled the way RawProcessId is. The process handle other events point at (ParentProcessId, ContextProcessId).",
+      "role": "pid"
+    },
+    "parent_process_id": {
+      "label": "Parent process id",
+      "type": "process_uid",
+      "description": "The TargetProcessId of the parent process. Follow it up the tree; search it as TargetProcessId to find the parent's own ProcessRollup2.",
+      "role": "pid"
+    },
+    "source_process_id": {
+      "label": "Source process id",
+      "type": "process_uid",
+      "description": "On a ProcessHandleOpDetectInfo, the TargetProcessId of the process that opened the handle, the accessor, not the accessed. For LSASS access this is the suspect.",
+      "role": "pid"
+    },
+    "context_process_id": {
+      "label": "Context process id",
+      "type": "process_uid",
+      "description": "The TargetProcessId of the process in whose context the event happened (the writer of a file, the opener of a handle).",
+      "role": "pid"
+    },
+    "context_thread_id": {
+      "label": "Context thread id",
+      "type": "identifier",
+      "description": "The sensor's id for the thread the event happened on.",
+      "role": "identifier"
+    },
+    "process_start_time": {
+      "label": "Process start time",
+      "type": "event_time",
+      "description": "Process start, epoch seconds with fraction. Sensor clock.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ]
+    },
+    "process_end_time": {
+      "label": "Process end time",
+      "type": "event_time",
+      "description": "Process end, epoch seconds; 0 or empty while the process is alive.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ]
+    },
+    "image_file_name": {
+      "label": "Image file name",
+      "type": "file_path",
+      "description": "Full path of the executable image. Windows paths appear as \\Device\\HarddiskVolumeN\\… rather than a drive letter.",
+      "role": "file_path"
+    },
+    "command_line": {
+      "label": "Command line",
+      "type": "command_line",
+      "description": "The full command line the process started with. Where the technique shows: rundll32 comsvcs.dll MiniDump, procdump -ma lsass, sekurlsa….",
+      "role": "other",
+      "sensitivity": "confidential"
+    },
+    "parent_base_file_name": {
+      "label": "Parent base file name",
+      "type": "file_name",
+      "description": "Base name of the parent's image (cmd.exe, powershell.exe).",
+      "role": "file_name"
+    },
+    "grand_parent_base_file_name": {
+      "label": "Grand parent base file name",
+      "type": "file_name",
+      "description": "Base name of the grandparent's image.",
+      "role": "file_name"
+    },
+    "sha256": {
+      "label": "SHA-256",
+      "type": "file_hash",
+      "description": "SHA-256 of the image file. The key for 'everywhere this binary ran' across hosts; renamed binaries keep it.",
+      "role": "hash"
+    },
+    "sha1": {
+      "label": "SHA-1",
+      "type": "file_hash",
+      "description": "SHA-1 of the image file.",
+      "role": "hash"
+    },
+    "md5": {
+      "label": "MD5",
+      "type": "file_hash",
+      "description": "MD5 of the image file.",
+      "role": "hash"
+    },
+    "integrity_level": {
+      "label": "Integrity level",
+      "type": "enum",
+      "description": "Windows integrity level of the process as a number (0x1000 low, 0x2000 medium, 0x3000 high, 0x4000 system).",
+      "role": "enum",
+      "decode": {
+        "lookup": "windows-integrity-level",
+        "meaning_field": "level",
+        "values": {
+          "0": "Untrusted",
+          "4096": "Low",
+          "8192": "Medium",
+          "12288": "High (elevated)",
+          "16384": "System"
+        }
+      }
+    },
+    "window_title": {
+      "label": "Window title",
+      "type": "text",
+      "description": "Title of the process's main window, when it had one.",
+      "role": "other"
+    },
+    "file_name": {
+      "label": "File name",
+      "type": "file_path",
+      "description": "On file events, the path of the file the event is about.",
+      "role": "file_path"
+    },
+    "target_file_name": {
+      "label": "Target file name",
+      "type": "file_path",
+      "description": "On DmpFileWritten and FileDeleteInfo, the full path of the file written or deleted, the dump file's location.",
+      "role": "file_path"
+    },
+    "signing_id": {
+      "label": "Signing id",
+      "type": "signing_id",
+      "description": "The identifier in the image's code signature (macOS: reverse-DNS, com.apple.contactsd). Chosen by the signer; the corpus check (app/lib/known.js) is what says whether this id, at this path, with this hash, is the platform binary it claims to be.",
+      "role": "identifier",
+      "hazards": [
+        "signer_chosen"
+      ]
+    },
+    "team_id": {
+      "label": "Team id",
+      "type": "team_id",
+      "description": "The Apple developer team whose certificate signed the image. Falcon writes '-' for Apple's own platform binaries, which carry no team: a team id on a com.apple.* signing id is the disagreement the known-good verdict flags.",
+      "role": "identifier"
+    },
+    "code_signing_flags": {
+      "label": "Code signing flags",
+      "type": "bitmask",
+      "description": "The kernel's code-signing status bits for the process (cs_blobs.h CS_* flags) as one integer: CS_VALID 0x1, CS_HARD 0x100, CS_KILL 0x200, CS_RESTRICT 0x800, CS_ENTITLEMENTS_VALIDATED 0x4000, CS_RUNTIME 0x10000, CS_DYLD_PLATFORM 0x2000000, CS_PLATFORM_BINARY 0x4000000, CS_SIGNED 0x20000000. Test by mask; the Splunk TA also lists the set names in CodeSigningFlags_meaning.",
+      "role": "other"
+    },
+    "cs_validation_category": {
+      "label": "Code-signing validation category",
+      "type": "enum",
+      "description": "Falcon's own category for how the image's signature validated, a small integer. Apple platform binaries in the dev capture carry 1; the Falcon sensor's own signed app carries 6. The vendor's event data dictionary holds the full table; no decode is bundled.",
+      "role": "enum"
+    },
+    "template_disposition": {
+      "label": "Template disposition",
+      "type": "enum",
+      "description": "What the sensor did about the detection template that fired on this event: nothing, analysis only, an indicator, a detection, an operation block, a prevention, or a prevention that also killed the parent. 30 (PREVENT) means the sensor stopped the action.",
+      "role": "enum",
+      "tags": [
+        "detection"
+      ],
+      "provenance": "documented",
+      "cite": {
+        "url": "https://splunkbase.splunk.com/app/5082",
+        "title": "Splunk Add-on for CrowdStrike FDR, lookup crowdstrike_TemplateDisposition.csv (the Falcon event dictionary's table; the vendor page sits behind the Falcon console login, so the add-on's copy, carried by this pack's fields sidecar, is the reference)",
+        "read_on": "2026-09-17"
+      },
+      "decode": {
+        "lookup": "crowdstrike_TemplateDisposition.csv",
+        "meaning_field": "TemplateDisposition_meaning",
+        "values": {
+          "0": "TEMPLATE_DISPOSITION_NOACTION",
+          "3": "TEMPLATE_DISPOSITION_ANALYSIS",
+          "4": "TEMPLATE_DISPOSITION_SENSOR_ONLY",
+          "10": "TEMPLATE_DISPOSITION_INDICATOR",
+          "20": "TEMPLATE_DISPOSITION_DETECT",
+          "25": "TEMPLATE_DISPOSITION_OPERATION_BLOCK",
+          "30": "TEMPLATE_DISPOSITION_PREVENT",
+          "60": "TEMPLATE_DISPOSITION_PREVENT_KILLPARENT"
+        }
+      }
+    },
+    "desired_access": {
+      "label": "Desired access",
+      "type": "bitmask",
+      "description": "The Windows access rights the caller asked for when it opened a handle to the target process (the DesiredAccess mask of NtOpenProcess), one bit per right. 2097151 (0x1FFFFF) is PROCESS_ALL_ACCESS; a handle on lsass.exe asking PROCESS_VM_READ is the credential-dumping tell.",
+      "role": "other",
+      "tags": [
+        "detection",
+        "windows"
+      ],
+      "provenance": "documented",
+      "cite": {
+        "url": "https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights",
+        "title": "Process Security and Access Rights, Microsoft Learn (the Falcon event dictionary names the field but not the bits; its page sits behind the Falcon console login)",
+        "read_on": "2026-09-20"
+      },
+      "decode": {
+        "lookup": "windows-process-access-rights",
+        "meaning_field": "DesiredAccess_meaning",
+        "values": {
+          "2097151": "PROCESS_ALL_ACCESS"
+        },
+        "flags": {
+          "0x00000001": "PROCESS_TERMINATE",
+          "0x00000002": "PROCESS_CREATE_THREAD",
+          "0x00000004": "PROCESS_SET_SESSIONID",
+          "0x00000008": "PROCESS_VM_OPERATION",
+          "0x00000010": "PROCESS_VM_READ",
+          "0x00000020": "PROCESS_VM_WRITE",
+          "0x00000040": "PROCESS_DUP_HANDLE",
+          "0x00000080": "PROCESS_CREATE_PROCESS",
+          "0x00000100": "PROCESS_SET_QUOTA",
+          "0x00000200": "PROCESS_SET_INFORMATION",
+          "0x00000400": "PROCESS_QUERY_INFORMATION",
+          "0x00000800": "PROCESS_SUSPEND_RESUME",
+          "0x00001000": "PROCESS_QUERY_LIMITED_INFORMATION",
+          "0x00002000": "PROCESS_SET_LIMITED_INFORMATION",
+          "0x00010000": "DELETE",
+          "0x00020000": "READ_CONTROL",
+          "0x00040000": "WRITE_DAC",
+          "0x00080000": "WRITE_OWNER",
+          "0x00100000": "SYNCHRONIZE"
+        }
+      }
+    }
+  },
+  "containers": {
+    "crowdstrike:events:sensor": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "note": "The FDR sensor event stream as the Splunk Add-on for CrowdStrike FDR indexes it; event_simpleName says which event.",
+      "description": "Falcon sensor telemetry from endpoints: process, file, network, registry, DNS and user events, one record shape per event_simpleName. The bulk of FDR, and where every pivot starts."
+    },
+    "crowdstrike:events:external": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Events the Falcon cloud produces rather than a sensor: detections, audit, identity and cloud-side records, keyed by event_simpleName like sensor events.",
+      "note": "Detection summary and cloud-side events as the add-on indexes them; event_simpleName says which. Their process handles are renames whose PID space is not established."
+    },
+    "crowdstrike:inventory:aidmaster": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Host inventory, one row per agent (aid): hostname, OS, IPs, sensor version, first and last seen. The join target for aid → host; ComputerName is not stable, aid is."
+    },
+    "crowdstrike:appinfo": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Application inventory keyed by SHA256: file name, company, product, version. The join target for a hash → what it is."
+    },
+    "crowdstrike:userinfo": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "User inventory keyed by UserSid: account name, domain, when first and last seen on a host. The join target for a SID → who."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "timestamp",
+      "concept": "event_time",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "event_simpleName",
+      "concept": "event_simple_name",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "aid",
+      "concept": "aid",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "aip",
+      "concept": "aip",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "event_platform",
+      "concept": "event_platform",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "ComputerName",
+      "concept": "computer_name",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "UserSid",
+      "concept": "user_sid",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "UserName",
+      "concept": "user_name",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "RawProcessId",
+      "concept": "raw_process_id",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "TargetProcessId",
+      "concept": "target_process_id",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "ParentProcessId",
+      "concept": "parent_process_id",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "SourceProcessId",
+      "concept": "source_process_id",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "ContextProcessId",
+      "concept": "context_process_id",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "ContextThreadId",
+      "concept": "context_thread_id",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "ProcessStartTime",
+      "concept": "process_start_time",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "ProcessEndTime",
+      "concept": "process_end_time",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "ImageFileName",
+      "concept": "image_file_name",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "CommandLine",
+      "concept": "command_line",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "ParentBaseFileName",
+      "concept": "parent_base_file_name",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "GrandParentBaseFileName",
+      "concept": "grand_parent_base_file_name",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "SHA256HashData",
+      "concept": "sha256",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "SHA1HashData",
+      "concept": "sha1",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "MD5HashData",
+      "concept": "md5",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "IntegrityLevel",
+      "concept": "integrity_level",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "FileName",
+      "concept": "file_name",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "TargetFileName",
+      "concept": "target_file_name",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "SigningId",
+      "concept": "signing_id",
+      "basis": "observed",
+      "basis_ref": "macOS ProcessRollup2 events pulled from a Falcon trial tenant, 2026-09-17"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "TeamId",
+      "concept": "team_id",
+      "basis": "observed",
+      "basis_ref": "macOS ProcessRollup2 events pulled from a Falcon trial tenant, 2026-09-17"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "CodeSigningFlags",
+      "concept": "code_signing_flags",
+      "basis": "observed",
+      "basis_ref": "macOS ProcessRollup2 events pulled from a Falcon trial tenant, 2026-09-17"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "CsValidationCategory",
+      "concept": "cs_validation_category",
+      "basis": "observed",
+      "basis_ref": "macOS ProcessRollup2 events pulled from a Falcon trial tenant, 2026-09-17"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "TemplateDisposition",
+      "concept": "template_disposition",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "DesiredAccess",
+      "concept": "desired_access",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    }
+  ],
+  "hazards": {
+    "pid_recycling": {
+      "level": "caution",
+      "text": "RawProcessId is recycled by the OS. Pivot on TargetProcessId (the sensor's id) and always scope by Aid; a bare PID across hosts means nothing."
+    },
+    "hostname_unstable": {
+      "level": "caution",
+      "text": "ComputerName is what the sensor was told; it repeats across domains and changes on reimage. Aid is the host key."
+    },
+    "signer_chosen": {
+      "level": "caution",
+      "text": "SigningId is a string the signer chose; a build signed as com.apple.anything by a Developer ID or ad hoc still reports it. TeamId '-' and CS_PLATFORM_BINARY in CodeSigningFlags are what say Apple signed it; the known-good corpus checks the hash and path behind the name."
+    },
+    "time_is_index_time": {
+      "level": "note",
+      "text": "Time bounds are on _time (index time); timestamp and ContextTimeStamp are sensor-side and differ."
+    },
+    "index_macro": {
+      "level": "note",
+      "text": "index=`cs_index` is a macro: define it once (queries/macros) or replace it with your index."
+    },
+    "context_attribution": {
+      "level": "asserted",
+      "text": "ContextProcessId is the attribution key on non-process events. That attribution is asserted from the CrowdStrike data model, not corpus-validated."
+    },
+    "trace_host": {
+      "level": "note",
+      "text": "cs_trace_process scans the observable plus every process-creation event in the window. If you know the host, bind aid: orders of magnitude faster."
+    },
+    "pid_lookup_rows": {
+      "level": "danger",
+      "text": "RawProcessId is the OS PID and the OS recycles it: expect multiple rows; disambiguate on ImageFileName and ProcessStartTime; carry TargetProcessId forward."
+    },
+    "handoff_caution": {
+      "level": "caution",
+      "text": "Once you hand an OS PID to someone, it stops being reliable. If the box has rebooted or the process exited, that PID may now belong to something else entirely. Always pass the ImageFileName and start time alongside it."
+    },
+    "hostname_carry_aid": {
+      "level": "caution",
+      "text": "ComputerName is not stable (rename, reimage, DHCP); aid is. Expect more than one aid for a hostname that has been reimaged. Carry aid forward."
+    },
+    "signing_columns": {
+      "level": "note",
+      "text": "Apple signed means CsValidationCategory 1 with TeamId '-', as the sensor reports its own mac process events. A sensor build that reports neither field shows every mac process here.",
+      "platform": {
+        "sentinel": {
+          "text": "Apple signed means CsValidationCategory 1 with TeamId '-'. The seeded ReachCrowdStrike_CL sample carries no SigningId, TeamId or CsValidationCategory column, so on it this query does not resolve; run it on a Falcon ingest that lands those columns under these names."
+        }
+      }
+    },
+    "hunt_window": {
+      "level": "note",
+      "text": "The window is inside the search text, so the saved search keeps it whatever the schedule dialog says. Match the schedule to it (a seven-day window every day repeats rows; a one-day window every day does not).",
+      "platform": {
+        "sentinel": {
+          "text": "The window is inside the query, so the analytics rule keeps it whatever the rule's lookback says. Set the rule's lookback and frequency to match."
+        }
+      }
+    }
+  },
+  "macros": [
+    "cs_index",
+    "cs_trace_process",
+    "cs_process_table",
+    "cs_pid_lookup",
+    "cs_process_events"
+  ],
+  "edges": [
+    {
+      "id": "cs_host_events",
+      "kind": "host",
+      "label": "Everything this sensor reported",
+      "src": {
+        "concept": "aid"
+      },
+      "dst": {
+        "concept": "aid"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Falcon: aid is on every sensor event",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [],
+      "intent": {
+        "filter": [
+          {
+            "concept": "aid",
+            "op": "eq",
+            "value": "$value"
+          }
+        ],
+        "window": {
+          "since": "$earliest",
+          "until": "$latest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "event_time",
+            "event_simple_name",
+            "computer_name",
+            "user_name",
+            "image_file_name",
+            "command_line",
+            "target_process_id",
+            "parent_process_id",
+            "target_file_name"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "cs_process_children",
+      "kind": "process",
+      "label": "Processes this process started",
+      "src": {
+        "concept": "target_process_id"
+      },
+      "dst": {
+        "concept": "parent_process_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Falcon: a child's ParentProcessId is the parent's TargetProcessId, on the same aid",
+      "cardinality": "1:n",
+      "scope": [
+        "aid"
+      ],
+      "hazards": [
+        "pid_recycling"
+      ],
+      "intent": {
+        "filter": [
+          {
+            "concept": "aid",
+            "op": "eq",
+            "value": "$aid"
+          },
+          {
+            "concept": "parent_process_id",
+            "op": "eq",
+            "value": "$value"
+          }
+        ],
+        "record_types": [
+          "ProcessRollup2",
+          "SyntheticProcessRollup2"
+        ],
+        "window": {
+          "since": "$earliest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "event_time",
+            "target_process_id",
+            "raw_process_id",
+            "image_file_name",
+            "command_line",
+            "user_name",
+            "sha256"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "asc"
+          }
+        }
+      }
+    },
+    {
+      "id": "cs_process_parent",
+      "kind": "process",
+      "label": "The process that started this one",
+      "src": {
+        "concept": "parent_process_id"
+      },
+      "dst": {
+        "concept": "target_process_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Falcon: ParentProcessId → the parent's ProcessRollup2.TargetProcessId, same aid",
+      "cardinality": "n:1",
+      "scope": [
+        "aid"
+      ],
+      "hazards": [
+        "pid_recycling"
+      ],
+      "intent": {
+        "filter": [
+          {
+            "concept": "aid",
+            "op": "eq",
+            "value": "$aid"
+          },
+          {
+            "concept": "target_process_id",
+            "op": "eq",
+            "value": "$value"
+          }
+        ],
+        "record_types": [
+          "ProcessRollup2",
+          "SyntheticProcessRollup2"
+        ],
+        "window": {
+          "since": "$earliest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "target_process_id",
+            "parent_process_id",
+            "raw_process_id",
+            "image_file_name",
+            "command_line",
+            "user_name",
+            "parent_base_file_name",
+            "grand_parent_base_file_name"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cs_process_events",
+      "kind": "process",
+      "label": "Everything this process did",
+      "src": {
+        "concept": "target_process_id"
+      },
+      "dst": {
+        "concept": "context_process_id"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Falcon: file, handle and network events carry the acting process as ContextProcessId (or SourceProcessId on handle events)",
+      "cardinality": "1:n",
+      "scope": [
+        "aid"
+      ],
+      "hazards": [
+        "pid_recycling"
+      ],
+      "intent": {
+        "filter": [
+          {
+            "concept": "aid",
+            "op": "eq",
+            "value": "$aid"
+          },
+          {
+            "any": [
+              {
+                "concept": "context_process_id",
+                "op": "eq",
+                "value": "$value"
+              },
+              {
+                "concept": "source_process_id",
+                "op": "eq",
+                "value": "$value"
+              }
+            ]
+          }
+        ],
+        "window": {
+          "since": "$earliest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "event_time",
+            "event_simple_name",
+            "target_file_name",
+            "file_name",
+            "target_process_id",
+            "source_process_id",
+            "context_process_id"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "asc"
+          }
+        }
+      }
+    },
+    {
+      "id": "cs_hash_everywhere",
+      "kind": "file",
+      "label": "Everywhere this binary ran",
+      "src": {
+        "concept": "sha256"
+      },
+      "dst": {
+        "concept": "sha256"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Falcon: SHA256HashData on every ProcessRollup2",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [],
+      "intent": {
+        "filter": [
+          {
+            "concept": "sha256",
+            "op": "eq_ci",
+            "value": "$value"
+          }
+        ],
+        "window": {
+          "since": "$earliest"
+        },
+        "shape": {
+          "kind": "summary",
+          "by": [
+            "aid",
+            "computer_name"
+          ],
+          "measures": [
+            {
+              "fn": "count",
+              "as": "starts"
+            },
+            {
+              "fn": "min_time",
+              "as": "first_seen"
+            },
+            {
+              "fn": "max_time",
+              "as": "last_seen"
+            },
+            {
+              "fn": "values",
+              "concept": "image_file_name",
+              "as": "names",
+              "limit": 5
+            },
+            {
+              "fn": "values",
+              "concept": "user_name",
+              "as": "users",
+              "limit": 10
+            }
+          ],
+          "order": {
+            "by": "starts",
+            "dir": "desc"
+          }
+        }
+      }
+    },
+    {
+      "id": "cs_host_by_name",
+      "kind": "host",
+      "label": "Sensors that reported under this hostname",
+      "src": {
+        "concept": "computer_name"
+      },
+      "dst": {
+        "concept": "aid"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Falcon: ComputerName and aid ride together on every event",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [
+        "hostname_unstable"
+      ],
+      "note": "Resolve a name to the aid(s) behind it before pivoting on the host.",
+      "intent": {
+        "filter": [
+          {
+            "concept": "computer_name",
+            "op": "eq_ci",
+            "value": "$value"
+          }
+        ],
+        "window": {
+          "since": "$earliest"
+        },
+        "shape": {
+          "kind": "summary",
+          "by": [
+            "aid"
+          ],
+          "measures": [
+            {
+              "fn": "count",
+              "as": "events"
+            },
+            {
+              "fn": "min_time",
+              "as": "first_seen"
+            },
+            {
+              "fn": "max_time",
+              "as": "last_seen"
+            },
+            {
+              "fn": "values",
+              "concept": "event_platform",
+              "as": "platforms"
+            },
+            {
+              "fn": "values",
+              "concept": "aip",
+              "as": "addresses",
+              "limit": 10
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cs_user_processes",
+      "kind": "actor",
+      "label": "Processes this account ran",
+      "src": {
+        "concept": "user_sid"
+      },
+      "dst": {
+        "concept": "user_sid"
+      },
+      "basis": "confirmed",
+      "basis_ref": "Falcon: UserSid on ProcessRollup2",
+      "cardinality": "1:n",
+      "scope": [],
+      "hazards": [],
+      "intent": {
+        "filter": [
+          {
+            "concept": "user_sid",
+            "op": "eq",
+            "value": "$value"
+          }
+        ],
+        "record_types": [
+          "ProcessRollup2",
+          "SyntheticProcessRollup2"
+        ],
+        "window": {
+          "since": "$earliest"
+        },
+        "shape": {
+          "kind": "list",
+          "project": [
+            "computer_name",
+            "image_file_name",
+            "command_line",
+            "parent_base_file_name",
+            "target_process_id",
+            "aid"
+          ],
+          "order": {
+            "by": "time",
+            "dir": "desc"
+          }
+        }
+      }
+    }
+  ],
+  "templates": [],
+  "queries": [
+    {
+      "id": "cs_trace",
+      "label": "Trace an observable to the process that produced it",
+      "note": "The observable plus the anchor events in the window, correlated on the process handle; no join command.",
+      "containers": [
+        "crowdstrike:events:sensor"
+      ],
+      "spl": {
+        "required": [
+          "field",
+          "value",
+          "earliest"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$ latest=$latest:time$",
+            "needs": [
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$",
+            "unless": [
+              "latest"
+            ]
+          },
+          {
+            "clause": "  aid=$aid$",
+            "needs": [
+              "aid"
+            ]
+          },
+          "  ( $field:field$=$value$",
+          "    OR event_simpleName=ProcessRollup2",
+          "    OR event_simpleName=SyntheticProcessRollup2 )",
+          "| eval _pid = coalesce(ContextProcessId, TargetProcessId)",
+          "| where isnotnull(_pid)",
+          "| eval _hit = if($field:field$=$value$, 1, 0),",
+          "       _anchor = if(event_simpleName IN (\"ProcessRollup2\",\"SyntheticProcessRollup2\"), 1, 0)",
+          "| stats max(_hit) as matched, max(_anchor) as has_anchor,",
+          "        min(_time) as first_seen, max(_time) as last_seen,",
+          "        values(eval(if(_hit=1, event_simpleName, null()))) as observed_on,",
+          "        values(eval(if(_anchor=1, ImageFileName, null()))) as image,",
+          "        values(eval(if(_anchor=1, CommandLine, null()))) as command_line,",
+          "        values(eval(if(_anchor=1, RawProcessId, null()))) as os_pid,",
+          "        values(eval(if(_anchor=1, ParentProcessId, null()))) as parent_pid",
+          "        by aid, _pid",
+          "| where matched=1",
+          "| rename _pid as TargetProcessId",
+          "| eval resolved = if(has_anchor=1, \"yes\", \"no - creation event outside time range\")",
+          "| table aid TargetProcessId os_pid image command_line parent_pid observed_on first_seen last_seen resolved",
+          "| convert ctime(first_seen) ctime(last_seen)",
+          "| sort - last_seen"
+        ],
+        "macro": {
+          "lines": [
+            "`cs_trace_process(\"$field:field$\", $value$, $earliest:qtime$)`"
+          ]
+        }
+      },
+      "hazards": [
+        "context_attribution",
+        {
+          "ref": "trace_host",
+          "unless": [
+            "aid"
+          ]
+        },
+        {
+          "ref": "index_macro",
+          "unless": [
+            "index"
+          ]
+        },
+        "time_is_index_time"
+      ]
+    },
+    {
+      "id": "cs_process_events",
+      "label": "Everything this process did",
+      "note": "Every event whose ContextProcessId, TargetProcessId or ParentProcessId is the process, on one host, in the window.",
+      "containers": [
+        "crowdstrike:events:sensor"
+      ],
+      "spl": {
+        "required": [
+          "aid",
+          "tpid",
+          "earliest",
+          "latest"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          "search $index$ $sourcetype$ earliest=$earliest:time$ latest=$latest:time$",
+          "  aid=$aid$",
+          "  (ContextProcessId=$tpid$ OR TargetProcessId=$tpid$ OR ParentProcessId=$tpid$)",
+          "| table _time event_simpleName ContextProcessId TargetProcessId ParentProcessId ImageFileName CommandLine",
+          "| sort _time"
+        ],
+        "macro": {
+          "lines": [
+            "`cs_process_events($aid$, $tpid$, $earliest:qtime$)`"
+          ]
+        }
+      },
+      "hazards": [
+        "context_attribution",
+        {
+          "ref": "index_macro",
+          "unless": [
+            "index"
+          ]
+        },
+        "time_is_index_time"
+      ]
+    },
+    {
+      "id": "cs_process_table",
+      "label": "Every process on the host in the window",
+      "note": "One row per process the sensor saw on the host, with its image, command line, user and both PID spaces.",
+      "containers": [
+        "crowdstrike:events:sensor"
+      ],
+      "spl": {
+        "required": [
+          "aid",
+          "earliest",
+          "latest"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          "search $index$ $sourcetype$ earliest=$earliest:time$ latest=$latest:time$",
+          "  aid=$aid$",
+          "  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)",
+          "| stats min(_time) as start_seen, values(RawProcessId) as os_pid,",
+          "        values(ImageFileName) as image, values(CommandLine) as command_line,",
+          "        values(ParentProcessId) as parent_tpid,",
+          "        values(ProcessStartTime) as process_start_time,",
+          "        values(UserSid) as user_sid, values(SHA256HashData) as sha256",
+          "        by aid, TargetProcessId",
+          "| convert ctime(start_seen)",
+          "| sort start_seen"
+        ],
+        "macro": {
+          "lines": [
+            "`cs_process_table($aid$, $earliest:qtime$)`"
+          ]
+        }
+      },
+      "hazards": [
+        {
+          "ref": "index_macro",
+          "unless": [
+            "index"
+          ]
+        },
+        "time_is_index_time"
+      ]
+    },
+    {
+      "id": "cs_pid_lookup",
+      "label": "TargetProcessId candidates for an OS PID",
+      "note": "A lookup against the anchor events on one host in a tight window, never a conversion; expect more than one row.",
+      "containers": [
+        "crowdstrike:events:sensor"
+      ],
+      "spl": {
+        "required": [
+          "aid",
+          "pid",
+          "earliest",
+          "latest"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          "search $index$ $sourcetype$ earliest=$earliest:time$ latest=$latest:time$",
+          "  aid=$aid$ RawProcessId=$pid$",
+          "  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)",
+          "| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId",
+          "| sort _time"
+        ],
+        "guard": {
+          "all": [
+            "aid",
+            "earliest",
+            "latest"
+          ],
+          "code": "unscoped_pid",
+          "message": "a RawProcessId predicate needs aid, earliest and latest bound (placeholders are not enough)."
+        },
+        "macro": {
+          "lines": [
+            "`cs_pid_lookup($aid$, $pid$, $earliest:qtime$)`"
+          ]
+        }
+      },
+      "hazards": [
+        "pid_lookup_rows",
+        {
+          "ref": "index_macro",
+          "unless": [
+            "index"
+          ]
+        },
+        "time_is_index_time"
+      ]
+    },
+    {
+      "id": "cs_tpid_to_pid",
+      "label": "The OS PID of a process",
+      "note": "The process's own anchor event, with the RawProcessId to hand to someone on the box.",
+      "containers": [
+        "crowdstrike:events:sensor"
+      ],
+      "spl": {
+        "required": [
+          "aid",
+          "tpid"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$ latest=$latest:time$",
+            "needs": [
+              "earliest",
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$",
+            "needs": [
+              "earliest"
+            ],
+            "unless": [
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ latest=$latest:time$",
+            "needs": [
+              "latest"
+            ],
+            "unless": [
+              "earliest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$",
+            "unless": [
+              "earliest",
+              "latest"
+            ]
+          },
+          "  aid=$aid$ TargetProcessId=$tpid$",
+          "  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)",
+          "| fields _time aid ComputerName TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime",
+          "| head 1"
+        ]
+      },
+      "hazards": [
+        "handoff_caution",
+        {
+          "ref": "index_macro",
+          "unless": [
+            "index"
+          ]
+        },
+        {
+          "ref": "time_is_index_time",
+          "needs": [
+            "earliest"
+          ]
+        },
+        {
+          "ref": "time_is_index_time",
+          "needs": [
+            "latest"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cs_host_lookup",
+      "label": "Resolve a hostname to its aid",
+      "note": "The host record(s) behind a ComputerName; more than one is a reimaged host.",
+      "containers": [
+        "crowdstrike:inventory:aidmaster"
+      ],
+      "spl": {
+        "required": [
+          "hostname"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$ latest=$latest:time$",
+            "needs": [
+              "earliest",
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$",
+            "needs": [
+              "earliest"
+            ],
+            "unless": [
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ latest=$latest:time$",
+            "needs": [
+              "latest"
+            ],
+            "unless": [
+              "earliest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$",
+            "unless": [
+              "earliest",
+              "latest"
+            ]
+          },
+          "  ComputerName=$hostname$",
+          "| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,",
+          "        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,",
+          "        latest(event_platform) as platform, latest(Version) as os_version,",
+          "        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen",
+          "        by aid",
+          "| convert ctime(last_seen)",
+          "| sort - last_seen"
+        ]
+      },
+      "hazards": [
+        "hostname_carry_aid",
+        {
+          "ref": "index_macro",
+          "unless": [
+            "index"
+          ]
+        },
+        {
+          "ref": "time_is_index_time",
+          "needs": [
+            "earliest"
+          ]
+        },
+        {
+          "ref": "time_is_index_time",
+          "needs": [
+            "latest"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cs_event_sample",
+      "label": "See an event on real data",
+      "note": "Twenty events of one type, narrowed to a host and a field value when they are bound.",
+      "containers": [
+        "crowdstrike:events:sensor",
+        "crowdstrike:events:external"
+      ],
+      "spl": {
+        "required": [
+          "event",
+          "earliest"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$ latest=$latest:time$",
+            "needs": [
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$",
+            "unless": [
+              "latest"
+            ]
+          },
+          {
+            "clause": "  aid=$aid$ event_simpleName=$event:field$ $field:field$=$value$",
+            "needs": [
+              "aid",
+              "field",
+              "value"
+            ]
+          },
+          {
+            "clause": "  aid=$aid$ event_simpleName=$event:field$",
+            "needs": [
+              "aid"
+            ],
+            "unless": [
+              "field"
+            ]
+          },
+          {
+            "clause": "  aid=$aid$ event_simpleName=$event:field$",
+            "needs": [
+              "aid",
+              "field"
+            ],
+            "unless": [
+              "value"
+            ]
+          },
+          {
+            "clause": "  event_simpleName=$event:field$ $field:field$=$value$",
+            "needs": [
+              "field",
+              "value"
+            ],
+            "unless": [
+              "aid"
+            ]
+          },
+          {
+            "clause": "  event_simpleName=$event:field$",
+            "unless": [
+              "aid",
+              "field"
+            ]
+          },
+          {
+            "clause": "  event_simpleName=$event:field$",
+            "needs": [
+              "field"
+            ],
+            "unless": [
+              "aid",
+              "value"
+            ]
+          },
+          "| head 20",
+          "| fields - _raw _bkt _cd _indextime _serial _si _subsecond punct"
+        ]
+      },
+      "hazards": [
+        {
+          "ref": "index_macro",
+          "unless": [
+            "index"
+          ]
+        },
+        "time_is_index_time"
+      ]
+    },
+    {
+      "id": "cs_process_anchor",
+      "label": "The process's ProcessRollup2",
+      "note": "The anchor event of a process handle (a parent's or a context's TargetProcessId), on the host.",
+      "containers": [
+        "crowdstrike:events:sensor"
+      ],
+      "spl": {
+        "required": [
+          "value",
+          "aid"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$ latest=$latest:time$",
+            "needs": [
+              "earliest",
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$",
+            "needs": [
+              "earliest"
+            ],
+            "unless": [
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ latest=$latest:time$",
+            "needs": [
+              "latest"
+            ],
+            "unless": [
+              "earliest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$",
+            "unless": [
+              "earliest",
+              "latest"
+            ]
+          },
+          "  aid=$aid$ TargetProcessId=$value$",
+          "  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)",
+          "| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId",
+          "| sort _time"
+        ]
+      },
+      "hazards": [
+        {
+          "ref": "index_macro",
+          "unless": [
+            "index"
+          ]
+        },
+        {
+          "ref": "time_is_index_time",
+          "needs": [
+            "earliest"
+          ]
+        },
+        {
+          "ref": "time_is_index_time",
+          "needs": [
+            "latest"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cs_tree",
+      "label": "Every event in the same activity tree",
+      "note": "Everything the sensor grouped under one TreeId on the host.",
+      "containers": [
+        "crowdstrike:events:sensor"
+      ],
+      "spl": {
+        "required": [
+          "value",
+          "aid"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$ latest=$latest:time$",
+            "needs": [
+              "earliest",
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$",
+            "needs": [
+              "earliest"
+            ],
+            "unless": [
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ latest=$latest:time$",
+            "needs": [
+              "latest"
+            ],
+            "unless": [
+              "earliest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$",
+            "unless": [
+              "earliest",
+              "latest"
+            ]
+          },
+          "  aid=$aid$ TreeId=$value$",
+          "| table _time aid event_simpleName TreeId TargetProcessId ContextProcessId ParentProcessId ImageFileName",
+          "| sort _time"
+        ]
+      },
+      "hazards": [
+        {
+          "ref": "index_macro",
+          "unless": [
+            "index"
+          ]
+        },
+        {
+          "ref": "time_is_index_time",
+          "needs": [
+            "earliest"
+          ]
+        },
+        {
+          "ref": "time_is_index_time",
+          "needs": [
+            "latest"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cs_os_pid",
+      "label": "TargetProcessId candidates for this OS PID",
+      "note": "The pid lookup keyed on a held RawProcessId: host and window required, several candidates expected.",
+      "containers": [
+        "crowdstrike:events:sensor"
+      ],
+      "spl": {
+        "required": [
+          "value",
+          "aid",
+          "earliest",
+          "latest"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          "search $index$ $sourcetype$ earliest=$earliest:time$ latest=$latest:time$",
+          "  aid=$aid$ RawProcessId=$value$",
+          "  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)",
+          "| table _time aid TargetProcessId RawProcessId ImageFileName CommandLine ProcessStartTime ParentProcessId",
+          "| sort _time"
+        ],
+        "guard": {
+          "all": [
+            "aid",
+            "earliest",
+            "latest"
+          ],
+          "code": "unscoped_pid",
+          "message": "a RawProcessId predicate needs aid, earliest and latest bound (placeholders are not enough)."
+        },
+        "macro": {
+          "lines": [
+            "`cs_pid_lookup($aid$, $value$, $earliest:qtime$)`"
+          ]
+        }
+      },
+      "hazards": [
+        "pid_lookup_rows",
+        {
+          "ref": "index_macro",
+          "unless": [
+            "index"
+          ]
+        },
+        "time_is_index_time"
+      ]
+    },
+    {
+      "id": "cs_host_record",
+      "label": "The host record for an aid",
+      "note": "aidmaster's record for the sensor: hostname, domain, OU, site, OS, agent version.",
+      "containers": [
+        "crowdstrike:inventory:aidmaster"
+      ],
+      "spl": {
+        "required": [
+          "value"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$ latest=$latest:time$",
+            "needs": [
+              "earliest",
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$",
+            "needs": [
+              "earliest"
+            ],
+            "unless": [
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ latest=$latest:time$",
+            "needs": [
+              "latest"
+            ],
+            "unless": [
+              "earliest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$",
+            "unless": [
+              "earliest",
+              "latest"
+            ]
+          },
+          "  aid=$value$",
+          "| stats latest(_time) as last_seen, latest(ComputerName) as ComputerName,",
+          "        latest(MachineDomain) as MachineDomain, latest(OU) as OU, latest(SiteName) as SiteName,",
+          "        latest(event_platform) as platform, latest(Version) as os_version,",
+          "        latest(AgentVersion) as AgentVersion, latest(FirstSeen) as FirstSeen",
+          "        by aid",
+          "| convert ctime(last_seen)",
+          "| sort - last_seen"
+        ]
+      },
+      "hazards": [
+        {
+          "ref": "index_macro",
+          "unless": [
+            "index"
+          ]
+        },
+        {
+          "ref": "time_is_index_time",
+          "needs": [
+            "earliest"
+          ]
+        },
+        {
+          "ref": "time_is_index_time",
+          "needs": [
+            "latest"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cs_file_record",
+      "label": "The file record for a hash",
+      "note": "appinfo's record for the SHA-256: company, file description, name, version, product, detection count.",
+      "containers": [
+        "crowdstrike:appinfo"
+      ],
+      "spl": {
+        "required": [
+          "value"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$ latest=$latest:time$",
+            "needs": [
+              "earliest",
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$",
+            "needs": [
+              "earliest"
+            ],
+            "unless": [
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ latest=$latest:time$",
+            "needs": [
+              "latest"
+            ],
+            "unless": [
+              "earliest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$",
+            "unless": [
+              "earliest",
+              "latest"
+            ]
+          },
+          "  SHA256HashData=$value$",
+          "| stats latest(FileName) as FileName, latest(CompanyName) as CompanyName,",
+          "        latest(FileDescription) as FileDescription, latest(ProductName) as ProductName,",
+          "        latest(ProductVersion) as ProductVersion, latest(FileVersion) as FileVersion,",
+          "        latest(detectioncount) as detection_count",
+          "        by SHA256HashData"
+        ]
+      },
+      "hazards": [
+        {
+          "ref": "index_macro",
+          "unless": [
+            "index"
+          ]
+        },
+        {
+          "ref": "time_is_index_time",
+          "needs": [
+            "earliest"
+          ]
+        },
+        {
+          "ref": "time_is_index_time",
+          "needs": [
+            "latest"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cs_user_record",
+      "label": "The account record for a SID",
+      "note": "userinfo's record for the UserSid: user name, domain user, account type, last logged-on host, local admin access.",
+      "containers": [
+        "crowdstrike:userinfo"
+      ],
+      "spl": {
+        "required": [
+          "value"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$ latest=$latest:time$",
+            "needs": [
+              "earliest",
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$earliest:time$",
+            "needs": [
+              "earliest"
+            ],
+            "unless": [
+              "latest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ latest=$latest:time$",
+            "needs": [
+              "latest"
+            ],
+            "unless": [
+              "earliest"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$",
+            "unless": [
+              "earliest",
+              "latest"
+            ]
+          },
+          "  UserSid_readable=$value$",
+          "| stats latest(UserName) as UserName, latest(DomainUser) as DomainUser,",
+          "        latest(AccountType) as AccountType, latest(LastLoggedOnHost) as LastLoggedOnHost,",
+          "        latest(LocalAdminAccess) as LocalAdminAccess, latest(LoggedOnHostCount) as LoggedOnHostCount",
+          "        by UserSid_readable"
+        ]
+      },
+      "hazards": [
+        {
+          "ref": "index_macro",
+          "unless": [
+            "index"
+          ]
+        },
+        {
+          "ref": "time_is_index_time",
+          "needs": [
+            "earliest"
+          ]
+        },
+        {
+          "ref": "time_is_index_time",
+          "needs": [
+            "latest"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cs_detection_host",
+      "label": "Every process on the detection's host in the window",
+      "note": "The process table keyed on a detection's AgentIdString, which is the host's aid as a string.",
+      "containers": [
+        "crowdstrike:events:sensor"
+      ],
+      "spl": {
+        "required": [
+          "value",
+          "earliest",
+          "latest"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          "search $index$ $sourcetype$ earliest=$earliest:time$ latest=$latest:time$",
+          "  aid=$value$",
+          "  (event_simpleName=ProcessRollup2 OR event_simpleName=SyntheticProcessRollup2)",
+          "| stats min(_time) as start_seen, values(RawProcessId) as os_pid,",
+          "        values(ImageFileName) as image, values(CommandLine) as command_line,",
+          "        values(ParentProcessId) as parent_tpid,",
+          "        values(ProcessStartTime) as process_start_time,",
+          "        values(UserSid) as user_sid, values(SHA256HashData) as sha256",
+          "        by aid, TargetProcessId",
+          "| convert ctime(start_seen)",
+          "| sort start_seen"
+        ],
+        "macro": {
+          "lines": [
+            "`cs_process_table($value$, $earliest:qtime$)`"
+          ]
+        }
+      },
+      "hazards": [
+        {
+          "ref": "index_macro",
+          "unless": [
+            "index"
+          ]
+        },
+        "time_is_index_time"
+      ]
+    },
+    {
+      "id": "hunt_mac_apple_namespace",
+      "label": "Apple namespace, non-Apple signer",
+      "note": "Mac process starts whose SigningId is under com.apple. but whose signature is not Apple's own: CsValidationCategory other than 1, or a TeamId. One row per host and image with first and last seen.",
+      "containers": [
+        "crowdstrike:events:sensor"
+      ],
+      "spl": {
+        "required": [],
+        "index_macro": "cs_index",
+        "lines": [
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$window:time$",
+            "needs": [
+              "window"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ earliest=-7d",
+            "unless": [
+              "window"
+            ]
+          },
+          "  event_platform=Mac event_simpleName=ProcessRollup2",
+          "  SigningId=\"com.apple.*\"",
+          "  NOT (CsValidationCategory=1 TeamId=\"-\")",
+          "| stats count as events, min(_time) as first_seen, max(_time) as last_seen,",
+          "        values(SigningId) as signing_id, values(TeamId) as team_id, values(CsValidationCategory) as validation_category,",
+          "        values(SHA256HashData) as sha256",
+          "        by aid, ComputerName, ImageFileName",
+          "| convert ctime(first_seen) ctime(last_seen)",
+          "| sort - last_seen"
+        ],
+        "hazards": [
+          {
+            "ref": "index_macro",
+            "unless": [
+              "index"
+            ]
+          },
+          "time_is_index_time"
+        ]
+      },
+      "kql": {
+        "required": [],
+        "containers": [
+          "ReachCrowdStrike_CL"
+        ],
+        "lines": [
+          "$table$",
+          {
+            "clause": "| where TimeGenerated > $window:time$",
+            "needs": [
+              "window"
+            ]
+          },
+          {
+            "clause": "| where TimeGenerated > ago(7d)",
+            "unless": [
+              "window"
+            ]
+          },
+          "| where EventPlatform == \"Mac\" and EventSimpleName == \"ProcessRollup2\"",
+          "| where SigningId startswith \"com.apple.\"",
+          "| where not(CsValidationCategory == 1 and TeamId == \"-\")",
+          "| summarize events = count(), first_seen = min(TimeGenerated), last_seen = max(TimeGenerated),",
+          "            signing_id = make_set(SigningId, 8), team_id = make_set(TeamId, 8), validation_category = make_set(CsValidationCategory, 8),",
+          "            sha256 = make_set(SHA256HashData, 8)",
+          "            by Aid, ComputerName, ImageFileName",
+          "| order by last_seen desc"
+        ]
+      },
+      "hazards": [
+        "signer_chosen",
+        "signing_columns",
+        "hunt_window"
+      ]
+    },
+    {
+      "id": "hunt_mac_apple_path",
+      "label": "Apple path, wrong signer",
+      "note": "Mac process starts whose image sits where Apple's own binaries live (lists.apple_paths: /System, /usr/bin, /usr/sbin, /usr/libexec, the Apple app bundles) but whose signature is not Apple's own. One row per host and image with first and last seen.",
+      "containers": [
+        "crowdstrike:events:sensor"
+      ],
+      "spl": {
+        "required": [
+          "paths"
+        ],
+        "index_macro": "cs_index",
+        "lines": [
+          {
+            "clause": "search $index$ $sourcetype$ earliest=$window:time$",
+            "needs": [
+              "window"
+            ]
+          },
+          {
+            "clause": "search $index$ $sourcetype$ earliest=-7d",
+            "unless": [
+              "window"
+            ]
+          },
+          "  event_platform=Mac event_simpleName=ProcessRollup2",
+          "  ImageFileName IN ($paths:prefixes$)",
+          "  NOT (CsValidationCategory=1 TeamId=\"-\")",
+          "| stats count as events, min(_time) as first_seen, max(_time) as last_seen,",
+          "        values(SigningId) as signing_id, values(TeamId) as team_id, values(CsValidationCategory) as validation_category,",
+          "        values(SHA256HashData) as sha256",
+          "        by aid, ComputerName, ImageFileName",
+          "| convert ctime(first_seen) ctime(last_seen)",
+          "| sort - last_seen"
+        ],
+        "hazards": [
+          {
+            "ref": "index_macro",
+            "unless": [
+              "index"
+            ]
+          },
+          "time_is_index_time"
+        ]
+      },
+      "kql": {
+        "required": [
+          "paths"
+        ],
+        "containers": [
+          "ReachCrowdStrike_CL"
+        ],
+        "lines": [
+          "$table$",
+          {
+            "clause": "| where TimeGenerated > $window:time$",
+            "needs": [
+              "window"
+            ]
+          },
+          {
+            "clause": "| where TimeGenerated > ago(7d)",
+            "unless": [
+              "window"
+            ]
+          },
+          "| where EventPlatform == \"Mac\" and EventSimpleName == \"ProcessRollup2\"",
+          "| where ImageFileName matches regex $paths:prefixes$",
+          "| where not(CsValidationCategory == 1 and TeamId == \"-\")",
+          "| summarize events = count(), first_seen = min(TimeGenerated), last_seen = max(TimeGenerated),",
+          "            signing_id = make_set(SigningId, 8), team_id = make_set(TeamId, 8), validation_category = make_set(CsValidationCategory, 8),",
+          "            sha256 = make_set(SHA256HashData, 8)",
+          "            by Aid, ComputerName, ImageFileName",
+          "| order by last_seen desc"
+        ]
+      },
+      "hazards": [
+        "signing_columns",
+        "hunt_window"
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "id": "pid",
+      "title": "I have an OS PID and need CrowdStrike's process id",
+      "kicker": "OS PID → TargetProcessId",
+      "when": "You got a PID from a memory dump, a ticket, `ps`/Task Manager, another EDR, or a colleague, and now you need to pivot into FDR.",
+      "lead": "CrowdStrike's TargetProcessId and the OS PID (RawProcessId) are NOT convertible by arithmetic. Translation is a LOOKUP against events that carry both.",
+      "steps": [
+        {
+          "title": "Which host?",
+          "why": "PIDs are only meaningful on one machine. PID 4820 on a laptop and PID 4820 on a server are unrelated processes. Without the host you will get a pile of matches from across the fleet.",
+          "help": "If you have a hostname instead of an aid, look it up in aidmaster; the TA joins aid to ComputerName for you.",
+          "required": true,
+          "names": [
+            "aid"
+          ]
+        },
+        {
+          "title": "Roughly when?",
+          "why": "This is the one that catches people. The OS reuses PIDs; a busy Windows host can burn through the same PID several times a day. Searching all time will return multiple unrelated processes that all legitimately had this PID.",
+          "help": "Start with ±1 hour around the activity you are investigating. If you get nothing, widen it. If you get many, narrow it.",
+          "required": true,
+          "names": [
+            "earliest",
+            "latest"
+          ]
+        },
+        {
+          "title": "The PID itself",
+          "why": "",
+          "required": true,
+          "names": [
+            "pid"
+          ]
+        }
+      ],
+      "expect": "One or more rows. More than one is normal and does not mean you did something wrong; it means the PID was reused in your window.",
+      "disambiguate": [
+        "Match `ImageFileName` against the process you actually expect. This resolves most cases immediately.",
+        "Check that `ProcessStartTime` is BEFORE the activity you are investigating. A process cannot have caused an event that predates its own start.",
+        "If two candidates both fit, widen `fields` to include `CommandLine`; arguments usually separate them.",
+        "The value you carry forward is `TargetProcessId`. That is the key every other FDR event is joined on."
+      ],
+      "troubleshooting": [
+        {
+          "causes": [
+            "Your window is too narrow; widen it.",
+            "The process started before the sensor was installed or before the host booted with the sensor running. Check `SyntheticProcessRollup2`, which covers already-running processes.",
+            "Wrong host. Confirm the aid.",
+            "The process is older than your FDR retention."
+          ],
+          "symptom": "Zero results"
+        },
+        {
+          "causes": [
+            "Narrow the time window.",
+            "Low-numbered PIDs (under ~1000) are often system processes that churn constantly. Add an `ImageFileName` filter."
+          ],
+          "symptom": "Far too many results"
+        },
+        {
+          "causes": [
+            "Confirm you are pivoting on `TargetProcessId`, not `RawProcessId`. Most FDR events carry only `TargetProcessId`.",
+            "Short-lived processes may only ever produce `ProcessRollup2`."
+          ],
+          "symptom": "Found the process but no later events reference it"
+        }
+      ],
+      "entries": [
+        {
+          "concept": "raw_process_id",
+          "param": "pid"
+        }
+      ],
+      "results": [
+        {
+          "id": "lookup",
+          "label": "The lookup",
+          "note": "A lookup against the anchor events, not a conversion. Expect more than one row: that is the PID being reused, not a mistake.",
+          "query": "cs_pid_lookup",
+          "params": {
+            "aid": "$aid",
+            "pid": "$pid",
+            "earliest": "$earliest",
+            "latest": "$latest"
+          }
+        }
+      ],
+      "chain": {
+        "workflow": "process",
+        "text": "Carry the TargetProcessId you picked into “everything this process did”",
+        "why": "The value you carry forward is TargetProcessId. That is the key every other FDR event is joined on: the OS PID stops being useful the moment you leave this search.",
+        "carry": {
+          "aid": "$aid",
+          "tpid": "$tpid",
+          "earliest": "$earliest",
+          "latest": "$latest"
+        }
+      }
+    },
+    {
+      "id": "process",
+      "title": "I have a CrowdStrike process id and need everything it did",
+      "kicker": "TargetProcessId → its events, and its OS PID",
+      "when": "You are inside FDR following a process: from a detection, a parent, or the PID workflow, and you need everything the sensor recorded for it.",
+      "lead": "CrowdStrike's synthetic process identifier. Unique per host; does not repeat.",
+      "steps": [
+        {
+          "title": "Which host?",
+          "why": "TargetProcessId is unique per host, not globally. Scoping to the host keeps the search fast and correct.",
+          "required": true,
+          "names": [
+            "aid"
+          ]
+        },
+        {
+          "title": "The TargetProcessId",
+          "why": "TargetProcessId is unique per host and does not repeat.",
+          "required": true,
+          "names": [
+            "tpid"
+          ]
+        },
+        {
+          "title": "Which window?",
+          "why": "Events are filtered on _time (index time). ContextTimeStamp and timestamp are sensor-side and will not agree with it.",
+          "required": true,
+          "names": [
+            "earliest",
+            "latest"
+          ]
+        }
+      ],
+      "expect": "Every event the sensor recorded whose ContextProcessId, TargetProcessId or ParentProcessId is this process; file writes, network connections, registry, child processes. Attribution through ContextProcessId is asserted from CrowdStrike's data model, not validated against the corpus.",
+      "disambiguate": [
+        "Rows where the process is the TargetProcessId are things that happened *to* it (its creation, its end).",
+        "Rows where it is the ContextProcessId are things it *did*. That is the attribution, and it is the asserted edge.",
+        "Rows where it is the ParentProcessId are its children: a ProcessRollup2 whose TargetProcessId is the child.",
+        "A quiet result usually means the window, not the process: widen it before concluding the process did nothing."
+      ],
+      "troubleshooting": [
+        {
+          "causes": [
+            "The process may predate the sensor; check `SyntheticProcessRollup2`.",
+            "You may be on the wrong host.",
+            "The creation event may have aged out of retention even though later events referencing the process are still present."
+          ],
+          "symptom": "Zero results"
+        }
+      ],
+      "entries": [
+        {
+          "concept": "target_process_id",
+          "param": "tpid"
+        },
+        {
+          "concept": "context_process_id",
+          "param": "tpid"
+        },
+        {
+          "concept": "parent_process_id",
+          "param": "tpid"
+        }
+      ],
+      "results": [
+        {
+          "id": "events",
+          "label": "Everything this process did",
+          "note": "ContextProcessId is the attribution key on non-process events, and that attribution is asserted. ParentProcessId brings in the children it started.",
+          "query": "cs_process_events",
+          "params": {
+            "aid": "$aid",
+            "tpid": "$tpid",
+            "earliest": "$earliest",
+            "latest": "$latest"
+          }
+        },
+        {
+          "id": "ospid",
+          "label": "The OS PID, to hand to someone on the box",
+          "note": "The caution below travels with this one.",
+          "query": "cs_tpid_to_pid",
+          "params": {
+            "aid": "$aid",
+            "tpid": "$tpid",
+            "earliest": "$earliest",
+            "latest": "$latest"
+          },
+          "caution": "Once you hand an OS PID to someone, it stops being reliable. If the box has rebooted or the process exited, that PID may now belong to something else entirely. Always pass the ImageFileName and start time alongside it."
+        }
+      ]
+    },
+    {
+      "id": "host",
+      "title": "I have a host and want to know what ran on it",
+      "kicker": "hostname or aid → the process table",
+      "when": "You have a hostname from a ticket or an alert, or an aid from another search, and you need the processes the sensor saw on that machine.",
+      "lead": "Hostnames are not stable and aids are. A renamed or reimaged host has more than one aid; the same hostname can belong to two machines over time. Resolve the name first and carry the aid.",
+      "steps": [
+        {
+          "title": "The hostname",
+          "why": "ComputerName changes with a rename, a reimage or a DHCP lease; aid is one sensor install and does not. Resolving the name first is what stops the rest of the hunt from being silently wrong.",
+          "required": true,
+          "names": [
+            "hostname"
+          ]
+        },
+        {
+          "title": "The aid it resolves to",
+          "why": "Paste the aid the lookup returns. If it returns more than one, the machine has been reimaged; pick by last_seen and say which one you took.",
+          "required": false,
+          "names": [
+            "aid"
+          ]
+        },
+        {
+          "title": "Which window?",
+          "why": "A process table is per window. Start around the activity you are investigating; widen only if it comes back empty.",
+          "required": true,
+          "names": [
+            "earliest",
+            "latest"
+          ]
+        }
+      ],
+      "expect": "One row per aid from the lookup; more than one is normal for a reimaged host. Then one row per process on that host in the window, with its image, command line, user and both PID spaces.",
+      "disambiguate": [
+        "Two aids for one hostname: compare FirstSeen and last_seen. The old aid is the old install.",
+        "Three timestamps differ: _time is index time, ProcessStartTime is the sensor's, ContextTimeStamp is the event's. Filter on _time; read the others."
+      ],
+      "troubleshooting": [
+        {
+          "symptom": "The hostname returns nothing",
+          "causes": [
+            "aidmaster carries the name the sensor reported: try the short name and the FQDN.",
+            "The host may never have had a sensor installed.",
+            "Case and domain suffixes matter in a lookup."
+          ]
+        },
+        {
+          "symptom": "The process table is enormous",
+          "causes": [
+            "Narrow the window before anything else.",
+            "Servers churn; filter on ImageFileName once you know what you are looking for."
+          ]
+        }
+      ],
+      "entries": [
+        {
+          "concept": "computer_name",
+          "param": "hostname"
+        },
+        {
+          "concept": "aid",
+          "param": "aid"
+        },
+        {
+          "container": "crowdstrike:inventory:aidmaster",
+          "column": "aid",
+          "param": "aid"
+        }
+      ],
+      "results": [
+        {
+          "id": "lookup",
+          "label": "Resolve the hostname to an aid",
+          "note": "The TA's own host join: confirmed.",
+          "query": "cs_host_lookup",
+          "params": {
+            "hostname": "$hostname"
+          }
+        },
+        {
+          "id": "table",
+          "label": "Every process on the host in the window",
+          "note": "Needs the aid and both ends of the window.",
+          "query": "cs_process_table",
+          "params": {
+            "aid": "$aid",
+            "earliest": "$earliest",
+            "latest": "$latest"
+          }
+        }
+      ]
+    },
+    {
+      "id": "detection",
+      "title": "I have a detection and need the telemetry behind it",
+      "kicker": "detection summary event → sensor telemetry",
+      "when": "You are holding a detection summary event: from the console, an alert, or a ticket, and you need the sensor data around it.",
+      "lead": "Detection summary events are a different sourcetype (crowdstrike:events:external), they are in the CIM gap along with 219 of 275 events, and their handles are renames of the sensor-side names. Lead with what is safe.",
+      "steps": [
+        {
+          "title": "The file hash from the detection",
+          "why": "SHA256String on the detection is the same value space as SHA256HashData on sensor telemetry: the TA keys its appinfo lookup on it across the boundary, and enrichment agrees. This is the safest first pivot you have.",
+          "required": true,
+          "names": [
+            "sha256"
+          ]
+        },
+        {
+          "title": "The host",
+          "why": "ComputerName on the detection resolves through aidmaster to an aid, and AgentIdString is the same agent id as a string. Either gets you onto sensor telemetry for the right machine.",
+          "required": true,
+          "names": [
+            "hostname",
+            "aid"
+          ]
+        },
+        {
+          "title": "Which window?",
+          "why": "The detection's own time is a starting point, not a filter: the behaviour that produced it usually starts earlier. Widen backwards first.",
+          "required": true,
+          "names": [
+            "earliest",
+            "latest"
+          ]
+        },
+        {
+          "title": "The detection's ProcessId: which PID space is it in?",
+          "why": "ProcessId appears only on the two detection summary events, is not enriched, has no CIM row, and neither the catalogue, the TA nor the reference says whether it is an OS PID or a Falcon process id. Joining an OS PID as a Falcon id returns a different process.",
+          "required": true,
+          "names": [
+            "processid"
+          ],
+          "gate": true
+        }
+      ],
+      "expect": "The hash pivot returns every sensor event that touched the file, plus the appinfo record for it. The host pivot returns one aid (or more, if the machine was reimaged). The PID step returns nothing until you answer the question.",
+      "disambiguate": [
+        "A hash pivot with no host is fleet-wide: it tells you where else the file is, which is often the more valuable answer.",
+        "If the hash returns nothing on sensor telemetry, the file may have been blocked before execution: check the detection's own fields rather than assuming the pivot failed."
+      ],
+      "troubleshooting": [
+        {
+          "symptom": "The sensor search returns nothing for a detection you can see",
+          "causes": [
+            "You are on the wrong sourcetype: the detection is external, the telemetry is sensor.",
+            "The window is anchored on the detection time; the behaviour is usually earlier.",
+            "The handle you pivoted on is a rename: check the field page for the sensor-side name."
+          ]
+        },
+        {
+          "symptom": "The hostname does not resolve",
+          "causes": [
+            "Use AgentIdString from the detection instead; it is the aid as a string."
+          ]
+        }
+      ],
+      "entries": [
+        {
+          "container": "crowdstrike:events:external",
+          "column": "SHA256String",
+          "param": "sha256"
+        },
+        {
+          "container": "crowdstrike:events:external",
+          "column": "ComputerName",
+          "param": "hostname"
+        },
+        {
+          "container": "crowdstrike:events:external",
+          "column": "ProcessId",
+          "param": "processid"
+        }
+      ],
+      "gate": {
+        "param": "pidspace",
+        "ask": "which PID space is this ProcessId in?",
+        "blocked": "Nothing in the catalogue, the TA or the reference says which PID space a detection event's ProcessId occupies. Answer the question in step 4 and the matching search appears here.",
+        "choices": [
+          {
+            "value": "falcon",
+            "label": "It is a Falcon process id",
+            "emits": true,
+            "callout": {
+              "kind": "expect",
+              "label": "Treated as a Falcon process id",
+              "body": "The search below is the process workflow's: every event whose ContextProcessId or TargetProcessId is this value, on this host, in this window. If it comes back empty, that is evidence the value was an OS PID after all."
+            }
+          },
+          {
+            "value": "os",
+            "label": "It is an OS PID",
+            "emits": true,
+            "callout": {
+              "kind": "hazard",
+              "label": "Treated as an OS PID",
+              "body": "Then it is recycled, and the only safe move is a scoped lookup against the anchor events: host and window required, several candidates expected.",
+              "link": {
+                "text": "Continue in the OS PID workflow",
+                "workflow": "pid",
+                "carry": {
+                  "aid": "$aid",
+                  "pid": "$processid",
+                  "earliest": "$earliest",
+                  "latest": "$latest"
+                }
+              }
+            }
+          },
+          {
+            "value": "unknown",
+            "label": "I do not know",
+            "emits": false,
+            "callout": {
+              "kind": "caution",
+              "label": "Then no search is emitted",
+              "body": "Ask whoever raised the detection which value they read, or test it: run the Falcon reading and the OS reading separately and see which one returns a process whose image matches the detection."
+            }
+          }
+        ]
+      },
+      "results": [
+        {
+          "id": "hash",
+          "label": "Everything the file touched (the hash pivot)",
+          "note": "SHA256String on a detection summary event is the same SHA256 value space as SHA256HashData on sensor telemetry; pivot on the hash to find every process and file event that touched the file. Enrichment concurs at medium confidence.",
+          "join": "e_sha256string_to_sha256hashdata",
+          "params": {
+            "value": "$sha256",
+            "aid": "$aid",
+            "earliest": "$earliest",
+            "latest": "$latest"
+          }
+        },
+        {
+          "id": "host",
+          "label": "Resolve the host to an aid",
+          "note": "The TA's own host join: confirmed.",
+          "query": "cs_host_lookup",
+          "params": {
+            "hostname": "$hostname"
+          }
+        },
+        {
+          "id": "pidspace",
+          "label": "The PID crossover",
+          "note": "Gated: answer the PID-space question and this emits the matching search.",
+          "gate": true,
+          "choices": {
+            "falcon": {
+              "query": "cs_process_events",
+              "params": {
+                "aid": "$aid",
+                "tpid": "$processid",
+                "earliest": "$earliest",
+                "latest": "$latest"
+              }
+            },
+            "os": {
+              "query": "cs_pid_lookup",
+              "params": {
+                "aid": "$aid",
+                "pid": "$processid",
+                "earliest": "$earliest",
+                "latest": "$latest"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "ioc",
+      "title": "I have an observable and need the process behind it",
+      "kicker": "hash, IP, domain, filename → the process that produced it",
+      "when": "You have an indicator from threat intel, a ticket or another tool, and you need to know whether it appears in your FDR data and what process is responsible.",
+      "lead": "Paste the value first. The classifier identifies its kind and lists the fields that carry it. A 32-character hex string is ambiguous between an MD5 and an aid; both readings are offered.",
+      "steps": [
+        {
+          "title": "The value",
+          "why": "Everything else follows from what kind of thing this is. The classifier never guesses past what the shape supports.",
+          "required": true,
+          "names": [
+            "value"
+          ]
+        },
+        {
+          "title": "Which field carries it",
+          "why": "The same value can ride on several fields, and the field decides which events are in scope. Open the value page to pick one against the catalogue.",
+          "required": true,
+          "names": [
+            "field"
+          ]
+        },
+        {
+          "title": "The window, and the host if you have one",
+          "why": "The trace scans the observable plus every process-creation event in the window. Without a window it is unbounded; with an aid it is orders of magnitude faster.",
+          "required": true,
+          "names": [
+            "earliest",
+            "aid"
+          ],
+          "optional": [
+            "aid"
+          ]
+        }
+      ],
+      "expect": "One row per process that touched the observable in the window, with its image, command line, OS PID and whether the creation event was inside your window. resolved=no means the process started before your window, not that it does not exist.",
+      "disambiguate": [
+        "resolved=no: widen the window backwards until the ProcessRollup2 lands inside it.",
+        "Several processes for one observable is normal for a shared binary or a common domain: the ImageFileName column is how you separate them."
+      ],
+      "troubleshooting": [
+        {
+          "symptom": "Nothing comes back",
+          "causes": [
+            "Check the field actually carries that kind of value; the value page lists the ones that do.",
+            "The window may predate the observable.",
+            "Case: hashes in FDR are lower-case hex."
+          ]
+        },
+        {
+          "symptom": "It takes forever",
+          "causes": [
+            "Bind the aid. The trace is a fleet-wide scan without one."
+          ]
+        }
+      ],
+      "value_link": true,
+      "entries": [
+        {
+          "concept": "sha256",
+          "param": "value"
+        },
+        {
+          "container": "crowdstrike:events:sensor",
+          "column": "RemoteAddressIP4",
+          "param": "value"
+        },
+        {
+          "container": "crowdstrike:events:sensor",
+          "column": "DomainName",
+          "param": "value"
+        },
+        {
+          "concept": "image_file_name",
+          "param": "value"
+        }
+      ],
+      "results": [
+        {
+          "id": "trace",
+          "label": "Trace the observable to its process",
+          "note": "cs_trace_process: the observable plus the anchor events, correlated on the process handle. No join command; Splunk-Cloud safe.",
+          "query": "cs_trace",
+          "params": {
+            "field": "$field",
+            "value": "$value",
+            "aid": "$aid",
+            "earliest": "$earliest",
+            "latest": "$latest"
+          }
+        }
+      ]
+    },
+    {
+      "id": "hunt_mac_signing",
+      "title": "Hunt: mac binaries not signed as Apple",
+      "kicker": "com.apple.* name or an Apple path, signer not Apple",
+      "entries": [],
+      "hunt": {
+        "schedule": "Splunk: Save As, Alert, on a schedule that matches the window. Sentinel: Analytics, Create, Scheduled query rule, this KQL as the rule query."
+      },
+      "when": "You want a standing check, not a pivot from a value: a binary claiming Apple's namespace, or sitting at an Apple path, that Apple did not sign. Run it once here, then save it in the SIEM to run on a schedule.",
+      "lead": "Two searches from the sensor's own fields on mac process starts. The first takes SigningId under com.apple. and keeps the rows whose signature is not Apple's own (CsValidationCategory other than 1, or a TeamId where Apple's binaries carry '-'). The second takes the image path instead: under /System, /usr/bin, /usr/sbin, /usr/libexec or one of Apple's app bundles, with the same signer test. Neither needs a lookup; the Apple path list is pack data derived from the known-good corpus, the hash table stays out.",
+      "steps": [
+        {
+          "title": "How far back",
+          "why": "Seven days when left empty. A scheduled search keeps the window in its text, so pick the one the schedule will repeat.",
+          "required": false,
+          "names": [
+            "window"
+          ],
+          "optional": [
+            "window"
+          ]
+        }
+      ],
+      "expect": "One row per host and image: host, aid, image path, the signing id, team id and validation category seen, the hash, how many starts, first and last seen. On a clean fleet the rows are third-party software that borrowed an Apple name, an unsigned build of an Apple tool, or nothing at all. Every cell opens the value page.",
+      "disambiguate": [
+        "A com.apple. signing id with a real TeamId and CsValidationCategory other than 1 is a third-party build that chose Apple's namespace: what the signer_chosen hazard warns of. The known-good verdict on the hash says whether the file is Apple's.",
+        "An image under an Apple path with no signing fields at all is either unsigned or from a sensor build that does not report them; the CodeSigningFlags bitmask on the event says which.",
+        "Rosetta and the sealed system volume report Apple's own binaries at their real paths; those rows carry CsValidationCategory 1 and TeamId '-' and do not show here."
+      ],
+      "troubleshooting": [
+        {
+          "symptom": "Nothing comes back",
+          "causes": [
+            "No mac sensors report into this index or table in the window: check event_platform=Mac on the sourcetype page.",
+            "The sensor build reports SigningId but not CsValidationCategory or TeamId: every row would then show, so an empty result means no mac process events at all.",
+            "On Sentinel the seeded sample table has no signing columns; the query needs a Falcon ingest that carries them."
+          ]
+        },
+        {
+          "symptom": "Too much",
+          "causes": [
+            "Every mac process shows: the sensor build does not report CsValidationCategory or TeamId, so nothing reads as Apple signed. Narrow the window and read the rows by signing id.",
+            "One vendor's tools dominate: they signed as com.apple.something. Note the team id and hold it; the value page's benign list keeps it out next time."
+          ]
+        }
+      ],
+      "results": [
+        {
+          "id": "namespace",
+          "label": "Apple namespace, non-Apple signer",
+          "note": "SigningId under com.apple. whose signature is not Apple's own. No lookup.",
+          "query": "hunt_mac_apple_namespace",
+          "params": {
+            "window": "$window"
+          },
+          "shape": {
+            "columns": [
+              {
+                "key": "ComputerName",
+                "label": "host",
+                "role": "host",
+                "field": "ComputerName"
+              },
+              {
+                "key": "aid",
+                "label": "aid",
+                "role": "value",
+                "field": "aid"
+              },
+              {
+                "key": "ImageFileName",
+                "label": "image",
+                "role": "value",
+                "field": "ImageFileName"
+              },
+              {
+                "key": "signing_id",
+                "label": "signing id",
+                "role": "value",
+                "field": "SigningId"
+              },
+              {
+                "key": "team_id",
+                "label": "team id",
+                "role": "value",
+                "field": "TeamId"
+              },
+              {
+                "key": "validation_category",
+                "label": "validation category",
+                "role": "value",
+                "field": "CsValidationCategory"
+              },
+              {
+                "key": "sha256",
+                "label": "sha256",
+                "role": "value",
+                "field": "SHA256HashData"
+              },
+              {
+                "key": "events",
+                "label": "events",
+                "role": "count"
+              },
+              {
+                "key": "first_seen",
+                "label": "first seen",
+                "role": "time"
+              },
+              {
+                "key": "last_seen",
+                "label": "last seen",
+                "role": "time"
+              }
+            ]
+          }
+        },
+        {
+          "id": "path",
+          "label": "Apple path, wrong signer",
+          "note": "The image sits where Apple's own binaries live and the signature is not Apple's own. The path list is the pack's apple_paths, derived from the known-good corpus.",
+          "query": "hunt_mac_apple_path",
+          "params": {
+            "window": "$window",
+            "paths": "@apple_paths"
+          },
+          "shape": {
+            "columns": [
+              {
+                "key": "ComputerName",
+                "label": "host",
+                "role": "host",
+                "field": "ComputerName"
+              },
+              {
+                "key": "aid",
+                "label": "aid",
+                "role": "value",
+                "field": "aid"
+              },
+              {
+                "key": "ImageFileName",
+                "label": "image",
+                "role": "value",
+                "field": "ImageFileName"
+              },
+              {
+                "key": "signing_id",
+                "label": "signing id",
+                "role": "value",
+                "field": "SigningId"
+              },
+              {
+                "key": "team_id",
+                "label": "team id",
+                "role": "value",
+                "field": "TeamId"
+              },
+              {
+                "key": "validation_category",
+                "label": "validation category",
+                "role": "value",
+                "field": "CsValidationCategory"
+              },
+              {
+                "key": "sha256",
+                "label": "sha256",
+                "role": "value",
+                "field": "SHA256HashData"
+              },
+              {
+                "key": "events",
+                "label": "events",
+                "role": "count"
+              },
+              {
+                "key": "first_seen",
+                "label": "first seen",
+                "role": "time"
+              },
+              {
+                "key": "last_seen",
+                "label": "last seen",
+                "role": "time"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "lists": {
+    "apple_paths": {
+      "note": "Where Apple's own platform-signed binaries live: .app bundles at the bundle, loose binaries at their directory. The mac signing hunt flags an image under one of these whose signer is not Apple. Derived from the macOS corpus; the hash table stays out of every query.",
+      "source": [
+        "macos-25F71.csv",
+        "macos-25G83.csv",
+        "macos-26A5416b.csv"
+      ],
+      "values": [
+        "/Library/Apple/System/Library/CoreServices/MRT.app/",
+        "/Library/Apple/System/Library/CoreServices/XProtect.app/",
+        "/Library/Apple/System/Library/PrivateFrameworks/DeviceInterface.framework/Support/",
+        "/Library/Apple/System/Library/PrivateFrameworks/MobileDevice.framework/Versions/A/AppleMobileDeviceHelper.app/",
+        "/Library/Apple/System/Library/PrivateFrameworks/MobileDevice.framework/Versions/A/AppleMobileSync.app/",
+        "/Library/Apple/System/Library/PrivateFrameworks/MobileDevice.framework/Versions/A/Resources/",
+        "/Library/Apple/System/Library/PrivateFrameworks/MobileDevice.framework/Versions/A/XPCServices/MDPrivilegedUSBSupport.xpc/Contents/MacOS/",
+        "/Library/Apple/System/Library/PrivateFrameworks/MobileDevice.framework/Versions/A/XPCServices/MDRemoteServiceSupport.xpc/Contents/MacOS/",
+        "/Library/Apple/System/Library/PrivateFrameworks/RemotePairing.framework/Versions/A/Resources/bin/",
+        "/Library/Apple/System/Library/PrivateFrameworks/RemotePairing.framework/Versions/A/XPCServices/remotepairingd.xpc/Contents/MacOS/",
+        "/Library/Apple/usr/libexec/oah/",
+        "/System/Applications/App Store.app/",
+        "/System/Applications/Apps.app/",
+        "/System/Applications/Automator.app/",
+        "/System/Applications/Books.app/",
+        "/System/Applications/Calculator.app/",
+        "/System/Applications/Calendar.app/",
+        "/System/Applications/Chess.app/",
+        "/System/Applications/Clock.app/",
+        "/System/Applications/Contacts.app/",
+        "/System/Applications/Dictionary.app/",
+        "/System/Applications/FaceTime.app/",
+        "/System/Applications/FindMy.app/",
+        "/System/Applications/Font Book.app/",
+        "/System/Applications/Freeform.app/",
+        "/System/Applications/Games.app/",
+        "/System/Applications/Home.app/",
+        "/System/Applications/Image Capture.app/",
+        "/System/Applications/Image Playground.app/",
+        "/System/Applications/Journal.app/",
+        "/System/Applications/Mail.app/",
+        "/System/Applications/Maps.app/",
+        "/System/Applications/Messages.app/",
+        "/System/Applications/Mission Control.app/",
+        "/System/Applications/Music.app/",
+        "/System/Applications/News.app/",
+        "/System/Applications/Notes.app/",
+        "/System/Applications/Passwords.app/",
+        "/System/Applications/Phone.app/",
+        "/System/Applications/Photo Booth.app/",
+        "/System/Applications/Photos.app/",
+        "/System/Applications/Podcasts.app/",
+        "/System/Applications/Preview.app/",
+        "/System/Applications/QuickTime Player.app/",
+        "/System/Applications/Reminders.app/",
+        "/System/Applications/Shortcuts.app/",
+        "/System/Applications/Siri AI.app/",
+        "/System/Applications/Siri.app/",
+        "/System/Applications/Stickies.app/",
+        "/System/Applications/Stocks.app/",
+        "/System/Applications/System Settings.app/",
+        "/System/Applications/TV.app/",
+        "/System/Applications/TextEdit.app/",
+        "/System/Applications/Time Machine.app/",
+        "/System/Applications/Tips.app/",
+        "/System/Applications/Utilities/Activity Monitor.app/",
+        "/System/Applications/Utilities/AirPort Utility.app/",
+        "/System/Applications/Utilities/Audio MIDI Setup.app/",
+        "/System/Applications/Utilities/Bluetooth File Exchange.app/",
+        "/System/Applications/Utilities/Boot Camp Assistant.app/",
+        "/System/Applications/Utilities/ColorSync Utility.app/",
+        "/System/Applications/Utilities/Console.app/",
+        "/System/Applications/Utilities/Digital Color Meter.app/",
+        "/System/Applications/Utilities/Disk Utility.app/",
+        "/System/Applications/Utilities/Grapher.app/",
+        "/System/Applications/Utilities/Magnifier.app/",
+        "/System/Applications/Utilities/Migration Assistant.app/",
+        "/System/Applications/Utilities/Print Center.app/",
+        "/System/Applications/Utilities/Screen Sharing.app/",
+        "/System/Applications/Utilities/Screenshot.app/",
+        "/System/Applications/Utilities/Script Editor.app/",
+        "/System/Applications/Utilities/System Information.app/",
+        "/System/Applications/Utilities/Terminal.app/",
+        "/System/Applications/Utilities/VoiceOver Utility.app/",
+        "/System/Applications/VoiceMemos.app/",
+        "/System/Applications/Weather.app/",
+        "/System/Applications/iPhone Mirroring.app/",
+        "/System/Library/AssetsV2/",
+        "/System/Library/Audio/",
+        "/System/Library/Automator/",
+        "/System/Library/Classroom/ClassroomAppLockHelper.app/",
+        "/System/Library/Classroom/ClassroomStudentMenuExtra.app/",
+        "/System/Library/ColorSync/Calibrators/Display Calibrator.app/",
+        "/System/Library/CoreServices/",
+        "/System/Library/CryptoTokenKit/",
+        "/System/Library/DriverExtensions/",
+        "/System/Library/ExtensionKit/",
+        "/System/Library/Extensions/",
+        "/System/Library/Filesystems/",
+        "/System/Library/Frameworks/",
+        "/System/Library/Image Capture/",
+        "/System/Library/Input Methods/50onPaletteServer.app/",
+        "/System/Library/Input Methods/AinuIM.app/",
+        "/System/Library/Input Methods/Assistive Control.app/",
+        "/System/Library/Input Methods/CharacterPalette.app/",
+        "/System/Library/Input Methods/DictationIM.app/",
+        "/System/Library/Input Methods/EmojiFunctionRowIM.app/",
+        "/System/Library/Input Methods/JapaneseIM-KanaTyping.app/",
+        "/System/Library/Input Methods/JapaneseIM-RomajiTyping.app/",
+        "/System/Library/Input Methods/KoreanIM.app/",
+        "/System/Library/Input Methods/PluginIM.app/",
+        "/System/Library/Input Methods/PressAndHold.app/",
+        "/System/Library/Input Methods/SCIM.app/",
+        "/System/Library/Input Methods/TCIM.app/",
+        "/System/Library/Input Methods/TYIM.app/",
+        "/System/Library/Input Methods/TamilIM.app/",
+        "/System/Library/Input Methods/TrackpadIM.app/",
+        "/System/Library/Input Methods/TransliterationIM.app/",
+        "/System/Library/Input Methods/VietnameseIM.app/",
+        "/System/Library/InternetAccounts/",
+        "/System/Library/PDF Services/",
+        "/System/Library/Password Server Filters/",
+        "/System/Library/PreferencePanes/",
+        "/System/Library/Printers/",
+        "/System/Library/PrivateFrameworks/",
+        "/System/Library/SecurityResearch/",
+        "/System/Library/Services/",
+        "/System/Library/SystemConfiguration/",
+        "/System/Library/SystemProfiler/",
+        "/System/Library/Templates/",
+        "/System/Volumes/Preboot/Cryptexes/App/System/Applications/Safari.app/",
+        "/System/Volumes/Preboot/Cryptexes/App/System/Library/CoreServices/PasswordManagerBrowserExtensionHelper.app/",
+        "/System/Volumes/Preboot/Cryptexes/App/System/Library/CoreServices/PasswordsSettingsExtension.appex/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/App/System/Library/CoreServices/Web App.app/",
+        "/System/Volumes/Preboot/Cryptexes/App/usr/bin/",
+        "/System/Volumes/Preboot/Cryptexes/App/usr/libexec/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/Frameworks/AuthenticationServices.framework/Versions/A/XPCServices/com.apple.AuthenticationServices.Helper.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/Frameworks/SafariServices.framework/Versions/A/XPCServices/com.apple.SafariServices.ExtensionHelper.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/Frameworks/SafariServices.framework/Versions/A/XPCServices/com.apple.SafariServices.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.CaptivePortal.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.Development.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.EnhancedSecurity.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/PrivateFrameworks/SafariFoundation.framework/Versions/A/XPCServices/CredentialProviderExtensionHelper.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/PrivateFrameworks/SafariFoundation.framework/Versions/A/XPCServices/SafariConfigurationSubscriber.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/PrivateFrameworks/SafariPlatformSupport.framework/Versions/A/XPCServices/com.apple.SafariPlatformSupport.Helper.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/PrivateFrameworks/SafariShared.framework/Versions/A/XPCServices/com.apple.Safari.CredentialExtractionHelper.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/PrivateFrameworks/SafariShared.framework/Versions/A/XPCServices/com.apple.Safari.SearchHelper.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/PrivateFrameworks/WebDriver.framework/Versions/A/XPCServices/com.apple.WebDriver.HTTPService.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/Library/PrivateFrameworks/WebDriver.framework/Versions/A/XPCServices/com.apple.WebDriver.MCPService.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/iOSSupport/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/iOSSupport/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.GPU.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/iOSSupport/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/iOSSupport/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.CaptivePortal.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/iOSSupport/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.Development.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/iOSSupport/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.EnhancedSecurity.xpc/Contents/MacOS/",
+        "/System/Volumes/Preboot/Cryptexes/OS/System/iOSSupport/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/",
+        "/System/iOSSupport/",
+        "/bin/",
+        "/sbin/",
+        "/usr/bin/",
+        "/usr/libexec/",
+        "/usr/sbin/"
+      ]
+    }
+  }
+}

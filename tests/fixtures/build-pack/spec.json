@@ -1,0 +1,32 @@
+{
+ "format": "reach-pack-spec",
+ "version": 1,
+ "id": "fixture-cites",
+ "label": "Fixture feed",
+ "pack_version": "0.1.0",
+ "description": "A two-concept feed for the builder's own checks.",
+ "source": "tests/fixtures/build-pack",
+ "feed": {
+  "id": "fixture_feed",
+  "label": "Fixture feed",
+  "description": "One record per fixture event.",
+  "tags": ["fixture"]
+ },
+ "cites": {
+  "spec_page": {"url": "https://example.com/spec", "title": "Spec page", "read_on": "2026-09-19"}
+ },
+ "hazards": {},
+ "sourcetypes": {
+  "fixture:events": {"platform": "splunk", "kind": "vendor", "description": "The fixture sourcetype."}
+ },
+ "concepts": {
+  "event_name": {"label": "Event name", "type": "record_type", "description": "What happened.", "provenance": "documented", "cite": "spec_page"},
+  "outcome": {"label": "Outcome", "type": "outcome", "description": "How it ended.", "provenance": "observed"}
+ },
+ "bindings": {
+  "fixture:events": [
+   {"column": "eventName", "concept": "event_name", "kind": "extracted"},
+   {"column": "result", "concept": "outcome", "kind": "extracted"}
+  ]
+ }
+}

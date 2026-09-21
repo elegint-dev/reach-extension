@@ -1,0 +1,249 @@
+{
+  "format": "reach-taxonomy",
+  "version": 1,
+  "description": "Concept types above feeds: what kind of thing a field is, whichever feed or SIEM it comes from. A feed concept names its type and inherits the type's meaning fragment, default role, value shape and hazards.",
+  "types": {
+    "principal": {
+      "label": "Principal",
+      "description": "The identity that acted: an ARN, a UPN, a SID. The key for 'everything this actor did'.",
+      "role": "user_id",
+      "hazards": []
+    },
+    "user_id": {
+      "label": "User id",
+      "description": "A stable, opaque identifier for a user or account: an object id, an IAM principal id, a SID. Survives renames; not human-readable.",
+      "role": "user_id",
+      "shape": "guid_or_opaque",
+      "hazards": []
+    },
+    "user_name": {
+      "label": "User name",
+      "description": "A human-readable account or display name. Not unique across domains or tenants and changes on rename.",
+      "role": "user_id",
+      "hazards": ["names_not_stable"]
+    },
+    "account_id": {
+      "label": "Account or tenant id",
+      "description": "The account, subscription or tenant a record belongs to. A qualifier for every other key in the record.",
+      "role": "identifier",
+      "hazards": []
+    },
+    "access_key": {
+      "label": "Access key id",
+      "description": "The id of a credential that signed a request. Follows the credential, not the person holding it.",
+      "role": "identifier",
+      "hazards": []
+    },
+    "session_id": {
+      "label": "Session id",
+      "description": "Ties together the records of one session or authentication flow.",
+      "role": "identifier",
+      "hazards": []
+    },
+    "app_id": {
+      "label": "Application id",
+      "description": "The client or resource application involved, as an id. Names change; ids do not.",
+      "role": "identifier",
+      "shape": "guid",
+      "hazards": []
+    },
+    "source_ip": {
+      "label": "Source address",
+      "description": "The network address a request or sign-in came from, as the receiving service saw it.",
+      "role": "ip",
+      "shape": "ip",
+      "hazards": ["nat_vpn"]
+    },
+    "dest_ip": {
+      "label": "Destination address",
+      "description": "The network address a request or flow was addressed to, as the sending or reporting service saw it.",
+      "parent": "source_ip",
+      "hazards": []
+    },
+    "hostname": {
+      "label": "Hostname",
+      "description": "A host's name as it reported it or as DNS gave it. Repeats across domains and changes on reimage.",
+      "role": "hostname",
+      "hazards": ["hostname_unstable"]
+    },
+    "host_id": {
+      "label": "Host id",
+      "description": "A sensor's or platform's stable identifier for a host. The host key when names are not.",
+      "role": "agent_id",
+      "shape": "hex32",
+      "hazards": []
+    },
+    "domain": {
+      "label": "Domain name",
+      "description": "A DNS name: an endpoint, a host header, a service.",
+      "role": "domain",
+      "shape": "domain",
+      "hazards": []
+    },
+    "user_agent": {
+      "label": "User agent",
+      "description": "The client's self-description. Set by the client and trivially spoofed; good for noticing change, not for attribution.",
+      "role": "other",
+      "hazards": ["client_supplied"]
+    },
+    "process_id": {
+      "label": "Process id",
+      "description": "An operating-system process id. Recycled by the OS: meaningful only with the host and a time bound.",
+      "role": "pid",
+      "hazards": ["pid_recycling"]
+    },
+    "process_uid": {
+      "label": "Sensor process id",
+      "description": "A sensor's own unique id for a process, never recycled within a sensor session. Pivot on this, scoped by host id.",
+      "role": "pid",
+      "hazards": ["per_host"]
+    },
+    "command_line": {
+      "label": "Command line",
+      "description": "The full command a process started with.",
+      "role": "other",
+      "hazards": []
+    },
+    "file_path": {
+      "label": "File path",
+      "description": "A path on disk or an object key.",
+      "role": "file_path",
+      "hazards": []
+    },
+    "file_name": {
+      "label": "File name",
+      "description": "A file's base name without its directory.",
+      "role": "file_name",
+      "hazards": []
+    },
+    "file_hash": {
+      "label": "File hash",
+      "description": "A cryptographic digest of a file's contents. The key for 'everywhere this binary ran', across hosts and feeds.",
+      "role": "hash",
+      "shape": "hash",
+      "hazards": []
+    },
+    "signing_id": {
+      "label": "Signing identifier",
+      "description": "The identifier a binary's code signature carries: on macOS a reverse-DNS string such as com.apple.contactsd. A label the signer wrote into the signature, not proof of who signed it.",
+      "role": "identifier",
+      "shape": "reverse_dns",
+      "hazards": ["signer_chosen"]
+    },
+    "team_id": {
+      "label": "Team id",
+      "description": "The Apple developer team whose certificate signed a binary, a ten-character id. Empty (or a placeholder such as '-') for Apple's own platform binaries, which are signed by Apple's chain rather than a team.",
+      "role": "identifier",
+      "shape": "alnum10",
+      "hazards": ["team_id_is_the_certificate"]
+    },
+    "bitmask": {
+      "label": "Bit flags",
+      "description": "Several yes/no facts packed into one integer, one per bit. Read by mask, never by equality: two values that differ in one bit share every other flag.",
+      "role": "other",
+      "hazards": []
+    },
+    "event_time": {
+      "label": "Event time",
+      "description": "When the thing happened at the source, as opposed to when the SIEM received it.",
+      "role": "timestamp",
+      "hazards": ["time_basis"]
+    },
+    "record_type": {
+      "label": "Record type",
+      "description": "Which kind of record this is within the feed; decides which other fields are present.",
+      "role": "event_name",
+      "hazards": []
+    },
+    "event_id": {
+      "label": "Event id",
+      "description": "A unique id for one record. Deduplicate on it.",
+      "role": "event_id",
+      "shape": "guid",
+      "hazards": []
+    },
+    "request_id": {
+      "label": "Request id",
+      "description": "The id of one request or flow, shared by every record it produced.",
+      "role": "identifier",
+      "hazards": []
+    },
+    "outcome": {
+      "label": "Outcome",
+      "description": "How the operation ended: a result code, an error code, success or failure.",
+      "role": "enum",
+      "hazards": []
+    },
+    "event_source": {
+      "label": "Event source",
+      "description": "The service or component that produced or received the operation.",
+      "role": "enum",
+      "hazards": []
+    },
+    "region": {
+      "label": "Region",
+      "description": "The cloud region or geography a record is about.",
+      "role": "enum",
+      "hazards": []
+    },
+    "resource_id": {
+      "label": "Resource id",
+      "description": "The identity of a resource an operation touched: an ARN, an object id, a bucket, an instance.",
+      "role": "identifier",
+      "hazards": []
+    },
+    "raw_object": {
+      "label": "Nested object",
+      "description": "A structured value whose shape depends on the record type. Reached by path (dotted in Splunk, dynamic in KQL).",
+      "role": "other",
+      "hazards": []
+    },
+    "flag": {
+      "label": "Flag",
+      "description": "A yes/no fact about the record.",
+      "role": "bool",
+      "hazards": []
+    },
+    "enum": {
+      "label": "Enumeration",
+      "description": "One of a fixed set of values; a decode table gives their meaning.",
+      "role": "enum",
+      "hazards": []
+    },
+    "count": {
+      "label": "Quantity",
+      "description": "A measured number.",
+      "role": "count",
+      "hazards": []
+    },
+    "version": {
+      "label": "Version",
+      "description": "A format or protocol version.",
+      "role": "version",
+      "hazards": []
+    },
+    "text": {
+      "label": "Text",
+      "description": "Free text.",
+      "role": "other",
+      "hazards": []
+    },
+    "identifier": {
+      "label": "Identifier",
+      "description": "An opaque id whose kind the feed defines.",
+      "role": "identifier",
+      "hazards": []
+    }
+  },
+  "hazards": {
+    "nat_vpn": { "level": "note", "text": "One address is many people behind NAT, a proxy or a VPN egress. 'From this address' groups a network, not a person." },
+    "hostname_unstable": { "level": "caution", "text": "A hostname is what the host was told; it repeats across domains and changes on reimage. Use the platform's host id as the key." },
+    "client_supplied": { "level": "caution", "text": "Set by the client and trivially spoofed. Use it to notice change, not to attribute." },
+    "pid_recycling": { "level": "caution", "text": "Operating-system process ids are recycled. Pivot on the sensor's own process id where there is one, and always scope by host; a bare PID across hosts means nothing." },
+    "per_host": { "level": "note", "text": "Unique per host, not across hosts: always pair with the host id." },
+    "names_not_stable": { "level": "note", "text": "Names change on rename and repeat across domains and tenants; the stable id behind the name is the key." },
+    "time_basis": { "level": "note", "text": "Event time and ingest time differ by delivery lag. A tight upper time bound can miss the newest records." },
+    "signer_chosen": { "level": "caution", "text": "A signing identifier is chosen by whoever signed the binary: anyone can sign a build as com.apple.anything. Only the certificate chain makes it Apple's (Apple's platform signing carries no team id); check the hash, the team id and the path against a known-good corpus before trusting the name." },
+    "team_id_is_the_certificate": { "level": "note", "text": "A team id names the developer account whose certificate signed the binary, not who built or ran it. Certificates leak and get revoked; a known team id says who paid for the certificate." }
+  }
+}

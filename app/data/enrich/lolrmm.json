@@ -1,0 +1,4654 @@
+{
+ "format": "reach-lolrmm",
+ "version": 1,
+ "generated_at": "2026-09-19T05:40:39.752Z",
+ "count": 323,
+ "entries": [
+  {
+   "name": "ZeroTier",
+   "slug": "zerotier",
+   "category": "RAT",
+   "installationPaths": [
+    "zerotier*.msi",
+    "zerotier*.exe",
+    "zero-powershell.exe"
+   ],
+   "domains": [
+    "zerotier.com",
+    "*.zerotier.com"
+   ]
+  },
+  {
+   "name": "TigerVNC",
+   "slug": "tigervnc",
+   "category": "RAT",
+   "installationPaths": [
+    "tigervnc*.exe",
+    "winvnc4.exe",
+    "C:\\Program Files\\TightVNC\\*",
+    "*\\TightVNC\\*",
+    "*\\tvnserver.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "KHelpDesk",
+   "slug": "khelpdesk",
+   "category": "RMM",
+   "installationPaths": [
+    "KHelpDesk.exe"
+   ],
+   "domains": [
+    "*.khelpdesk.com.br"
+   ]
+  },
+  {
+   "name": "PuTTY Tray",
+   "slug": "putty-tray",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\*\\puttytray.exe",
+    "*\\puttytray.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Access Remote PC",
+   "slug": "access-remote-pc",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\RemotePC\\*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "RMMmax",
+   "slug": "rmmmax",
+   "category": "RMM",
+   "installationPaths": [
+    "RMMmaxAgentSetup.exe",
+    "%ProgramData%\\rmmmax\\AgentService\\RMMmaxAgentService.exe",
+    "/var/rmmmax/agentservice/rmmmax_agent.py",
+    "/usr/local/bin/rmmmax-agent",
+    "/Applications/RMMmax Agent.app/Contents/MacOS/RMMmax Agent"
+   ],
+   "domains": [
+    "api.rmmmax.com"
+   ]
+  },
+  {
+   "name": "HelpU",
+   "slug": "helpu",
+   "category": "RMM",
+   "installationPaths": [
+    "helpu_install.exe",
+    "HelpuUpdater.exe",
+    "HelpuManager.exe"
+   ],
+   "domains": [
+    "helpu.co.kr",
+    "*.helpu.co.kr"
+   ]
+  },
+  {
+   "name": "RDCMan",
+   "slug": "rdcman",
+   "category": "RAT",
+   "installationPaths": [
+    "*\\RDCMan.exe",
+    "*\\RDCMan-x86.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "GoToMyPC",
+   "slug": "gotomypc",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\GoToMyPC\\*",
+    "G2M.exe",
+    "%APPDATA%\\GoToMeeting\\G2M.exe"
+   ],
+   "domains": [
+    "*.gotomypc.com"
+   ]
+  },
+  {
+   "name": "Senso.cloud",
+   "slug": "senso-cloud",
+   "category": "RMM",
+   "installationPaths": [
+    "SensoClient.exe",
+    "SensoService.exe",
+    "aadg.exe"
+   ],
+   "domains": [
+    "*.senso.cloud",
+    "senso.cloud"
+   ]
+  },
+  {
+   "name": "Free Ping Tool",
+   "slug": "free-ping-tool",
+   "category": "RAT",
+   "installationPaths": [
+    "can't find this one"
+   ],
+   "domains": []
+  },
+  {
+   "name": "CloudFlare Tunnel",
+   "slug": "cloudflare-tunnel",
+   "category": "RAT",
+   "installationPaths": [
+    "cloudflared.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Teleport Connect",
+   "slug": "teleport-connect",
+   "category": "RAT",
+   "installationPaths": [
+    "Teleport Connect Setup-*.exe",
+    "C:\\Program Files\\Teleport Connect\\*",
+    "C:\\Users\\*\\AppData\\Local\\Programs\\Teleport Connect\\*",
+    "/Applications/Teleport Connect.app/*",
+    "/opt/Teleport Connect/*",
+    "/usr/local/bin/tsh"
+   ],
+   "domains": [
+    "cdn.teleport.dev",
+    "reporting-connect.teleportinfra.sh",
+    "usage.teleport.dev",
+    "*.teleport.sh"
+   ]
+  },
+  {
+   "name": "ShellHub",
+   "slug": "shellhub",
+   "category": "RAT",
+   "installationPaths": [
+    "/usr/local/bin/shellhub-agent",
+    "/etc/shellhub-agent/*",
+    "/etc/systemd/system/shellhub-agent.service",
+    "/var/lib/shellhub-agent/*"
+   ],
+   "domains": [
+    "shellhub.io",
+    "cloud.shellhub.io",
+    "www.shellhub.io",
+    "*.shellhub.io"
+   ]
+  },
+  {
+   "name": "Royal Apps",
+   "slug": "royal-apps",
+   "category": "RMM",
+   "installationPaths": [
+    "royalserver.exe",
+    "royalts.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Pocket Controller",
+   "slug": "pocket-controller",
+   "category": "RMM",
+   "installationPaths": [
+    "pocketcontroller.exe",
+    "pocketcloudservice.exe",
+    "wysebrowser.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "ConnectWise",
+   "slug": "connectwise",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\ScreenConnect Client (<string ID>)\\*",
+    "*\\ScreenConnect*Client*\\*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Sorillus",
+   "slug": "sorillus",
+   "category": "RMM",
+   "installationPaths": [
+    "Sorillus-Launcher*.exe",
+    "Sorillus Launcher.exe"
+   ],
+   "domains": [
+    "*.sorillus.com",
+    "sorillus.com"
+   ]
+  },
+  {
+   "name": "RuDesktop",
+   "slug": "rudesktop",
+   "category": "RMM",
+   "installationPaths": [
+    "rd.exe",
+    "rudesktop*.exe"
+   ],
+   "domains": [
+    "*.rudesktop.ru",
+    "rudesktop.ru"
+   ]
+  },
+  {
+   "name": "ExtraPuTTY",
+   "slug": "extraputty",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Users\\*\\ExtraPuTTY-0.30-2016-01-28-installer.exe",
+    "*Users\\*\\ExtraPuTTY-0.30-2016-01-28-installer.exe",
+    "*\\ExtraPuTTY-0.30-2016-01-28-installer.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Pocket Controller (Soti Xsight)",
+   "slug": "pocket-controller-soti-xsight",
+   "category": "RMM",
+   "installationPaths": [
+    "pocketcontroller.exe",
+    "wysebrowser.exe",
+    "XSightService.exe"
+   ],
+   "domains": [
+    "soti.net",
+    "*.soti.net"
+   ]
+  },
+  {
+   "name": "ManageEngine RMM Central",
+   "slug": "manageengine-rmm-central",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "GatherPlace-desktop sharing",
+   "slug": "gatherplace-desktop-sharing",
+   "category": "RMM",
+   "installationPaths": [
+    "gp3.exe",
+    "gp4.exe",
+    "gp5.exe"
+   ],
+   "domains": [
+    "*.gatherplace.com",
+    "*.gatherplace.net",
+    "gatherplace.com"
+   ]
+  },
+  {
+   "name": "Pocket Cloud (Wyse)",
+   "slug": "pocket-cloud-wyse",
+   "category": "RMM",
+   "installationPaths": [
+    "pocketcloud*.exe",
+    "pocketcloudservice.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Faronics Deploy",
+   "slug": "faronics-deploy",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Faronics\\Faronics Deploy Agent\\*",
+    "C:\\Program Files (x86)\\Faronics\\Faronics Deploy Agent\\FaronicsDeployAgent.exe",
+    "C:\\Program Files (x86)\\Faronics\\Faronics Deploy Agent\\FWAService.exe",
+    "C:\\Program Files (x86)\\Faronics\\Faronics Deploy Agent\\FWA_UI_Agent.exe",
+    "C:\\Program Files (x86)\\Faronics\\Faronics Deploy Agent\\FRCServer.exe",
+    "C:\\Program Files (x86)\\Faronics\\Faronics Deploy Agent\\FaronicsSA.exe",
+    "C:\\Program Files (x86)\\Faronics\\Faronics Deploy Agent\\FSSInstaller.exe",
+    "C:\\Program Files (x86)\\Faronics\\Faronics Deploy Agent\\ModulesUpgradeMgr.exe",
+    "C:\\Program Files (x86)\\Faronics\\Faronics Deploy Agent\\NotificationHelper.exe",
+    "C:\\Program Files (x86)\\Faronics\\Faronics Deploy Agent\\UserNotificationHelper.exe",
+    "C:\\Program Files (x86)\\Faronics\\Faronics Deploy Agent\\MigrationHelper_32.exe",
+    "C:\\Program Files (x86)\\Faronics\\Faronics Deploy Agent\\MigrationHelper_64.exe",
+    "C:\\ProgramData\\Faronics\\StorageSpace\\FWA\\*",
+    "FaronicsDeployAgent.exe",
+    "FWAWebInstaller_*.exe",
+    "FWAService.exe",
+    "FWA_UI_Agent.exe",
+    "CloudWksInstall.exe"
+   ],
+   "domains": [
+    "deploy.faronics.com",
+    "www.faronicsdeploy.com",
+    "faronicscloud.com",
+    "nv0mddxkh7.execute-api.us-west-2.amazonaws.com",
+    "29qoj3q0yf.execute-api.us-west-2.amazonaws.com",
+    "8z5x4rqbxi.execute-api.eu-west-1.amazonaws.com",
+    "1wuccjc4a3.execute-api.eu-west-1.amazonaws.com",
+    "faronics-deploy-na-production-installers.s3.us-west-2.amazonaws.com",
+    "faronics-deploy-int-production-installers.s3.eu-west-1.amazonaws.com",
+    "remotepro-us-west-2.faronics.com",
+    "remotepro-us-east-1.faronics.com",
+    "remotepro-ca-central-1.faronics.com",
+    "remotepro-eu-west-1.faronicsdeploy.com",
+    "remotepro-ap-southeast-1.faronicsdeploy.com",
+    "remotepro-sa-east-1.faronicsdeploy.com",
+    "faronics.com",
+    "support.faronics.com",
+    "docs.faronics.com",
+    "upd.faronicslabs.com"
+   ]
+  },
+  {
+   "name": "Yandex.Disk",
+   "slug": "yandex-disk",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Yandex\\*",
+    "*\\Yandex\\*",
+    "*\\YandexDisk2.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "RemotePass",
+   "slug": "remotepass",
+   "category": "RMM",
+   "installationPaths": [
+    "remotepass-access.exe",
+    "rpaccess.exe",
+    "rpwhostscr.exe"
+   ],
+   "domains": [
+    "remotepass.com"
+   ]
+  },
+  {
+   "name": "Xpra",
+   "slug": "xpra",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Xpra\\*",
+    "*\\Xpra\\*",
+    "*\\Xpra-Launcher.exe",
+    "*\\Xpra-x86_64_Setup.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "AnyDesk",
+   "slug": "anydesk",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\AnyDesk\\*",
+    "C:\\Program Files\\AnyDesk\\*",
+    "/Applications/AnyDesk.app"
+   ],
+   "domains": [
+    "boot.net.anydesk.com",
+    "*.anydesk.com"
+   ]
+  },
+  {
+   "name": "SecureCRT",
+   "slug": "securecrt",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\*\\SecureCRT.EXE",
+    "*\\SecureCRT.EXE",
+    "*\\VanDyke Software\\ClientPack\\*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "S3 Browser",
+   "slug": "s3-browser",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\S3 Browser\\*",
+    "*\\S3 Browser\\*",
+    "*\\s3browser*.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Itarian",
+   "slug": "itarian",
+   "category": "RMM",
+   "installationPaths": [
+    "ITSMAgent.exe",
+    "RViewer.exe",
+    "ItsmRsp.exe",
+    "RAccess.exe",
+    "RmmService.exe",
+    "ITarianRemoteAccessSetup.exe",
+    "RDesktop.exe",
+    "ComodoRemoteControl.exe",
+    "ITSMService.exe",
+    "RHost.exe"
+   ],
+   "domains": [
+    "mdmsupport.comodo.com",
+    "*.itsm-us1.comodo.com",
+    "*.cmdm.comodo.com",
+    "remoteaccess.itarian.com",
+    "servicedesk.itarian.com"
+   ]
+  },
+  {
+   "name": "DameWare",
+   "slug": "dameware",
+   "category": "RMM",
+   "installationPaths": [
+    "SolarWinds-Dameware-DRS*.exe",
+    "DameWare Mini Remote Control*.exe",
+    "C:\\Windows\\dwrcs\\*",
+    "C:\\Program Files\\SolarWinds\\Dameware Mini Remote Control\\*",
+    "dntus*.exe",
+    "dwrcs.exe",
+    "*\\dwrcs\\*",
+    "*\\dwrcst.exe",
+    "DameWare Remote Support.exe",
+    "SolarWinds-Dameware-MRC*.exe"
+   ],
+   "domains": [
+    "dameware.com"
+   ]
+  },
+  {
+   "name": "Duplicati",
+   "slug": "duplicati",
+   "category": "RAT",
+   "installationPaths": [
+    "c:\\Program Files\\*\\Duplicati.Server.exe",
+    "*\\*\\Duplicati.Server.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "PSEXEC (Clone)",
+   "slug": "psexec-clone",
+   "category": "RAT",
+   "installationPaths": [
+    "paexec.exe",
+    "PAExec-*.exe",
+    "csexec.exe",
+    "remcom.exe",
+    "remcomsvc.exe",
+    "xcmd.exe",
+    "xcmdsvc.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "BreezeRMM",
+   "slug": "breezermm",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\Breeze\\*",
+    "C:\\ProgramData\\Breeze\\*"
+   ],
+   "domains": [
+    "breezermm.com",
+    "breeze.app",
+    "us.2breeze.app",
+    "eu.2breeze.app"
+   ]
+  },
+  {
+   "name": "I'm InTouch",
+   "slug": "i-m-intouch",
+   "category": "RMM",
+   "installationPaths": [
+    "iit.exe",
+    "intouch.exe",
+    "I'm InTouch Go Installer.exe"
+   ],
+   "domains": [
+    "*.01com.com"
+   ]
+  },
+  {
+   "name": "Splashtop (Beta)",
+   "slug": "splashtop-beta",
+   "category": "RMM",
+   "installationPaths": [
+    "SRServer.exe",
+    "SplashtopSOS.exe",
+    "Splashtop_Streamer_Windows*.exe",
+    "SRManager.exe"
+   ],
+   "domains": [
+    "splashtop.com"
+   ]
+  },
+  {
+   "name": "TightVNC",
+   "slug": "tightvnc",
+   "category": "RAT",
+   "installationPaths": [
+    "tvnviewer.exe",
+    "TightVNCViewerPortable*.exe",
+    "tvnserver.exe"
+   ],
+   "domains": [
+    "tightvnc.com"
+   ]
+  },
+  {
+   "name": "Ericom AccessNow",
+   "slug": "ericom-accessnow",
+   "category": "RMM",
+   "installationPaths": [
+    "accessserver*.exe",
+    "accessserver.exe"
+   ],
+   "domains": [
+    "ericom.com"
+   ]
+  },
+  {
+   "name": "Terminals",
+   "slug": "terminals",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "Total Software Deployment",
+   "slug": "total-software-deployment",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\ProgramData\\Total Software Deployment\\*",
+    "*\\Total Software Deployment\\*",
+    "*\\tniwinagent.exe",
+    "*\\Tsdservice.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "VIZOR",
+   "slug": "vizor",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Vector\\Asset Management Client\\*",
+    "C:\\Program Files\\Vector\\Asset Management Client\\*",
+    "C:\\Program Files\\Vector Networks Limited\\LANutil32 Suite\\*"
+   ],
+   "domains": [
+    "vizor.cloud",
+    "www.vizor.cloud",
+    "vector-networks.com",
+    "www.vector-networks.com",
+    "metaquest.com",
+    "mail.metaquest.com",
+    "www.metaquest.com",
+    "downloads.vector-networks.com"
+   ]
+  },
+  {
+   "name": "Remote Utilities",
+   "slug": "remote-utilities",
+   "category": "RMM",
+   "installationPaths": [
+    "rutview.exe",
+    "rutserv.exe"
+   ],
+   "domains": [
+    "*.internetid.ru"
+   ]
+  },
+  {
+   "name": "DeskNets",
+   "slug": "desknets",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "Mouse Without Borders",
+   "slug": "mouse-without-borders",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Microsoft Garage\\Mouse without Borders\\*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Royal TS",
+   "slug": "royal-ts",
+   "category": "RMM",
+   "installationPaths": [
+    "royalts.exe"
+   ],
+   "domains": [
+    "royalapps.com"
+   ]
+  },
+  {
+   "name": "Xshell",
+   "slug": "xshell",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\NetSarang\\xShell\\*",
+    "*\\NetSarang\\xShell\\*",
+    "*\\xShell.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "MobaXterm",
+   "slug": "mobaxterm",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\*\\MobaXterm_installer_12.1.msi",
+    "*\\MobaXterm_installer_*.msi",
+    "*\\Mobatek\\MobaXterm\\*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "TurboMeeting",
+   "slug": "turbomeeting",
+   "category": "RMM",
+   "installationPaths": [
+    "pcstarter.exe",
+    "turbomeeting.exe",
+    "turbomeetingstarter.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Supremo",
+   "slug": "supremo",
+   "category": "RMM",
+   "installationPaths": [
+    "*\\\\supremoremotedesktop\\\\supremosystem.exe",
+    "%USERPROFILE%\\\\AppData\\\\Local\\\\Temp\\\\SupremoRemoteDesktop\\\\",
+    "C:\\\\ProgramData\\\\SupremoRemoteDesktop\\\\",
+    "supremo.exe",
+    "supremohelper.exe",
+    "supremoservice.exe",
+    "SupremoSystem.exe"
+   ],
+   "domains": [
+    "*.supremocontrol.com"
+   ]
+  },
+  {
+   "name": "Remote Manipulator System",
+   "slug": "remote-manipulator-system",
+   "category": "RMM",
+   "installationPaths": [
+    "rfusclient.exe",
+    "rutserv.exe"
+   ],
+   "domains": [
+    "*.internetid.ru",
+    "rmansys.ru"
+   ]
+  },
+  {
+   "name": "Mocha VNC Lite",
+   "slug": "mocha-vnc-lite",
+   "category": "RAT",
+   "installationPaths": [
+    "This installs a modified VNC and cannot be blocked by path separate from VNC",
+    "*\\RealVNC\\VNC4\\*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Zabbix Agent",
+   "slug": "zabbix-agent",
+   "category": "RMM",
+   "installationPaths": [
+    "zabbix_agent*.exe"
+   ],
+   "domains": [
+    "zabbix.com"
+   ]
+  },
+  {
+   "name": "Echoware",
+   "slug": "echoware",
+   "category": "RMM",
+   "installationPaths": [
+    "echoserver*.exe",
+    "echoware.dll"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Ninite Pro (Ninite Agent)",
+   "slug": "ninite-pro-ninite-agent",
+   "category": "RMM",
+   "installationPaths": [
+    "NiniteOne.exe",
+    "NinitePro.exe",
+    "NiniteAgent.exe",
+    "Ninite.exe"
+   ],
+   "domains": [
+    "ninite.com",
+    "*.ninite.com"
+   ]
+  },
+  {
+   "name": "ShowMyPC",
+   "slug": "showmypc",
+   "category": "RMM",
+   "installationPaths": [
+    "SMPCSetup.exe",
+    "showmypc*.exe",
+    "showmypc.exe",
+    "smpcsetup.exe"
+   ],
+   "domains": [
+    "*.showmypc.com",
+    "showmypc.com"
+   ]
+  },
+  {
+   "name": "NTR Remote",
+   "slug": "ntr-remote",
+   "category": "RMM",
+   "installationPaths": [
+    "NTRsupportPro_EN.exe"
+   ],
+   "domains": [
+    "*.ntrsupport.com"
+   ]
+  },
+  {
+   "name": "Iperius Remote",
+   "slug": "iperius-remote",
+   "category": "RMM",
+   "installationPaths": [
+    "iperius.exe",
+    "iperiusremote.exe"
+   ],
+   "domains": [
+    "*.iperiusremote.com",
+    "*.iperius.com",
+    "*.iperius-rs.com",
+    "iperiusremote.com"
+   ]
+  },
+  {
+   "name": "Microsoft Quick Assist",
+   "slug": "microsoft-quick-assist",
+   "category": "RAT",
+   "installationPaths": [
+    "quickassist.exe"
+   ],
+   "domains": [
+    "*.support.services.microsoft.com"
+   ]
+  },
+  {
+   "name": "Laplink Everywhere",
+   "slug": "laplink-everywhere",
+   "category": "RMM",
+   "installationPaths": [
+    "laplink.exe",
+    "laplink-everywhere-setup*.exe",
+    "laplinkeverywhere.exe",
+    "llrcservice.exe",
+    "serverproxyservice.exe",
+    "OOSysAgent.exe"
+   ],
+   "domains": [
+    "everywhere.laplink.com",
+    "le.laplink.com",
+    "atled.syspectr.com"
+   ]
+  },
+  {
+   "name": "Pandora RC (eHorus)",
+   "slug": "pandora-rc-ehorus",
+   "category": "RMM",
+   "installationPaths": [
+    "ehorus standalone.exe",
+    "ehorus_agent.exe"
+   ],
+   "domains": [
+    "portal.ehorus.com"
+   ]
+  },
+  {
+   "name": "Naverisk",
+   "slug": "naverisk",
+   "category": "RMM",
+   "installationPaths": [
+    "AgentSetup-*.exe"
+   ],
+   "domains": [
+    "naverisk.com"
+   ]
+  },
+  {
+   "name": "HelpBeam",
+   "slug": "helpbeam",
+   "category": "RMM",
+   "installationPaths": [
+    "helpbeam*.exe"
+   ],
+   "domains": [
+    "helpbeam.software.informer.com"
+   ]
+  },
+  {
+   "name": "MyIVO",
+   "slug": "myivo",
+   "category": "RMM",
+   "installationPaths": [
+    "myivomgr.exe",
+    "myivomanager.exe"
+   ],
+   "domains": [
+    "myivo-server.software.informer.com"
+   ]
+  },
+  {
+   "name": "Impero Connect",
+   "slug": "impero-connect",
+   "category": "RMM",
+   "installationPaths": [
+    "ImperoClientSVC.exe"
+   ],
+   "domains": [
+    "imperosoftware.com"
+   ]
+  },
+  {
+   "name": "Seetrol",
+   "slug": "seetrol",
+   "category": "RMM",
+   "installationPaths": [
+    "seetrolcenter.exe",
+    "seetrolclient.exe",
+    "seetrolmyservice.exe",
+    "seetrolremote.exe",
+    "seetrolsetting.exe"
+   ],
+   "domains": [
+    "seetrol.co.kr"
+   ]
+  },
+  {
+   "name": "NinjaRMM",
+   "slug": "ninjarmm",
+   "category": "RMM",
+   "installationPaths": [
+    "NinjaRMMAgent.exe",
+    "NinjaRMMAgentPatcher.exe",
+    "ninjarmm-cli.exe"
+   ],
+   "domains": [
+    "*.ninjarmm.com",
+    "*.ninjaone.com",
+    "resources.ninjarmm.com",
+    "ninjaone.com",
+    "ninjarmm.net",
+    "*.ninjarmm.net",
+    "rmmservice.eu",
+    "*.rmmservice.eu",
+    "rmmservice.com.au",
+    "*.rmmservice.com.au",
+    "rmmservice.ca",
+    "*.rmmservice.ca",
+    "ninja-backup.com",
+    "*.ninja-backup.com"
+   ]
+  },
+  {
+   "name": "UltraViewer",
+   "slug": "ultraviewer",
+   "category": "RMM",
+   "installationPaths": [
+    "UltraViewer_Service.exe",
+    "UltraViewer_setup*",
+    "UltraViewer_Desktop.exe",
+    "ultraviewer.exe",
+    "C:\\Program Files (x86)\\UltraViewer\\UltraViewer_Desktop.exe",
+    "*\\UltraViewer\\",
+    "*\\UltraViewer_Desktop.exe",
+    "ultraviewer_desktop.exe",
+    "ultraviewer_service.exe"
+   ],
+   "domains": [
+    "*.ultraviewer.net",
+    "ultraviewer.net"
+   ]
+  },
+  {
+   "name": "Atera",
+   "slug": "atera",
+   "category": "RMM",
+   "installationPaths": [
+    "*\\AgentPackageNetworkDiscovery.exe",
+    "*\\AgentPackageTaskScheduler.exe",
+    "*\\ATERA Networks\\AteraAgent\\*",
+    "*\\AteraAgent.exe",
+    "atera_agent.exe",
+    "ateraagent.exe",
+    "C:\\Program Files\\ATERA Networks\\AteraAgent\\*",
+    "C:\\Program Files\\Atera Networks",
+    "C:\\Program Files (x86)\\Atera Networks",
+    "syncrosetup.exe"
+   ],
+   "domains": [
+    "pubsub.atera.com",
+    "agentreporting.atera.com",
+    "getalphacontrol.com",
+    "app.atera.com",
+    "agenthb.atera.com",
+    "packagesstore.blob.core.windows.net",
+    "agent-api.atera.com",
+    "agentreportingstore.blob.core.windows.net",
+    "atera-agent-heartbeat.servicebus.windows.net",
+    "ps.atera.com",
+    "atera.pubnubapi.com",
+    "appcdn.atera.com"
+   ]
+  },
+  {
+   "name": "CrossLoop",
+   "slug": "crossloop",
+   "category": "RMM",
+   "installationPaths": [
+    "crossloopservice.exe",
+    "CrossLoopConnect.exe",
+    "WinVNCStub.exe"
+   ],
+   "domains": [
+    "*.crossloop.com",
+    "crossloop.en.softonic.com"
+   ]
+  },
+  {
+   "name": "SmartCode Web VNC",
+   "slug": "smartcode-web-vnc",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files\\TightVNC\\*",
+    "*\\TightVNC\\*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Ericom Connect",
+   "slug": "ericom-connect",
+   "category": "RMM",
+   "installationPaths": [
+    "EricomConnectRemoteHost*.exe",
+    "ericomconnectconfigurationtool.exe"
+   ],
+   "domains": [
+    "ericom.com"
+   ]
+  },
+  {
+   "name": "OptiTune",
+   "slug": "optitune",
+   "category": "RMM",
+   "installationPaths": [
+    "OTService.exe",
+    "OTPowerShell.exe"
+   ],
+   "domains": [
+    "*.optitune.us",
+    "*.opti-tune.com"
+   ]
+  },
+  {
+   "name": "Remotely",
+   "slug": "remotely",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\Remotely\\Remotely_Agent.exe",
+    "C:\\Program Files\\Remotely\\Desktop\\Remotely_Desktop.exe",
+    "C:\\Program Files\\Remotely\\ConnectionInfo.json",
+    "C:\\Program Files\\Remotely\\etag.txt",
+    "/usr/local/bin/Remotely/Remotely_Agent",
+    "/usr/local/bin/Remotely/Desktop/Remotely_Desktop",
+    "/usr/local/bin/Remotely/ConnectionInfo.json",
+    "/etc/systemd/system/remotely-agent.service",
+    "/Library/LaunchDaemons/remotely-agent.plist"
+   ],
+   "domains": []
+  },
+  {
+   "name": "SuperPuTTY",
+   "slug": "superputty",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Downloads\\SuperPuTTY\\*",
+    "*Downloads\\SuperPuTTY\\*",
+    "*\\superputty.exe",
+    "*\\SuperPuTTY\\*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "RdClient",
+   "slug": "rdclient",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\RdClient\\*",
+    "C:\\Program Files\\RdClient\\*",
+    "rdclient.exe",
+    "RdClientInstaller.exe",
+    "SupportTool.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Devolutions Remote Desktop Manager",
+   "slug": "devolutions-remote-desktop-manager",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files\\Devolutions\\Remote Desktop Manager",
+    "*\\RemoteDesktopManager.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "ImmyBot",
+   "slug": "immybot",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\ImmyBot\\ImmyAgent.exe",
+    "C:\\Program Files\\ImmyBot\\ImmyUpdater.exe",
+    "C:\\Program Files (x86)\\ImmyBot\\ImmyAgent.exe",
+    "C:\\Program Files (x86)\\ImmyBot\\ImmyUpdater.exe",
+    "*\\ImmyBot\\*",
+    "C:\\Windows\\Temp\\ImmyBot\\*",
+    "ImmyAgent.exe",
+    "ImmyUpdater.exe",
+    "ImmyBot.Agent.Ephemeral.exe",
+    "ImmyBot.msi"
+   ],
+   "domains": [
+    "*.immy.bot",
+    "immy.bot"
+   ]
+  },
+  {
+   "name": "Remmon",
+   "slug": "remmon",
+   "category": "RMM",
+   "installationPaths": [
+    "remmon.exe"
+   ],
+   "domains": [
+    "*.remmon.hu",
+    "remmon.hu"
+   ]
+  },
+  {
+   "name": "ZOC",
+   "slug": "zoc",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files\\ZOC8\\*",
+    "*\\ZOC?\\*",
+    "*\\zoc.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Rapid7",
+   "slug": "rapid7",
+   "category": "RMM",
+   "installationPaths": [
+    "ir_agent.exe",
+    "rapid7_agent_core.exe",
+    "rapid7_endpoint_broker.exe"
+   ],
+   "domains": [
+    "*.analytics.insight.rapid7.com",
+    "*.endpoint.ingress.rapid7.com"
+   ]
+  },
+  {
+   "name": "TeamViewer",
+   "slug": "teamviewer",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\TeamViewer\\",
+    "teamviewer_desktop.exe",
+    "teamviewer_service.exe",
+    "teamviewerhost"
+   ],
+   "domains": [
+    "*.teamviewer.com",
+    "router15.teamviewer.com",
+    "client.teamviewer.com",
+    "taf.teamviewer.com"
+   ]
+  },
+  {
+   "name": "baramundi Management Suite",
+   "slug": "baramundi-management-suite",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\bsag\\bma\\*",
+    "C:\\Program Files\\bsag\\*",
+    "C:\\Program Files (x86)\\bsag\\bma\\*",
+    "C:\\Program Files (x86)\\bsag\\*"
+   ],
+   "domains": [
+    "*.baramundi.com",
+    "www.baramundi.com",
+    "docs.baramundi.com",
+    "isodownload.baramundi.com"
+   ]
+  },
+  {
+   "name": "NinjaOne (formerly NinjaRMM)",
+   "slug": "ninjaone-formerly-ninjarmm",
+   "category": "RMM",
+   "installationPaths": [
+    "*ProgramData\\NinjaRMMAgent\\*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Splashtop Remote",
+   "slug": "splashtop-remote",
+   "category": "RMM",
+   "installationPaths": [
+    "strwinclt.exe",
+    "Splashtop_Streamer_Windows*.exe",
+    "SplashtopSOS.exe",
+    "sragent.exe",
+    "srmanager.exe",
+    "srserver.exe",
+    "srservice.exe"
+   ],
+   "domains": [
+    "splashtop.com",
+    "*.api.splashtop.com",
+    "*.relay.splashtop.com",
+    "*.api.splashtop.eu"
+   ]
+  },
+  {
+   "name": "LogMeIn rescue",
+   "slug": "logmein-rescue",
+   "category": "RMM",
+   "installationPaths": [
+    "support-logmeinrescue*.exe",
+    "support-logmeinrescue.exe",
+    "lmi_rescue.exe",
+    "C:\\Users\\*\\AppData\\Local\\LogMeIn Rescue Applet\\LMIR*.tmp\\lmi_rescue.exe",
+    "C:\\Users\\*\\AppData\\Local\\LogMeIn Rescue Applet\\LMIR*.tmp\\lmi_rescue_srv.exe"
+   ],
+   "domains": [
+    "*.logmeinrescue.com",
+    "*.logmeinrescue.eu",
+    "logmeinrescue.com",
+    "rescue-list.*.logmein-gateway.com",
+    "rescue-data-cetner.logmein-gateway.com"
+   ]
+  },
+  {
+   "name": "Onionshare",
+   "slug": "onionshare",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\OnionShare\\*",
+    "*\\OnionShare\\*",
+    "*\\onionshare*.exe",
+    "OnionShare-win*.msi"
+   ],
+   "domains": []
+  },
+  {
+   "name": "SmarTTY",
+   "slug": "smartty",
+   "category": "RAT",
+   "installationPaths": [
+    "c:\\Program Files (x86)\\Sysprogs\\SmarTTY\\*",
+    "*\\Sysprogs\\SmarTTY\\*",
+    "*\\SmarTTY.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Chrome Remote Desktop",
+   "slug": "chrome-remote-desktop",
+   "category": "RAT",
+   "installationPaths": [
+    "remoting_host.exe",
+    "C:\\Program Files (x86)\\Google\\Chrome Remote Desktop\\*",
+    "*\\Google\\Chrome Remote Desktop\\*",
+    "*\\remoting_host.exe",
+    "/Library/PrivilegedHelperTools/ChromeRemoteDesktopHost.app/Contents/MacOS/remoting_me2me_host",
+    "/Library/PrivilegedHelperTools/ChromeRemoteDesktopHost.app/Contents/MacOS/remoting_me2me_host_service",
+    "/opt/google/chrome-remote-desktop/chrome-remote-desktop-host",
+    "/opt/google/chrome-remote-desktop/chrome-remote-desktop"
+   ],
+   "domains": [
+    "*.remotedesktop.google.com",
+    "remotedesktop-pa.googleapis.com",
+    "*.remotedesktop-pa.googleapis.com",
+    "remotedesktop.google.com",
+    "chromoting-client.talkgadget.google.com",
+    "chromoting-host.talkgadget.google.com",
+    "chromoting-oauth.talkgadget.google.com"
+   ]
+  },
+  {
+   "name": "SuperOps",
+   "slug": "superops",
+   "category": "RMM",
+   "installationPaths": [
+    "superopsticket.exe",
+    "superops.exe"
+   ],
+   "domains": [
+    "*.superopsbeta.com",
+    "superops.ai",
+    "serv.superopsalpha.com",
+    "*.superops.ai",
+    "*.superopsalpha.com"
+   ]
+  },
+  {
+   "name": "Ultra VNC",
+   "slug": "ultra-vnc",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files\\uvnc bvba\\UltraVNC\\*",
+    "*\\uvnc bvba\\UltraVNC\\*",
+    "*\\UVNC_Launch.exe",
+    "*\\winvnc.exe",
+    "*\\vncviewer.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "ToDesk",
+   "slug": "todesk",
+   "category": "RMM",
+   "installationPaths": [
+    "todesk.exe",
+    "ToDesk_Service.exe",
+    "ToDesk_Setup.exe"
+   ],
+   "domains": [
+    "todesk.com",
+    "*.todesk.com"
+   ]
+  },
+  {
+   "name": "SimpleHelp",
+   "slug": "simplehelp",
+   "category": "RMM",
+   "installationPaths": [
+    "simplehelpcustomer.exe",
+    "simpleservice.exe",
+    "simplegatewayservice.exe",
+    "remote access.exe",
+    "windowslauncher.exe",
+    "spsrv.exe",
+    "serviceconfig.xml",
+    "C:\\ProgramData\\JWrapper-Remote Access\\*",
+    "%APPDATA%\\JWrapper-SimpleSetup\\*",
+    "vhost.exe"
+   ],
+   "domains": [
+    "simple-help.com",
+    "dronemaker.org",
+    "telesupportgroup.com",
+    "microuptime.com"
+   ]
+  },
+  {
+   "name": "N-ABLE Remote Access Software",
+   "slug": "n-able-remote-access-software",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": [
+    "n-able.com"
+   ]
+  },
+  {
+   "name": "Pulseway",
+   "slug": "pulseway",
+   "category": "RMM",
+   "installationPaths": [
+    "PCMonitorManager.exe",
+    "pcmonitorsrv.exe"
+   ],
+   "domains": [
+    "pulseway.com"
+   ]
+  },
+  {
+   "name": "FreeRDP",
+   "slug": "freerdp",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "Tanium",
+   "slug": "tanium",
+   "category": "RMM",
+   "installationPaths": [
+    "TaniumClient.exe",
+    "TaniumCX.exe",
+    "TaniumExecWrapper.exe",
+    "TaniumFileInfo.exe",
+    "TPowerShell.exe"
+   ],
+   "domains": [
+    "cloud.tanium.com",
+    "*.cloud.tanium.com"
+   ]
+  },
+  {
+   "name": "EMCO Remote Console",
+   "slug": "emco-remote-console",
+   "category": "RMM",
+   "installationPaths": [
+    "remoteconsole.exe"
+   ],
+   "domains": [
+    "emcosoftware.com"
+   ]
+  },
+  {
+   "name": "mstsc.exe (Microsoft Remote Desktop Connection)",
+   "slug": "mstsc-exe-microsoft-remote-desktop-connection",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Windows\\System32\\mstsc.exe",
+    "*Windows\\System32\\mstsc.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Netreo",
+   "slug": "netreo",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": [
+    "charon.netreo.net",
+    "activation.netreo.net",
+    "*.api.netreo.com",
+    "netreo.com"
+   ]
+  },
+  {
+   "name": "Duet Display",
+   "slug": "duet-display",
+   "category": "RAT",
+   "installationPaths": [
+    "duet.exe",
+    "DuetSetup.exe",
+    "DuetDisp.exe"
+   ],
+   "domains": [
+    "*.duetdisplay.com",
+    "rdp.duetdisplay.com",
+    "duetdisplay.com",
+    "*.itagent.com",
+    "itagent.com"
+   ]
+  },
+  {
+   "name": "DragonDisk",
+   "slug": "dragondisk",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Almageste\\DragonDisk\\*",
+    "*\\Almageste\\DragonDisk\\*",
+    "*\\DragonDisk.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Barracuda",
+   "slug": "barracuda",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": [
+    "*.islonline.net",
+    "rmm.barracudamsp.com",
+    "barracudamsp.com"
+   ]
+  },
+  {
+   "name": "Aspia",
+   "slug": "aspia",
+   "category": "RMM",
+   "installationPaths": [
+    "*\\aspia_client.exe",
+    "C:\\Program Files\\Aspia\\",
+    "C:\\Program Files (x86)\\Aspia\\"
+   ],
+   "domains": []
+  },
+  {
+   "name": "pcAnywhere",
+   "slug": "pcanywhere",
+   "category": "RAT",
+   "installationPaths": [
+    "awhost32.exe",
+    "awrem32.exe",
+    "pcaquickconnect.exe",
+    "winaw32.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "SunLogin",
+   "slug": "sunlogin",
+   "category": "RMM",
+   "installationPaths": [
+    "OrayRemoteShell.exe",
+    "OrayRemoteService.exe",
+    "sunlogin*.exe"
+   ],
+   "domains": [
+    "sunlogin.oray.com",
+    "client.oray.net"
+   ]
+  },
+  {
+   "name": "Level.io",
+   "slug": "level-io",
+   "category": "RMM",
+   "installationPaths": [
+    "level-windows-amd64.exe",
+    "level.exe",
+    "level-remote-control-ffmpeg.exe"
+   ],
+   "domains": [
+    "level.io",
+    "*.level.io"
+   ]
+  },
+  {
+   "name": "ServerEye",
+   "slug": "servereye",
+   "category": "RMM",
+   "installationPaths": [
+    "servereye*.exe",
+    "ServiceProxyLocalSys.exe"
+   ],
+   "domains": [
+    "*.server-eye.de"
+   ]
+  },
+  {
+   "name": "SmartFTP",
+   "slug": "smartftp",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\SmartFTP Client\\en-US\\",
+    "*\\SmartFTP Client\\*",
+    "*\\SfShellTools.dll.mui"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Xeox",
+   "slug": "xeox",
+   "category": "RMM",
+   "installationPaths": [
+    "xeox-agent_x64.exe",
+    "xeox_service_windows.exe",
+    "xeox-agent_*.exe",
+    "xeox-agent_x86.exe"
+   ],
+   "domains": [
+    "*.xeox.com",
+    "xeox.com"
+   ]
+  },
+  {
+   "name": "X2Go",
+   "slug": "x2go",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "Insync",
+   "slug": "insync",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Users\\USERNAME\\AppData\\Roaming\\Insync\\App\\Insync.exe",
+    "*Users\\*\\AppData\\Roaming\\Insync\\App\\Insync.exe",
+    "*\\Insync.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "ngrok",
+   "slug": "ngrok",
+   "category": "RAT",
+   "installationPaths": [
+    "ngrok.exe",
+    "C:\\*\\ngrok.zip",
+    "*\\ngrok*"
+   ],
+   "domains": [
+    "connect.ngrok-agent.com",
+    "connect.us.ngrok-agent.com",
+    "connect.eu.ngrok-agent.com",
+    "connect.ap.ngrok-agent.com",
+    "connect.au.ngrok-agent.com",
+    "connect.sa.ngrok-agent.com",
+    "connect.jp.ngrok-agent.com",
+    "connect.in.ngrok-agent.com",
+    "ngrok.com"
+   ]
+  },
+  {
+   "name": "CrossTec Remote Control",
+   "slug": "crosstec-remote-control",
+   "category": "RMM",
+   "installationPaths": [
+    "PCIVIDEO.EXE",
+    "supporttool.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "eHorus",
+   "slug": "ehorus",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\ehorus_agent\\*",
+    "ehorus standalone.exe",
+    "ehorus_agent.exe",
+    "ehorus_cmd.exe",
+    "ehorus_launcher.exe",
+    "ehorus_uit.exe"
+   ],
+   "domains": [
+    "ehorus.com"
+   ]
+  },
+  {
+   "name": "LabTeach (Connectwise Automate)",
+   "slug": "labteach-connectwise-automate",
+   "category": "RMM",
+   "installationPaths": [
+    "ltsvc.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "AeroAdmin",
+   "slug": "aeroadmin",
+   "category": "RMM",
+   "installationPaths": [
+    "aeroadmin.exe",
+    "AeroAdmin.exe"
+   ],
+   "domains": [
+    "auth*.aeroadmin.com",
+    "aeroadmin.com"
+   ]
+  },
+  {
+   "name": "Lunixar",
+   "slug": "lunixar",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\Lunixar\\*",
+    "*\\Lunixar\\Lunixar.exe",
+    "*\\Lunixar\\Lunixar.dll",
+    "*\\Lunixar\\Lunixar.Agent.Core.dll",
+    "*\\Lunixar\\LunixarRemote.exe",
+    "*\\Lunixar\\LunixarRemote.dll",
+    "*\\Lunixar\\LunixarUpdater.exe",
+    "*\\Lunixar\\LunixarUpdater.dll",
+    "LunixarRMM*.msi",
+    "Googlemeet.msi",
+    "eDocument-*.msi"
+   ],
+   "domains": [
+    "*.lunixar.com",
+    "lunixar.com",
+    "app.lunixar.com",
+    "socket.lunixar.com",
+    "downloads.lunixar.com",
+    "devrmm.lunixar.com",
+    "mymeetinggoogle.com"
+   ]
+  },
+  {
+   "name": "LANDesk",
+   "slug": "landesk",
+   "category": "RMM",
+   "installationPaths": [
+    "issuser.exe",
+    "landeskagentbootstrap.exe",
+    "LANDeskPortalManager.exe",
+    "ldinv32.exe",
+    "ldsensors.exe",
+    "C:\\Program Files (x86)\\LANDesk\\*",
+    "*\\LANDesk\\*",
+    "*\\issuser.exe",
+    "*\\softmon.exe",
+    "*\\tmcsvc.exe"
+   ],
+   "domains": [
+    "*.ivanticloud.com",
+    "*.ivanti.com",
+    "ivanti.com"
+   ]
+  },
+  {
+   "name": "RealVNC",
+   "slug": "realvnc",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "Comodo RMM",
+   "slug": "comodo-rmm",
+   "category": "RMM",
+   "installationPaths": [
+    "itsmagent.exe",
+    "rviewer.exe"
+   ],
+   "domains": [
+    "*.itsm-us1.comodo.com",
+    "mdmsupport.comodo.com",
+    "*.mdmsupport.comodo.com",
+    "one.comodo.com"
+   ]
+  },
+  {
+   "name": "N-Able Advanced Monitoring Agent",
+   "slug": "n-able-advanced-monitoring-agent",
+   "category": "RMM",
+   "installationPaths": [
+    "BASupSrvc.exe",
+    "winagent.exe",
+    "BASupApp.exe",
+    "BASupTSHelper.exe",
+    "Agent_*_RW.exe",
+    "BASEClient.exe",
+    "BASupSrvcCnfg.exe"
+   ],
+   "domains": [
+    "beanywhere.com",
+    "*.beanywhere.com",
+    "systemmonitor.co.uk",
+    "*.system-monitor.com",
+    "cloudbackup.management",
+    "*.systemmonitor.co.uk",
+    "n-able.com",
+    "systemmonitor.us",
+    "*.systemmonitor.eu.com",
+    "*.logicnow.com",
+    "*.swi-tc.com",
+    "*.remote.management",
+    "systemmonitor.us.cdn.cloudflare.net",
+    "*.cloudbackup.management",
+    "remote.management",
+    "logicnow.com",
+    "system-monitor.com",
+    "*.systemmonitor.us",
+    "systemmonitor.eu.com",
+    "*.n-able.com"
+   ]
+  },
+  {
+   "name": "Net Monitor for Employees",
+   "slug": "net-monitor-for-employees",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Net Monitor for Employees Pro\\*",
+    "C:\\Program Files\\Net Monitor for Employees Pro\\*",
+    "nmep_agtconfig.exe",
+    "nmep_ctrlagent.exe",
+    "nmep_ctrlagentsvc.exe",
+    "winpty-agent.exe",
+    "winpty-agent64.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Rocket Remote Desktop",
+   "slug": "rocket-remote-desktop",
+   "category": "RMM",
+   "installationPaths": [
+    "RDConsole.exe",
+    "RocketRemoteDesktop_Setup.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Netviewer (GoToMeet)",
+   "slug": "netviewer-gotomeet",
+   "category": "RMM",
+   "installationPaths": [
+    "NetViewer.exe",
+    "nvClient.exe",
+    "nvConsole.exe"
+   ],
+   "domains": [
+    "*.netviewer.com",
+    "netviewer.com"
+   ]
+  },
+  {
+   "name": "NetSupport Manager",
+   "slug": "netsupport-manager",
+   "category": "RMM",
+   "installationPaths": [
+    "pcictlui.exe",
+    "pcicfgui.exe",
+    "client32.exe",
+    "remcmdstub.exe"
+   ],
+   "domains": [
+    "geo.netsupportsoftware.com",
+    "*.netsupportmanager.com",
+    "netsupportmanager.com"
+   ]
+  },
+  {
+   "name": "DW Service",
+   "slug": "dw-service",
+   "category": "RMM",
+   "installationPaths": [
+    "dwagsvc.exe",
+    "dwagent.exe",
+    "dwaglnc.exe"
+   ],
+   "domains": [
+    "*.dwservice.net"
+   ]
+  },
+  {
+   "name": "AliWangWang-remote-control",
+   "slug": "aliwangwang-remote-control",
+   "category": "RMM",
+   "installationPaths": [
+    "alitask.exe"
+   ],
+   "domains": [
+    "wangwang.taobao.com"
+   ]
+  },
+  {
+   "name": "Encapto",
+   "slug": "encapto",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": [
+    "encapto.com"
+   ]
+  },
+  {
+   "name": "PiTunnel",
+   "slug": "pitunnel",
+   "category": "RAT",
+   "installationPaths": [
+    "/usr/local/bin/pitunnel",
+    "/opt/pitunnel/*",
+    "/etc/systemd/system/pitunnel.service"
+   ],
+   "domains": [
+    "pitunnel.com",
+    "www.pitunnel.com",
+    "*.pitunnel.com"
+   ]
+  },
+  {
+   "name": "ISL Online",
+   "slug": "isl-online",
+   "category": "RMM",
+   "installationPaths": [
+    "*\\ISLLight.exe",
+    "isllight.exe",
+    "ISLLightClient.exe",
+    "C:\\Program Files (x86)\\ISL Online\\ISL Light*",
+    "*\\ISL Online\\ISL Light*",
+    "ISLLight.exe",
+    "isllightservice.exe",
+    "islalwaysonmonitor.exe"
+   ],
+   "domains": [
+    "*.islonline.com",
+    "*.islonline.net"
+   ]
+  },
+  {
+   "name": "NordLocker",
+   "slug": "nordlocker",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "ManageEngine",
+   "slug": "manageengine",
+   "category": "RMM",
+   "installationPaths": [
+    "InstallShield Setup.exe",
+    "ManageEngine_Remote_Access_Plus.exe",
+    "*\\dcagentservice.exe",
+    "C:\\Program Files (x86)\\DesktopCentral_Agent\\bin\\*",
+    "*\\DesktopCentral_Agent\\bin\\*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "ManageEngine ServiceDesk Plus",
+   "slug": "manageengine-servicedesk-plus",
+   "category": "RMM",
+   "installationPaths": [
+    "ManageEngine_ServiceDesk_Plus.exe",
+    "ManageEngine_ServiceDesk_Plus.bin",
+    "C:\\Program Files\\ManageEngine\\ServiceDesk\\*",
+    "C:\\Program Files (x86)\\ManageEngine\\ServiceDesk\\*"
+   ],
+   "domains": [
+    "*.manageengine.com",
+    "manageengine.com"
+   ]
+  },
+  {
+   "name": "RemoteView",
+   "slug": "remoteview",
+   "category": "RMM",
+   "installationPaths": [
+    "remoteview.exe",
+    "rv.exe",
+    "rvagent.exe",
+    "rvagtray.exe"
+   ],
+   "domains": [
+    "*.content.rview.com",
+    "*.rview.com",
+    "content.rview.com"
+   ]
+  },
+  {
+   "name": "Freshservice",
+   "slug": "freshservice",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Freshdesk\\Freshservice Discovery Agent\\*",
+    "C:\\Program Files (x86)\\Freshdesk\\Freshservice Discovery Agent\\bin\\*",
+    "C:\\Program Files (x86)\\Freshdesk\\Freshservice Discovery Agent\\conf\\*",
+    "C:\\Program Files (x86)\\Freshworks\\FreshServiceProbe\\*",
+    "C:\\Program Files (x86)\\Freshworks\\FreshServiceProbe\\bin\\*",
+    "C:\\Program Files (x86)\\Freshworks\\FreshServiceProbe\\conf\\*",
+    "C:\\Program Files (x86)\\Freshworks\\FreshServiceProbe\\db\\*",
+    "C:\\Program Files (x86)\\Freshworks\\FreshServiceProbe\\nmap\\*",
+    "C:\\Program Files (x86)\\Freshworks\\FreshServiceProbe\\tools\\ssh\\*",
+    "C:\\Program Files (x86)\\Freshworks\\FreshServiceProbe\\bin\\Freshservice.DiscoveryProbe.ScanService.exe",
+    "C:\\Program Files (x86)\\Freshworks\\FreshServiceProbe\\bin\\Freshservice.DiscoveryProbe.Window.exe",
+    "C:\\Program Files (x86)\\Freshworks\\FreshServiceProbe\\bin\\plink.exe",
+    "C:\\Program Files (x86)\\Freshdesk\\Freshservice Discovery Agent\\FSAgentService.exe",
+    "C:\\Program Files (x86)\\Freshdesk\\Freshservice Discovery Agent\\FSAgentAutoUpdate.exe",
+    "*\\FSAgentService.exe",
+    "*\\FSAgentAutoUpdate.exe",
+    "*\\FSWmiScanner.exe",
+    "*\\Freshservice.DiscoveryProbe.Window.exe",
+    "*\\Freshservice.DiscoveryProbe.ScanService.exe",
+    "fs-windows-agent-*.msi",
+    "win-installer-*.msi",
+    "fs-probe-*.msi",
+    "FSAgent.msi"
+   ],
+   "domains": [
+    "fstools.freshservice.com",
+    "*.freshservice.com",
+    "freshservice.com",
+    "www.freshservice.com",
+    "fstools.freshasset.com",
+    "freshasset.com",
+    "*.myfreshworks.com",
+    "*.freshworksapi.com",
+    "*.freshworks.com",
+    "*.freshconnect.io",
+    "api.fdcollab.com",
+    "*.fdcollab.com",
+    "*.freshchat.com",
+    "*.webpush.freshchat.com",
+    "apicdn-wchat.freshchat.com",
+    "*.rtschannel.com",
+    "*.freshdev.io",
+    "static.freshdev.io",
+    "*.freshcloud.io",
+    "*.in-freshbots.ai"
+   ]
+  },
+  {
+   "name": "Remobo",
+   "slug": "remobo",
+   "category": "RMM",
+   "installationPaths": [
+    "remobo.exe",
+    "remobo_client.exe",
+    "remobo_tracker.exe"
+   ],
+   "domains": [
+    "remobo.en.softonic.com"
+   ]
+  },
+  {
+   "name": "Dataplicity",
+   "slug": "dataplicity",
+   "category": "RAT",
+   "installationPaths": [
+    "/opt/dataplicity/*",
+    "/opt/dataplicity/tuxtunnel/*",
+    "/usr/local/bin/dataplicity",
+    "/etc/systemd/system/dataplicity.service",
+    "/etc/init.d/dataplicity"
+   ],
+   "domains": [
+    "dataplicity.com",
+    "www.dataplicity.com",
+    "*.dataplicity.com",
+    "*.wormhole.dataplicity.com"
+   ]
+  },
+  {
+   "name": "InvGate",
+   "slug": "invgate",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Inventec\\InvGate.net Client\\*",
+    "C:\\Program Files (x86)\\Inventec\\InvGate.net Client\\InvGate-ED.exe",
+    "C:\\Program Files (x86)\\Inventec\\InvGate.net Client\\DepHlp.exe",
+    "C:\\Program Files (x86)\\Inventec\\InvGate.net Client\\files\\InvGateAssetsRD.exe",
+    "C:\\Program Files (x86)\\Inventec\\InvGate.net Client\\files\\InvGateRD.exe",
+    "C:\\Program Files (x86)\\Inventec\\InvGate.net Client\\files\\sas.dll",
+    "C:\\Program Files (x86)\\Inventec\\InvGate.net Client\\Software Matt.dll"
+   ],
+   "domains": [
+    "invgate.com",
+    "www.invgate.com",
+    "*.invgate.net",
+    "invgate.net",
+    "lb-insight-001.invgate.net",
+    "trust.invgate.com",
+    "trust-access.invgate.com",
+    "instances-info.invgate.com",
+    "instances-list.invgate.com",
+    "releases.invgate.com",
+    "docs.invgate.net",
+    "help.invgate.com"
+   ]
+  },
+  {
+   "name": "RemSupp",
+   "slug": "remsupp",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Users\\*\\AppData\\Local\\remsupp-updater\\installer.exe",
+    "C:\\Users\\*\\AppData\\Local\\Programs\\RemSupp\\RemSupp.exe",
+    "C:\\Users\\*\\AppData\\Local\\Programs\\RemSupp\\Uninstall RemSupp.exe"
+   ],
+   "domains": [
+    "api.remsupp.com",
+    "download.remsupp.com"
+   ]
+  },
+  {
+   "name": "Jump Desktop",
+   "slug": "jump-desktop",
+   "category": "RMM",
+   "installationPaths": [
+    "jumpclient.exe",
+    "jumpdesktop.exe",
+    "jumpservice.exe",
+    "jumpconnect.exe",
+    "jumpupdater.exe"
+   ],
+   "domains": [
+    "*.jumpdesktop.com",
+    "jumpdesktop.com",
+    "jumpto.me",
+    "*.jumpto.me"
+   ]
+  },
+  {
+   "name": "MioNet (Also known as WD Anywhere Access)",
+   "slug": "mionet-also-known-as-wd-anywhere-access",
+   "category": "RMM",
+   "installationPaths": [
+    "mionet.exe",
+    "mionetmanager.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Parsec",
+   "slug": "parsec",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files\\Parsec\\*",
+    "parsecd.exe",
+    "pservice.exe"
+   ],
+   "domains": [
+    "parsec.app",
+    "parsec.gg",
+    "*.parsec.app"
+   ]
+  },
+  {
+   "name": "Weezo",
+   "slug": "weezo",
+   "category": "RMM",
+   "installationPaths": [
+    "weezohttpd.exe",
+    "weezo.exe",
+    "weezo setup*.exe"
+   ],
+   "domains": [
+    "*.weezo.me",
+    "weezo.net",
+    "*.weezo.net",
+    "weezo.en.softonic.com"
+   ]
+  },
+  {
+   "name": "Syncro",
+   "slug": "syncro",
+   "category": "RMM",
+   "installationPaths": [
+    "Syncro.Installer.exe",
+    "Kabuto.App.Runner.exe",
+    "Syncro.Overmind.Service.exe",
+    "Kabuto.Installer.exe",
+    "KabutoSetup.exe",
+    "Syncro.Service.exe",
+    "Kabuto.Service.Runner.exe",
+    "Syncro.App.Runner.exe",
+    "SyncroLive.Service.exe",
+    "SyncroLive.Agent.exe"
+   ],
+   "domains": [
+    "kabuto.io",
+    "*.syncromsp.com",
+    "*.syncroapi.com",
+    "syncromsp.com",
+    "servably.com",
+    "ld.aurelius.host",
+    "app.kabuto.io",
+    "*.kabutoservices.com",
+    "repairshopr.com",
+    "kabutoservices.com",
+    "attachments.servably.com"
+   ]
+  },
+  {
+   "name": "Teramind",
+   "slug": "teramind",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\ProgramData\\{4CEC2908-5CE4-48F0-A717-8FC833D8017A}\\*",
+    "C:\\ProgramData\\{4CEC2908-5CE4-48F0-A717-8FC833D8017A}\\config",
+    "C:\\ProgramData\\{4CEC2908-5CE4-48F0-A717-8FC833D8017A}\\updates\\*",
+    "C:\\ProgramData\\Teramind Agent\\*",
+    "C:\\ProgramData\\Teramind Agent\\config",
+    "C:\\ProgramData\\Teramind Agent\\<version>\\{6D99445F-F40F-45CB-B433-06302DAE6C70}\\*",
+    "C:\\ProgramData\\Teramind Agent\\<version>\\{6D99445F-F40F-45CB-B433-06302DAE6C70}\\tmagentsvc.exe",
+    "C:\\ProgramData\\Package Cache\\.unverified\\agent",
+    "/usr/local/teramind/agent/bin/",
+    "/usr/local/teramind/agent/bin/tmsysd",
+    "/usr/local/teramind/agent/etc/",
+    "/Applications/Teramind Agent.app",
+    "/Applications/tmagent.app"
+   ],
+   "domains": [
+    "*.teramind.co",
+    "teramind.co",
+    "www.teramind.co",
+    "rt.teramind.co",
+    "sentry.dev.teramind.co"
+   ]
+  },
+  {
+   "name": "GLPI Agent",
+   "slug": "glpi-agent",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\GLPI-Agent\\*",
+    "C:\\Program Files\\GLPI-Agent\\perl\\bin\\*",
+    "C:\\Program Files\\GLPI-Agent\\etc\\*",
+    "C:\\Program Files\\GLPI-Agent\\var\\*",
+    "C:\\Program Files\\GLPI-Agent\\logs\\*",
+    "/usr/bin/glpi-agent",
+    "/usr/local/bin/glpi-agent",
+    "/etc/glpi-agent/*",
+    "/var/lib/glpi-agent/*",
+    "/Applications/GLPI-Agent/*",
+    "/Applications/GLPI-Agent/etc/*"
+   ],
+   "domains": [
+    "glpi-project.org",
+    "www.glpi-project.org",
+    "nightly.glpi-project.org",
+    "forum.glpi-project.org",
+    "glpi-network.com",
+    "services.glpi-network.com",
+    "github.com",
+    "objects.githubusercontent.com"
+   ]
+  },
+  {
+   "name": "ScreenMeet",
+   "slug": "screenmeet",
+   "category": "RMM",
+   "installationPaths": [
+    "ScreenMeetSupport.exe",
+    "ScreenMeet.Support.exe"
+   ],
+   "domains": [
+    "*.screenmeet.com",
+    "*.scrn.mt"
+   ]
+  },
+  {
+   "name": "Netviewer",
+   "slug": "netviewer",
+   "category": "RMM",
+   "installationPaths": [
+    "netviewer*.exe",
+    "netviewer.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "DeskDay",
+   "slug": "deskday",
+   "category": "RMM",
+   "installationPaths": [
+    "ultimate_*.exe"
+   ],
+   "domains": [
+    "deskday.ai",
+    "app.deskday.ai"
+   ]
+  },
+  {
+   "name": "RunSmart",
+   "slug": "runsmart",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": [
+    "runsmart.io"
+   ]
+  },
+  {
+   "name": "ESET Remote Administrator",
+   "slug": "eset-remote-administrator",
+   "category": "RMM",
+   "installationPaths": [
+    "era.exe",
+    "einstaller.exe",
+    "ezhelp*.exe",
+    "eratool.exe",
+    "ERAAgent.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Dev Tunnels (aka Visual Studio Dev Tunnel)",
+   "slug": "dev-tunnels-aka-visual-studio-dev-tunnel",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "Zoho Assist",
+   "slug": "zoho-assist",
+   "category": "RMM",
+   "installationPaths": [
+    "toolsiq.exe",
+    "zaservice.exe",
+    "ZMAgent.exe",
+    "ZohoMeeting.exe",
+    "Zohours.exe",
+    "zohotray.exe",
+    "ZohoURSService.exe",
+    "*\\ZA_Access.exe",
+    "za_connect.exe",
+    "connect.exe"
+   ],
+   "domains": [
+    "*.zoho.com.au",
+    "*.zohoassist.jp",
+    "assist.zoho.com",
+    "*.zoho.in",
+    "downloads.zohodl.com.cn",
+    "*.zohoassist.com",
+    "downloads.zohocdn.com",
+    "gateway.zohoassist.com",
+    "*.zohoassist.com.cn",
+    "*.zoho.com.cn",
+    "*.zoho.com",
+    "*.zoho.eu"
+   ]
+  },
+  {
+   "name": "BeyondTrust",
+   "slug": "beyondtrust",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "Quick Assist",
+   "slug": "quick-assist",
+   "category": "RAT",
+   "installationPaths": [
+    "quickassist.exe"
+   ],
+   "domains": [
+    "*.support.services.microsoft.com"
+   ]
+  },
+  {
+   "name": "Adobe Connect",
+   "slug": "adobe-connect",
+   "category": "RAT",
+   "installationPaths": [
+    "ConnectAppSetup*.exe",
+    "ConnectShellSetup*.exe",
+    "Connect.exe",
+    "ConnectDetector.exe"
+   ],
+   "domains": [
+    "*.adobeconnect.com"
+   ]
+  },
+  {
+   "name": "Domotz",
+   "slug": "domotz",
+   "category": "RMM",
+   "installationPaths": [
+    "domotz.exe",
+    "Domotz Pro Desktop App.exe",
+    "domotz_bash.exe",
+    "domotz*.exe",
+    "Domotz Pro Desktop App Setup*.exe",
+    "domotz-windows*.exe"
+   ],
+   "domains": [
+    "*.domotz.co",
+    "domotz.com",
+    "cell-1.domotz.com",
+    "*.cell-1.domotz.com"
+   ]
+  },
+  {
+   "name": "NVDA (Non-Visual Desktop Access)",
+   "slug": "nvda-non-visual-desktop-access",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\NVDA\\nvda.exe",
+    "C:\\Program Files\\NVDA\\nvda.exe",
+    "C:\\Users\\*\\AppData\\Roaming\\nvda\\*",
+    "C:\\Users\\*\\AppData\\Local\\Temp\\nvda_*\\*",
+    "nvda.exe",
+    "nvda_service.exe",
+    "nvda_*.exe"
+   ],
+   "domains": [
+    "nvaccess.org",
+    "*.nvaccess.org"
+   ]
+  },
+  {
+   "name": "Veyon",
+   "slug": "veyon",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files\\Veyon\\*",
+    "C:\\Program Files (x86)\\Veyon\\*",
+    "veyon-wcli.exe",
+    "veyon-worker.exe",
+    "veyon-server.exe",
+    "veyon-service.exe",
+    "veyon-master.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "mRemoteNG",
+   "slug": "mremoteng",
+   "category": "RAT",
+   "installationPaths": [
+    "mRemoteNG.exe",
+    "C:\\Program Files (x86)\\mRemoteNG\\*",
+    "*\\mRemoteNG\\*",
+    "*\\mRemoteNG.exe",
+    "c:\\Program Files (x86)%\\mRemoteNG",
+    "*%\\mRemoteNG",
+    "mRemoteNG-Installer-*.msi"
+   ],
+   "domains": [
+    "mremoteng.org"
+   ]
+  },
+  {
+   "name": "SimpleHelp",
+   "slug": "simplehelp",
+   "category": "RMM",
+   "installationPaths": [
+    "simplehelpcustomer.exe",
+    "simpleservice.exe",
+    "simplegatewayservice.exe",
+    "remote access.exe",
+    "windowslauncher.exe",
+    "spsrv.exe",
+    "serviceconfig.xml"
+   ],
+   "domains": [
+    "simple-help.com"
+   ]
+  },
+  {
+   "name": "Solar-PuTTY",
+   "slug": "solar-putty",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files\\Solar-Putty-v4\\*",
+    "*\\Solar-Putty-v4\\*",
+    "*\\Solar-PuTTY.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "GoToAssist (GoTo Resolve)",
+   "slug": "gotoassist-goto-resolve",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\GoTo Resolve Unattended\\*",
+    "C:\\Program Files\\GoTo Resolve Unattended\\*",
+    "GoToResolveExternalModuleHandler.exe",
+    "GoToResolveFileManager.exe",
+    "GoToResolveLoggerProcess.exe",
+    "GoToResolveNetworkChecker.exe",
+    "GoToResolveProcessChecker.exe",
+    "GoToResolveQuickView.exe",
+    "GoToResolveRegistryEditor.exe",
+    "GoToResolveRemoteControl.exe",
+    "GoToResolveService.exe",
+    "GoToResolveServiceManager.exe",
+    "GoToResolveTerminal.exe",
+    "GoToResolveTools32.exe",
+    "GoToResolveTools64.exe",
+    "GoToResolveUi.exe",
+    "GoToResolveUnattended.exe",
+    "GoToResolveUnattendedRemover.exe",
+    "GoToResolveUnattendedUi.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "GoToAssist Agent Desktop Console",
+   "slug": "gotoassist-agent-desktop-console",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\*\\G2RDesktopConsole-x64.msi",
+    "*\\G2RDesktopConsole-x64.msi"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Miradore",
+   "slug": "miradore",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\Miradore\\OnlineClient\\bin\\*",
+    "*\\Miradore\\*"
+   ],
+   "domains": [
+    "gateway.miradore.com",
+    "*.miradore.com",
+    "miradore.com",
+    "gerwconline.blob.core.windows.net"
+   ]
+  },
+  {
+   "name": "RemoteCall",
+   "slug": "remotecall",
+   "category": "RMM",
+   "installationPaths": [
+    "rcengmgru.exe",
+    "rcmgrsvc.exe",
+    "rxstartsupport.exe",
+    "rcstartsupport.exe",
+    "raautoup.exe",
+    "agentu.exe",
+    "remotesupportplayeru.exe"
+   ],
+   "domains": [
+    "*.remotecall.com",
+    "*.startsupport.com",
+    "remotecall.com"
+   ]
+  },
+  {
+   "name": "WebEx (Remote Access)",
+   "slug": "webex-remote-access",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "Faronics Insight",
+   "slug": "faronics-insight",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\Faronics\\Insight Student\\*",
+    "C:\\Program Files\\Faronics\\Insight Teacher\\*",
+    "C:\\Program Files (x86)\\Faronics\\Insight Student\\*",
+    "C:\\Program Files (x86)\\Faronics\\Insight Teacher\\*",
+    "*\\Faronics\\Insight Student\\STAHelper.exe",
+    "*\\Faronics\\Insight Teacher\\STAHelper.exe",
+    "*\\Faronics\\Insight Student\\FIStudentSvc.exe",
+    "*\\Faronics\\Insight Student\\FIStudentAgent.exe",
+    "*\\Faronics\\Insight Student\\FIStudentUI.exe",
+    "FIStudentAgent.exe",
+    "FIStudentSvc.exe",
+    "FIStudentUI.exe",
+    "STAHelper.exe",
+    "StudentSvc.exe",
+    "InsightInstaller.exe",
+    "InsightInstallerStudent.exe",
+    "InsightInstallerTeacher.exe",
+    "InsightSetup.msi"
+   ],
+   "domains": [
+    "faronics.com",
+    "www.faronics.com",
+    "support.faronics.com",
+    "docs.faronics.com"
+   ]
+  },
+  {
+   "name": "Splashtop",
+   "slug": "splashtop",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Splashtop\\*",
+    "*\\Splashtop\\Splashtop Remote\\Client for RMM\\*",
+    "strwinclt.exe"
+   ],
+   "domains": [
+    "*.splashtop.com"
+   ]
+  },
+  {
+   "name": "PSEXEC",
+   "slug": "psexec",
+   "category": "RAT",
+   "installationPaths": [
+    "psexec.exe",
+    "psexec64.exe",
+    "psexecsvc.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Parallels Access",
+   "slug": "parallels-access",
+   "category": "RMM",
+   "installationPaths": [
+    "parallelsaccess-*.exe",
+    "TSClient.exe",
+    "prl_deskctl_agent.exe",
+    "prl_deskctl_wizard.exe",
+    "prl_pm_service.exe"
+   ],
+   "domains": [
+    "*.parallels.com"
+   ]
+  },
+  {
+   "name": "Apple Remote Desktop",
+   "slug": "apple-remote-desktop",
+   "category": "RAT",
+   "installationPaths": [
+    "ARDAgent.app"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Syspectr",
+   "slug": "syspectr",
+   "category": "RMM",
+   "installationPaths": [
+    "oolocker.exe",
+    "oosyspectr.exe",
+    "syspectr.exe"
+   ],
+   "domains": [
+    "*.syspectr.com",
+    "syspectr.com"
+   ]
+  },
+  {
+   "name": "Gorelo RMM",
+   "slug": "gorelo-rmm",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": [
+    "app.gorelo.io",
+    "gorelo-rmm.azurewebsites.net",
+    "gw.usw.gorelo.tech",
+    "lr.rmm.pod1.usw.gorelo.tech",
+    "public.rmm.pod1.usw.gorelo.tech",
+    "r1.rmm.uw.gorelo.tech",
+    "sr.rmm.pod1.usw.gorelo.tech"
+   ]
+  },
+  {
+   "name": "Level.io",
+   "slug": "level-io",
+   "category": "RMM",
+   "installationPaths": [
+    "level-windows-amd64.exe",
+    "level.exe",
+    "level-remote-control-ffmpeg.exe"
+   ],
+   "domains": [
+    "level.io",
+    "*.level.io"
+   ]
+  },
+  {
+   "name": "Goverlan",
+   "slug": "goverlan",
+   "category": "RMM",
+   "installationPaths": [
+    "goverrmc.exe",
+    "govsrv*.exe",
+    "GovAgentInstallHelper.exe",
+    "GovAgentx64.exe",
+    "GovReachClient.exe",
+    "C:\\Program Files (x86)\\PJ Technologies\\GOVsrv\\*",
+    "*\\PJ Technologies\\GOVsrv\\*",
+    "*\\GovSrv.exe"
+   ],
+   "domains": [
+    "goverlan.com"
+   ]
+  },
+  {
+   "name": "ConnectWise Control",
+   "slug": "connectwise-control",
+   "category": "RMM",
+   "installationPaths": [
+    "connectwisechat-customer.exe",
+    "connectwisecontrol.client.exe",
+    "screenconnect.windowsclient.exe"
+   ],
+   "domains": [
+    "live.screenconnect.com",
+    "control.connectwise.com"
+   ]
+  },
+  {
+   "name": "Remote.it",
+   "slug": "remote-it",
+   "category": "RMM",
+   "installationPaths": [
+    "remote-it-installer.exe",
+    "remote.it.exe",
+    "remoteit.exe"
+   ],
+   "domains": [
+    "auth.api.remote.it",
+    "api.remote.it",
+    "remote.it"
+   ]
+  },
+  {
+   "name": "Rodex RMM",
+   "slug": "rodex-rmm",
+   "category": "RAT",
+   "installationPaths": [
+    "RodexAgent.exe",
+    "rodexagent.exe",
+    "C:\\Program Files\\Rodex\\RodexAgent.exe",
+    "C:\\Windows\\<random>.exe"
+   ],
+   "domains": [
+    "rodex.cc",
+    "www.rodex.cc"
+   ]
+  },
+  {
+   "name": "Bluetrait",
+   "slug": "bluetrait",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Bluetrait Agent\\*"
+   ],
+   "domains": [
+    "bluetrait.io",
+    "*.bluetrait.io"
+   ]
+  },
+  {
+   "name": "SysAid",
+   "slug": "sysaid",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\SysAidServer\\*",
+    "*\\SysAidServer\\*",
+    "*\\SysAid\\*",
+    "*\\IliAS.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "KickIdler",
+   "slug": "kickidler",
+   "category": "RMM",
+   "installationPaths": [
+    "grabberEM.*msi",
+    "grabberTT*.msi"
+   ],
+   "domains": [
+    "kickidler.com",
+    "my.kickidler.com"
+   ]
+  },
+  {
+   "name": "Faronics Core",
+   "slug": "faronics-core",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\Faronics\\Faronics Core\\*",
+    "C:\\Program Files\\Faronics\\Faronics Core\\Workstation Agent\\*",
+    "C:\\Program Files\\Faronics\\Core\\Console\\*",
+    "C:\\Program Files (x86)\\Faronics\\Faronics Core\\*",
+    "*\\Faronics\\Faronics Core\\Workstation Agent\\FaronicsCoreAgent.exe",
+    "*\\Faronics\\Faronics Core\\Workstation Agent\\CoreAgentService.exe",
+    "C:\\ProgramData\\Faronics\\FCAForStartupMonitor.msi",
+    "FaronicsCoreAgent.exe",
+    "CoreAgentService.exe"
+   ],
+   "domains": [
+    "upd.faronicslabs.com",
+    "faronics.com",
+    "www.faronics.com"
+   ]
+  },
+  {
+   "name": "FreeNX",
+   "slug": "freenx",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\*\\nxplayer.exe",
+    "*\\nxplayer.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Acronis Cyber Protect (Remotix)",
+   "slug": "acronis-cyber-protect-remotix",
+   "category": "RMM",
+   "installationPaths": [
+    "AcronisCyberProtectConnectQuickAssist*.exe",
+    "AcronisCyberProtectConnectAgent.exe"
+   ],
+   "domains": [
+    "cloud.acronis.com",
+    "agents*-cloud.acronis.com",
+    "gw.remotix.com",
+    "connect.acronis.com"
+   ]
+  },
+  {
+   "name": "Addigy",
+   "slug": "addigy",
+   "category": "RMM",
+   "installationPaths": [
+    "addigy-*.pkg"
+   ],
+   "domains": [
+    "prod.addigy.com",
+    "grtmprod.addigy.com",
+    "agents.addigy.com"
+   ]
+  },
+  {
+   "name": "NoMachine",
+   "slug": "nomachine",
+   "category": "RAT",
+   "installationPaths": [
+    "nomachine*.exe",
+    "nxservice*.exe",
+    "nxd.exe"
+   ],
+   "domains": [
+    "nomachine.com"
+   ]
+  },
+  {
+   "name": "Instant Housecall",
+   "slug": "instant-housecall",
+   "category": "RMM",
+   "installationPaths": [
+    "hsloader.exe",
+    "ihcserver.exe",
+    "instanthousecall.exe"
+   ],
+   "domains": [
+    "*.instanthousecall.com",
+    "*.instanthousecall.net",
+    "instanthousecall.com",
+    "secure.instanthousecall.com"
+   ]
+  },
+  {
+   "name": "LabTech RMM (Now ConnectWise Automate)",
+   "slug": "labtech-rmm-now-connectwise-automate",
+   "category": "RMM",
+   "installationPaths": [
+    "ltsvc.exe",
+    "ltsvcmon.exe",
+    "lttray.exe"
+   ],
+   "domains": [
+    "connectwise.com"
+   ]
+  },
+  {
+   "name": "Basecamp",
+   "slug": "basecamp",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": [
+    "basecamp.com"
+   ]
+  },
+  {
+   "name": "Komari",
+   "slug": "komari",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\Komari\\*",
+    "C:\\komari\\*",
+    "/opt/komari/*",
+    "/usr/local/komari/*",
+    "/etc/systemd/system/komari.service",
+    "/etc/systemd/system/komari-agent.service"
+   ],
+   "domains": [
+    "github.com",
+    "raw.githubusercontent.com",
+    "ghcr.io",
+    "komari-document.pages.dev",
+    "www.komari.wiki"
+   ]
+  },
+  {
+   "name": "Visual Studio Dev Tunnel",
+   "slug": "visual-studio-dev-tunnel",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": [
+    "global.rel.tunnels.api.visualstudio.com",
+    "*.rel.tunnels.api.visualstudio.com",
+    "*.devtunnels.ms"
+   ]
+  },
+  {
+   "name": "Tailscale",
+   "slug": "tailscale",
+   "category": "RAT",
+   "installationPaths": [
+    "tailscale-*.exe",
+    "tailscaled.exe",
+    "tailscale-ipn.exe"
+   ],
+   "domains": [
+    "*.tailscale.com",
+    "*.tailscale.io",
+    "tailscale.com"
+   ]
+  },
+  {
+   "name": "CruzControl",
+   "slug": "cruzcontrol",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "Free Tools Launcher",
+   "slug": "free-tools-launcher",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\ManageEngine\\ManageEngine Free Tools\\Launcher\\*",
+    "*\\ManageEngine\\*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "RemotePulse",
+   "slug": "remotepulse",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\RemotePulseAgent\\InstallCore.exe",
+    "C:\\Program Files (x86)\\RemotePulseAgent\\agent.ps1",
+    "C:\\Program Files (x86)\\RemotePulseAgent\\defender-exclude.ps1",
+    "C:\\Program Files (x86)\\RemotePulseAgent\\install.ps1",
+    "C:\\Program Files (x86)\\RemotePulseAgent\\install.cmd"
+   ],
+   "domains": [
+    "remotepulse.io",
+    "www.remotepulse.io"
+   ]
+  },
+  {
+   "name": "Chrome SSH Extension",
+   "slug": "chrome-ssh-extension",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\iodihamcpbpeioajjeobimgagajmlibd*",
+    "*Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\iodihamcpbpeioajjeobimgagajmlibd*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Electric AI (Kaseya)",
+   "slug": "electric-ai-kaseya",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": [
+    "electric.ai"
+   ]
+  },
+  {
+   "name": "Auvik",
+   "slug": "auvik",
+   "category": "RMM",
+   "installationPaths": [
+    "auvik.engine.exe",
+    "auvik.agent.exe"
+   ],
+   "domains": [
+    "*.my.auvik.com",
+    "*.auvik.com",
+    "auvik.com"
+   ]
+  },
+  {
+   "name": "FixMe.it",
+   "slug": "fixme-it",
+   "category": "RMM",
+   "installationPaths": [
+    "FixMeit Client.exe",
+    "TiExpertStandalone.exe",
+    "FixMeitClient*.exe",
+    "TiExpertCore.exe",
+    "FixMeit Unattended Access Setup.exe",
+    "FixMeit Expert Setup.exe",
+    "fixmeitclient.exe",
+    "TiClientCore.exe",
+    "TiClientHelper*.exe",
+    "9380CC75B872221A7425D7503565B67580407F60"
+   ],
+   "domains": [
+    "*.fixme.it",
+    "*.techinline.net",
+    "fixme.it"
+   ]
+  },
+  {
+   "name": "Manage Engine (Desktop Central)",
+   "slug": "manage-engine-desktop-central",
+   "category": "RMM",
+   "installationPaths": [
+    "dcagentservice.exe",
+    "dcagentregister.exe"
+   ],
+   "domains": [
+    "desktopcentral.manageengine.com",
+    "desktopcentral.manageengine.com.eu",
+    "desktopcentral.manageengine.cn",
+    "*.dms.zoho.com",
+    "*.dms.zoho.com.eu",
+    "*.-dms.zoho.com.cn"
+   ]
+  },
+  {
+   "name": "RDPView",
+   "slug": "rdpview",
+   "category": "RAT",
+   "installationPaths": [
+    "dwrcs.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "XRDP",
+   "slug": "xrdp",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "Kabuto",
+   "slug": "kabuto",
+   "category": "RMM",
+   "installationPaths": [
+    "Kabuto.App.Runner.exe"
+   ],
+   "domains": [
+    "*.kabuto.io"
+   ]
+  },
+  {
+   "name": "LogMeIn",
+   "slug": "logmein",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": [
+    "logmein-gateway.com",
+    "*.logmein.com",
+    "*.logmein.eu",
+    "logmeinrescue.com",
+    "*.logmeininc.com"
+   ]
+  },
+  {
+   "name": "PDQ Connect",
+   "slug": "pdq-connect",
+   "category": "RMM",
+   "installationPaths": [
+    "pdq-connect*.exe",
+    "PDQConnectUpdater-*.msi"
+   ],
+   "domains": [
+    "app.pdq.com",
+    "cfcdn.pdq.com",
+    "pdqinstallers.*.r2.cloudflarestorage.com"
+   ]
+  },
+  {
+   "name": "HopToDesk",
+   "slug": "hoptodesk",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\HopToDesk\\HopToDesk.exe",
+    "HopToDesk.exe",
+    "HopToDesk-Standalone.exe"
+   ],
+   "domains": [
+    "hoptodesk.com",
+    "api.hoptodesk.com",
+    "signal.hoptodesk.com",
+    "turn.hoptodesk.com",
+    "download.hoptodesk.com",
+    "www.hoptodesk.com"
+   ]
+  },
+  {
+   "name": "SpyAnywhere",
+   "slug": "spyanywhere",
+   "category": "RMM",
+   "installationPaths": [
+    "sysdiag.exe"
+   ],
+   "domains": [
+    "*.spytech-web.com",
+    "spyanywhere.com"
+   ]
+  },
+  {
+   "name": "SkyFex",
+   "slug": "skyfex",
+   "category": "RMM",
+   "installationPaths": [
+    "Deskroll.exe",
+    "DeskRollUA.exe"
+   ],
+   "domains": [
+    "skyfex.com",
+    "deskroll.com",
+    "*.deskroll.com"
+   ]
+  },
+  {
+   "name": "TiFLUX",
+   "slug": "tiflux",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\TiFLUX\\*",
+    "C:\\Program Files (x86)\\TiFLUX\\desktop\\*",
+    "C:\\Program Files (x86)\\TiFLUX\\dependencies\\*",
+    "C:\\Program Files (x86)\\TiFLUX\\dependencies\\7zip\\*",
+    "C:\\Program Files (x86)\\TiFLUX\\dependencies\\tar\\*",
+    "C:\\Program Files (x86)\\TiFLUX\\dependencies\\ultravnc\\*",
+    "C:\\Program Files (x86)\\TiFLUX\\TiService.exe",
+    "C:\\Program Files (x86)\\TiFLUX\\TiUpdateService.exe",
+    "C:\\Program Files (x86)\\TiFLUX\\si.exe",
+    "C:\\Program Files (x86)\\TiFLUX\\desktop\\TiAgent.exe",
+    "%ProgramData%\\Tiflux\\*",
+    "/Applications/TiAgent.app"
+   ],
+   "domains": [
+    "agent.tiflux.com",
+    "app.tiflux.com",
+    "tiflux.com",
+    "www.tiflux.com",
+    "tiflux.com.br",
+    "www.tiflux.com.br",
+    "*.tiflux.com",
+    "my.splashtop.com"
+   ]
+  },
+  {
+   "name": "Bitvise SSH Server",
+   "slug": "bitvise-ssh-server",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files\\Bitvise SSH Server\\*",
+    "*\\Bitvise SSH Server\\*",
+    "*\\BvSshServer-Inst.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Tanium Deploy",
+   "slug": "tanium-deploy",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "PChelpware",
+   "slug": "pchelpware",
+   "category": "RMM",
+   "installationPaths": [
+    "*\\PcHelpWare_viewer.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Royal Server",
+   "slug": "royal-server",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": [
+    "royalapps.com"
+   ]
+  },
+  {
+   "name": "JollysFastVNC",
+   "slug": "jollysfastvnc",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "RPort",
+   "slug": "rport",
+   "category": "RMM",
+   "installationPaths": [
+    "rport.exe"
+   ],
+   "domains": [
+    "rport.io"
+   ]
+  },
+  {
+   "name": "ITSupport247 (ConnectWise)",
+   "slug": "itsupport247-connectwise",
+   "category": "RMM",
+   "installationPaths": [
+    "saazapsc.exe"
+   ],
+   "domains": [
+    "*.itsupport247.net"
+   ]
+  },
+  {
+   "name": "Controlio",
+   "slug": "controlio",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\ProgramData\\{E0E95C6C-F194-4846-928D-E5538022226D}\\",
+    "weCliboardListener.exe",
+    "bbl.exe",
+    "weprtct.exe",
+    "wemonc.exe",
+    "wesvc.exe",
+    "libeay32.dll",
+    "ssleay32.dll",
+    "wec_launcher_[a-Z0-9]*_.exe",
+    "wec_launcher_[a-Z0-9]*_.pkg",
+    "weInstSvc.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "GetScreen",
+   "slug": "getscreen",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\ProgramData\\Getscreen.me\\",
+    "C:\\Users\\*\\AppData\\Local\\Getscreen.me\\",
+    "C:\\Program Files\\Getscreen.me\\",
+    "C:\\Users\\*\\Downloads\\getscreen-x86.exe",
+    "C:\\Users\\*\\Downloads\\getscreen.upd.exe"
+   ],
+   "domains": [
+    "getscreen.me",
+    "*.getscreen.me",
+    "go.getscreen.me",
+    "image.getscreen.me",
+    "px-*.getscreen.me"
+   ]
+  },
+  {
+   "name": "Pilixo",
+   "slug": "pilixo",
+   "category": "RMM",
+   "installationPaths": [
+    "rdp.exe",
+    "Pilixo_Installer*.exe"
+   ],
+   "domains": [
+    "pilixo.com",
+    "download.pilixo.com",
+    "*.pilixo.com"
+   ]
+  },
+  {
+   "name": "ITSupport247 (ConnectWise)",
+   "slug": "itsupport247-connectwise",
+   "category": "RMM",
+   "installationPaths": [
+    "saazapsc.exe"
+   ],
+   "domains": [
+    "*.itsupport247.net",
+    "itsupport247.net"
+   ]
+  },
+  {
+   "name": "FleetDeck.io",
+   "slug": "fleetdeck-io",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\FleetDeck Agent\\fleetdeck_agent_svc.exe",
+    "C:\\Program Files (x86)\\FleetDeck Agent\\*\\fleetdeck_agent.exe",
+    "C:\\Program Files (x86)\\FleetDeck Agent\\*\\fd_agent.dll",
+    "C:\\Windows\\Temp\\FleetDeck\\*",
+    "fleetdeck-agent.exe",
+    "fleetdeck_agent_svc.exe",
+    "fleetdeck_commander_svc.exe",
+    "fleetdeck_installer.exe",
+    "fleetdeck_commander_launcher.exe",
+    "fleetdeck_agent.exe",
+    "fleetdeck-agent.msi",
+    "fleetdeck-agent.mst"
+   ],
+   "domains": [
+    "*.fleetdeck.io",
+    "fleetdeck.io",
+    "agentmqtt.fleetdeck.io",
+    "checkip.zmazonaws.com"
+   ]
+  },
+  {
+   "name": "VNC",
+   "slug": "vnc",
+   "category": "RAT",
+   "installationPaths": [
+    "winvnc*.exe",
+    "vncserver.exe",
+    "winwvc.exe",
+    "winvncsc.exe",
+    "vncserverui.exe",
+    "vncviewer.exe",
+    "winvnc.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "ISL Light",
+   "slug": "isl-light",
+   "category": "RMM",
+   "installationPaths": [
+    "islalwaysonmonitor.exe",
+    "isllight.exe",
+    "isllightservice.exe"
+   ],
+   "domains": [
+    "islonline.com"
+   ]
+  },
+  {
+   "name": "Pcnow",
+   "slug": "pcnow",
+   "category": "RMM",
+   "installationPaths": [
+    "mwcliun.exe",
+    "pcnmgr.exe",
+    "webexpcnow.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "rdp2tcp",
+   "slug": "rdp2tcp",
+   "category": "RAT",
+   "installationPaths": [
+    "rdp2tcp.exe",
+    "rdp2tcp.py"
+   ],
+   "domains": []
+  },
+  {
+   "name": "NetBird",
+   "slug": "netbird",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files\\Netbird\\netbird.exe",
+    "C:\\Program Files\\Netbird\\netbird-ui.exe",
+    "C:\\ProgramData\\Netbird\\*",
+    "/usr/bin/netbird",
+    "/usr/local/bin/netbird",
+    "/opt/netbird/*",
+    "/Applications/NetBird UI.app",
+    "/etc/netbird/install.conf",
+    "C:\\bin\\netbird.msi",
+    "C:\\bin\\OpenSSH.msi",
+    "C:\\bin\\cis.vbs",
+    "C:\\bin\\trm.zip",
+    "C:\\temper\\trm",
+    "netbird.exe",
+    "netbird-ui.exe",
+    "netbird"
+   ],
+   "domains": [
+    "netbird.io",
+    "*.netbird.io",
+    "api.netbird.io",
+    "app.netbird.io",
+    "signal.netbird.io",
+    "relay.netbird.io",
+    "login.netbird.io",
+    "pkgs.netbird.io",
+    "googl-6c11f.firebaseapp.com",
+    "googl-6c11f.web.app",
+    "googl-165a0.web.app",
+    "cloud-ed980.firebaseapp.com",
+    "cloud-233f9.firebaseapp.com",
+    "my-sharepoint-inc.com",
+    "my1cloudlive.com",
+    "my2cloudlive.com",
+    "web-16fe.app"
+   ]
+  },
+  {
+   "name": "RES Automation Manager",
+   "slug": "res-automation-manager",
+   "category": "RMM",
+   "installationPaths": [
+    "wisshell*.exe",
+    "wmc.exe",
+    "wmc_deployer.exe",
+    "wmcsvc.exe"
+   ],
+   "domains": [
+    "ivanti.com"
+   ]
+  },
+  {
+   "name": "SetMe PRO",
+   "slug": "setme-pro",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Techinline Ltd\\SetMe Unattended\\Client\\SetMe_Client.exe",
+    "C:\\Program Files (x86)\\Techinline Ltd\\SetMe Unattended\\Module\\*\\tinUnattendedModule.exe"
+   ],
+   "domains": [
+    "set.me",
+    "*.set.me"
+   ]
+  },
+  {
+   "name": "Netop Remote Control (aka Impero Connect)",
+   "slug": "netop-remote-control-aka-impero-connect",
+   "category": "RMM",
+   "installationPaths": [
+    "nhostsvc.exe",
+    "nhstw32.exe",
+    "nldrw32.exe",
+    "rmserverconsolemediator.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "ISL Online",
+   "slug": "isl-online",
+   "category": "RMM",
+   "installationPaths": [
+    "islalwaysonmonitor.exe",
+    "isllight.exe",
+    "isllightservice.exe",
+    "ISLLightClient.exe",
+    "C:\\Program Files (x86)\\ISL Online\\ISL Light*",
+    "*\\ISL Online\\ISL Light*",
+    "*\\ISLLight.exe"
+   ],
+   "domains": [
+    "*.islonline.com",
+    "*.islonline.net"
+   ]
+  },
+  {
+   "name": "GotoHTTP",
+   "slug": "gotohttp",
+   "category": "RMM",
+   "installationPaths": [
+    "GotoHTTP_x64.exe",
+    "gotohttp.exe",
+    "GotoHTTP*.exe"
+   ],
+   "domains": [
+    "*.gotohttp.com",
+    "gotohttp.com"
+   ]
+  },
+  {
+   "name": "Tactical RMM",
+   "slug": "tactical-rmm",
+   "category": "RMM",
+   "installationPaths": [
+    "tacticalrmm.exe"
+   ],
+   "domains": [
+    "login.tailscale.com",
+    "docs.tacticalrmm.com"
+   ]
+  },
+  {
+   "name": "MSP360",
+   "slug": "msp360",
+   "category": "RMM",
+   "installationPaths": [
+    "Online Backup.exe",
+    "CBBackupPlan.exe",
+    "Cloud.Backup.Scheduler.exe",
+    "Cloud.Backup.RM.Service.exe",
+    "cbb.exe",
+    "CloudRaService.exe",
+    "CloudRaSd.exe",
+    "CloudRaCmd.exe",
+    "CloudRaUtilities.exe",
+    "Remote Desktop.exe",
+    "Connect.exe",
+    "RMM.Agent.exe"
+   ],
+   "domains": [
+    "*.cloudberrylab.com",
+    "*.msp360.com",
+    "*.mspbackups.com",
+    "msp360.com"
+   ]
+  },
+  {
+   "name": "Pcvisit",
+   "slug": "pcvisit",
+   "category": "RMM",
+   "installationPaths": [
+    "pcvisit.exe",
+    "pcvisit_client.exe",
+    "pcvisit-easysupport.exe",
+    "pcvisit_service_client.exe"
+   ],
+   "domains": [
+    "*.pcvisit.de",
+    "pcvisit.de"
+   ]
+  },
+  {
+   "name": "GoTo Opener",
+   "slug": "goto-opener",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\GoTo Opener",
+    "*\\GoTo Opener"
+   ],
+   "domains": []
+  },
+  {
+   "name": "RemoteUtilities",
+   "slug": "remoteutilities",
+   "category": "RMM",
+   "installationPaths": [
+    "rutview.exe",
+    "*\\Remote Manipulator System - Server\\*",
+    "C:\\Program Files\\Remote Utilities\\*",
+    "*\\Remote Utilities\\*",
+    "rutserv.exe",
+    "*\\rutserv.exe"
+   ],
+   "domains": [
+    "remoteutilities.com"
+   ]
+  },
+  {
+   "name": "KiTTY",
+   "slug": "kitty",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\*\\kitty.exe",
+    "*\\kitty.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "MioNet (WD Anywhere Access)",
+   "slug": "mionet-wd-anywhere-access",
+   "category": "RMM",
+   "installationPaths": [
+    "mionet.exe",
+    "mionetmanager.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Lite Manager",
+   "slug": "lite-manager",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\LiteManager Pro – Viewer\\*",
+    "*\\LiteManager Pro – Viewer\\*",
+    "*\\LMNoIpServer.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Syncthing",
+   "slug": "syncthing",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Users\\*\\AppData\\Roaming\\SyncTrayzor\\*",
+    "*Users\\*\\AppData\\Roaming\\SyncTrayzor\\*",
+    "*\\Syncthing.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "BeamYourScreen",
+   "slug": "beamyourscreen",
+   "category": "RMM",
+   "installationPaths": [
+    "beamyourscreen.exe",
+    "beamyourscreen-host.exe"
+   ],
+   "domains": [
+    "beamyourscreen.com",
+    "*.beamyourscreen.com"
+   ]
+  },
+  {
+   "name": "VNC Connect",
+   "slug": "vnc-connect",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files\\RealVNC\\VNC Server\\*",
+    "*\\RealVNC\\VNC Server\\*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "BeAnyWhere",
+   "slug": "beanywhere",
+   "category": "RMM",
+   "installationPaths": [
+    "basuptshelper.exe",
+    "basupsrvcupdate.exe",
+    "BASupApp.exe",
+    "BASupSysInf.exe",
+    "BASupAppSrvc.exe",
+    "TakeControl.exe",
+    "BASupAppElev.exe",
+    "basupsrvc.exe"
+   ],
+   "domains": [
+    "beanywhere.com"
+   ]
+  },
+  {
+   "name": "NetLock RMM",
+   "slug": "netlock-rmm",
+   "category": "RMM",
+   "installationPaths": [
+    "NetLock_RMM_Agent_Installer.exe",
+    "NetLock_RMM_Agent_Installer",
+    "/var/0x101_Cyber_Security/*",
+    "/Library/Application Support/0x101_Cyber_Security/*",
+    "/usr/local/bin/0x101_Cyber_Security/Netlock_RMM/*",
+    "/usr/0x101_Cyber_Security/Netlock_RMM/*",
+    "C:\\ProgramData\\0x101 Cyber Security\\NetLock RMM\\Comm Agent\\*",
+    "C:\\Program Files\\0x101 Cyber Security\\NetLock RMM\\UserAgent\\NetLock_RMM_User_Process.exe",
+    "C:\\Program Files\\0x101 Cyber Security\\NetLock RMM\\UserAgent\\NetLock_RMM_User_UAC.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "WebRDP",
+   "slug": "webrdp",
+   "category": "RAT",
+   "installationPaths": [
+    "webrdp.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Jump Cloud",
+   "slug": "jump-cloud",
+   "category": "RMM",
+   "installationPaths": [
+    "JumpCloud*.exe"
+   ],
+   "domains": [
+    "*.api.jumpcloud.com",
+    "*.assist.jumpcloud.com"
+   ]
+  },
+  {
+   "name": "Remmina",
+   "slug": "remmina",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "tmate",
+   "slug": "tmate",
+   "category": "RAT",
+   "installationPaths": [
+    "/usr/bin/tmate",
+    "/usr/local/bin/tmate",
+    "tmate",
+    "tmate.sock",
+    "tmate-ready",
+    "tmate.bashrc"
+   ],
+   "domains": [
+    "tmate.io",
+    "*.tmate.io"
+   ]
+  },
+  {
+   "name": "OCS inventory",
+   "slug": "ocs-inventory",
+   "category": "RMM",
+   "installationPaths": [
+    "ocsinventory.exe",
+    "ocsservice.exe"
+   ],
+   "domains": [
+    "ocsinventory-ng.org"
+   ]
+  },
+  {
+   "name": "CentraStage (Now Datto)",
+   "slug": "centrastage-now-datto",
+   "category": "RMM",
+   "installationPaths": [
+    "CagService.exe",
+    "AEMAgent.exe"
+   ],
+   "domains": [
+    "*.rmm.datto.com",
+    "cc.centrastage.net",
+    "*.cc.centrastage.net"
+   ]
+  },
+  {
+   "name": "Level",
+   "slug": "level",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\Level\\*"
+   ],
+   "domains": [
+    "level.io",
+    "builds.level.io",
+    "agents.level.io",
+    "online.level.io",
+    "downloads.io"
+   ]
+  },
+  {
+   "name": "Koofr",
+   "slug": "koofr",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "iDrive",
+   "slug": "idrive",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\ProgramData\\IDrive\\*",
+    "C:\\Program Files\\IDrive\\*",
+    "C:\\Program Files (x86)\\IDrive\\*",
+    "C:\\Users\\*\\AppData\\Local\\IDrive\\*",
+    "C:\\Users\\*\\Downloads\\IDriveWinSetup.exe",
+    "IDriveWinSetup.exe",
+    "IDriveEClassic.exe",
+    "id_tray.exe",
+    "IDComponent.dll"
+   ],
+   "domains": [
+    "idrive.com",
+    "*.idrive.com",
+    "api.idrive.com"
+   ]
+  },
+  {
+   "name": "Alpemix",
+   "slug": "alpemix",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\AlpemixService.exe",
+    "C:\\AlpemixSrvc\\"
+   ],
+   "domains": [
+    "*.alpemix.com",
+    "*.teknopars.com"
+   ]
+  },
+  {
+   "name": "Monitic",
+   "slug": "monitic",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\Monitic\\*",
+    "C:\\Program Files\\Monitic\\agent.exe",
+    "C:\\Program Files\\Monitic\\amon.exe",
+    "C:\\Program Files\\Monitic\\conf.json"
+   ],
+   "domains": [
+    "api.monitic.com",
+    "app.monitic.com",
+    "devapi.monitic.com",
+    "turn.monitic.com",
+    "monitic.com",
+    "www.monitic.com"
+   ]
+  },
+  {
+   "name": "Ammyy Admin",
+   "slug": "ammyy-admin",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\\\ProgramData\\\\AMMYY\\\\*",
+    "AMMYY_Admin.exe",
+    "aa_v*.exe",
+    "C:\\Users\\*\\Downloads\\AMMYY_Admin.exe",
+    "*\\AMMYY_Admin.exe"
+   ],
+   "domains": [
+    "ammyy.com",
+    "*.ammyy.com"
+   ]
+  },
+  {
+   "name": "Remote Ripple",
+   "slug": "remote-ripple",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\Remote Ripple\\*",
+    "C:\\Program Files (x86)\\Remote Ripple\\*",
+    "RemoteRipple.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "BeyondTrust (Bomgar)",
+   "slug": "beyondtrust-bomgar",
+   "category": "RMM",
+   "installationPaths": [
+    "bomgar-scc-*.exe",
+    "bomgar-scc.exe",
+    "bomgar-pac-*.exe",
+    "bomgar-pac.exe",
+    "bomgar-rdp.exe"
+   ],
+   "domains": [
+    "*.beyondtrustcloud.com",
+    "*.bomgarcloud.com",
+    "bomgarcloud.com"
+   ]
+  },
+  {
+   "name": "PuTTY",
+   "slug": "putty",
+   "category": "RAT",
+   "installationPaths": [
+    "*\\putty.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "ezHelp",
+   "slug": "ezhelp",
+   "category": "RMM",
+   "installationPaths": [
+    "ezhelpclientmanager.exe",
+    "ezHelpManager.exe",
+    "ezhelpclient.exe"
+   ],
+   "domains": [
+    "*.ezhelp.co.kr",
+    "ezhelp.co.kr"
+   ]
+  },
+  {
+   "name": "RustDesk",
+   "slug": "rustdesk",
+   "category": "RMM",
+   "installationPaths": [
+    "rustdesk*.exe",
+    "rustdesk.exe",
+    "C:\\Users\\*\\AppData\\Local\\rustdesk\\rustdesk.exe",
+    "C:\\Users\\*\\AppData\\Local\\rustdesk\\*",
+    "C:\\Program Files\\RustDesk"
+   ],
+   "domains": [
+    "rustdesk.com",
+    "web.rustdesk.com",
+    "api.rustdesk.com",
+    "rs-ny.rustdesk.com"
+   ]
+  },
+  {
+   "name": "LiteManager",
+   "slug": "litemanager",
+   "category": "RMM",
+   "installationPaths": [
+    "lmnoipserver.exe",
+    "ROMFUSClient.exe",
+    "romfusclient.exe",
+    "romviewer.exe",
+    "romserver.exe",
+    "ROMServer.exe"
+   ],
+   "domains": [
+    "*.litemanager.ru",
+    "*.litemanager.com",
+    "litemanager.com"
+   ]
+  },
+  {
+   "name": "Laplink Gold",
+   "slug": "laplink-gold",
+   "category": "RMM",
+   "installationPaths": [
+    "tsircusr.exe",
+    "laplink.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "QQ IM-remote assistance",
+   "slug": "qq-im-remote-assistance",
+   "category": "RMM",
+   "installationPaths": [
+    "qq.exe",
+    "QQProtect.exe",
+    "qqpcmgr.exe"
+   ],
+   "domains": [
+    "*.mdt.qq.com",
+    "*.desktop.qq.com",
+    "qq-messenger.en.softonic.com"
+   ]
+  },
+  {
+   "name": "Remote Desktop Plus",
+   "slug": "remote-desktop-plus",
+   "category": "RAT",
+   "installationPaths": [
+    "rdp.exe"
+   ],
+   "domains": [
+    "donkz.nl"
+   ]
+  },
+  {
+   "name": "Remcos",
+   "slug": "remcos",
+   "category": "RMM",
+   "installationPaths": [
+    "remcos*.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "AweRay",
+   "slug": "aweray",
+   "category": "RMM",
+   "installationPaths": [
+    "aweray_remote*.exe",
+    "AweSun.exe"
+   ],
+   "domains": [
+    "asapi*.aweray.net",
+    "client-api.aweray.com"
+   ]
+  },
+  {
+   "name": "ControlR",
+   "slug": "controlr",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\ControlR\\*\\ControlR.Agent.exe",
+    "C:\\Program Files\\ControlR\\*\\DesktopClient\\ControlR.DesktopClient.exe",
+    "C:\\Program Files\\ControlR\\*\\DesktopClient\\ControlR.DesktopClient.dll",
+    "C:\\ProgramData\\ControlR\\",
+    "/usr/local/bin/ControlR/*",
+    "/Library/Application Support/ControlR/*",
+    "/Applications/ControlR.app",
+    "/Applications/ControlR.*.app"
+   ],
+   "domains": [
+    "demo.controlr.app"
+   ]
+  },
+  {
+   "name": "Absolute (Computrace)",
+   "slug": "absolute-computrace",
+   "category": "RMM",
+   "installationPaths": [
+    "rpcnet.exe",
+    "ctes.exe",
+    "ctespersistence.exe",
+    "cteshostsvc.exe",
+    "rpcld.exe"
+   ],
+   "domains": [
+    "search.namequery.com",
+    "*.search.namequery.com",
+    "server.absolute.com",
+    "*.server.absolute.com"
+   ]
+  },
+  {
+   "name": "HeartbeatRM",
+   "slug": "heartbeatrm",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\HeartbeatRM\\*",
+    "C:\\Program Files\\HeartbeatRM\\*",
+    "*\\HeartbeatRM\\*",
+    "agent-installer-any.exe",
+    "hbrm-x64.exe",
+    "hbrm-updater-x64.exe"
+   ],
+   "domains": [
+    "*.heartbeatrm.com",
+    "heartbeatrm.com"
+   ]
+  },
+  {
+   "name": "Guacamole",
+   "slug": "guacamole",
+   "category": "RAT",
+   "installationPaths": [
+    "guacd.exe"
+   ],
+   "domains": [
+    "guacamole.apache.org"
+   ]
+  },
+  {
+   "name": "Kaseya (VSA)",
+   "slug": "kaseya-vsa",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Kaseya\\",
+    "C:\\ProgramData\\Kaseya\\"
+   ],
+   "domains": [
+    "deploy01.kaseya.com",
+    "managedsupport.kaseya.net",
+    "*.managedsupport.kaseya.net",
+    "*.kaseya.net",
+    "kaseya.com"
+   ]
+  },
+  {
+   "name": "UltraVNC",
+   "slug": "ultravnc",
+   "category": "RAT",
+   "installationPaths": [
+    "UltraVNC*.exe"
+   ],
+   "domains": [
+    "ultravnc.com"
+   ]
+  },
+  {
+   "name": "Distant Desktop",
+   "slug": "distant-desktop",
+   "category": "RMM",
+   "installationPaths": [
+    "ddsystem.exe",
+    "dd.exe",
+    "distant-desktop.exe"
+   ],
+   "domains": [
+    "*.distantdesktop.com",
+    "signalserver.xyz",
+    "*.signalserver.xyz"
+   ]
+  },
+  {
+   "name": "ScreenConnect",
+   "slug": "screenconnect",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\ScreenConnect Client (Random)\\ScreenConnect.ClientService.exe",
+    "Remote Workforce Client.exe",
+    "*\\*\\ScreenConnect.ClientService.exe",
+    "C:\\Program Files (x86)\\ScreenConnect Client (<string ID>)\\*",
+    "*\\ScreenConnect Client*\\*",
+    "*\\*\\ScreenConnect.WindowsClient.exe",
+    "screenconnect*.exe",
+    "screenconnect.windowsclient.exe",
+    "ConnectWiseControl*.exe",
+    "connectwise*.exe",
+    "screenconnect.clientservice.exe"
+   ],
+   "domains": [
+    "control.connectwise.com",
+    "*.connectwise.com",
+    "*.screenconnect.com"
+   ]
+  },
+  {
+   "name": "Netop",
+   "slug": "netop",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\Danware Data\\NetOp Packn Deploy\\*",
+    "*\\Danware Data\\NetOp Packn Deploy\\*",
+    "*\\Netop Remote Control\\*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "IntelliAdmin Remote Control",
+   "slug": "intelliadmin-remote-control",
+   "category": "RMM",
+   "installationPaths": [
+    "iadmin.exe",
+    "intelliadmin.exe",
+    "agent32.exe",
+    "agent64.exe",
+    "agent_setup_5.exe"
+   ],
+   "domains": [
+    "*.intelliadmin.com"
+   ]
+  },
+  {
+   "name": "Fortra",
+   "slug": "fortra",
+   "category": "RMM",
+   "installationPaths": [],
+   "domains": [
+    "fortra.com"
+   ]
+  },
+  {
+   "name": "Instant Housecall",
+   "slug": "instant-housecall",
+   "category": "RMM",
+   "installationPaths": [
+    "hsloader.exe",
+    "InstantHousecall.exe",
+    "ihcserver.exe",
+    "instanthousecall.exe"
+   ],
+   "domains": [
+    "*.instanthousecall.com",
+    "secure.instanthousecall.com",
+    "*.instanthousecall.net",
+    "instanthousecall.com"
+   ]
+  },
+  {
+   "name": "rdpwrap",
+   "slug": "rdpwrap",
+   "category": "RAT",
+   "installationPaths": [
+    "RDPWInst.exe",
+    "RDPCheck.exe",
+    "RDPConf.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Nezha",
+   "slug": "nezha",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\nezha\\*",
+    "C:\\Program Files\\nezha\\*",
+    "*\\nezha-agent.exe",
+    "nezha-agent.exe",
+    "dashboard-windows-amd64.exe",
+    "/opt/nezha/*",
+    "/opt/nezha/agent",
+    "/opt/nezha/agent/nezha-agent",
+    "/opt/nezha/dashboard",
+    "/etc/systemd/system/nezha-agent.service",
+    "/etc/systemd/system/nezha-dashboard.service",
+    "nezha-agent",
+    "nezha_agent"
+   ],
+   "domains": [
+    "github.com",
+    "raw.githubusercontent.com",
+    "nezha.wiki",
+    "nezhahq.github.io",
+    "c.mid.al",
+    "gd.bj2.xyz",
+    "rism.pages.dev"
+   ]
+  },
+  {
+   "name": "Chicken (of the VNC)",
+   "slug": "chicken-of-the-vnc",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "247ithelp.com (ConnectWise)",
+   "slug": "247ithelp-com-connectwise",
+   "category": "RMM",
+   "installationPaths": [
+    "Remote Workforce Client.exe"
+   ],
+   "domains": [
+    "*.247ithelp.com"
+   ]
+  },
+  {
+   "name": "GoToAssist",
+   "slug": "gotoassist",
+   "category": "RMM",
+   "installationPaths": [
+    "gotoassist.exe",
+    "g2a*.exe",
+    "GoTo Assist Opener.exe",
+    "g2mcomm.exe",
+    "g2mupdate.com",
+    "goto opener.exe",
+    "g2ax_comm_customer.exe"
+   ],
+   "domains": [
+    "goto.com",
+    "*.getgo.com",
+    "*.fastsupport.com",
+    "*.gotoassist.com",
+    "helpme.net",
+    "*.gotoassist.me",
+    "*.gotoassist.at",
+    "*.desktopstreaming.com",
+    "*.cdn.getgo.com"
+   ]
+  },
+  {
+   "name": "RAdmin",
+   "slug": "radmin",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Radmin Viewer 3\\Radmin.exe",
+    "C:\\Windows\\SysWOW64\\rserver30\\rserver3.exe",
+    "C:\\Windows\\SysWOW64\\rserver30\\FamItrfc",
+    "C:\\Windows\\SysWOW64\\rserver30\\FamItrf2"
+   ],
+   "domains": [
+    "radmin.com"
+   ]
+  },
+  {
+   "name": "Synergy",
+   "slug": "synergy",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "Any Support",
+   "slug": "any-support",
+   "category": "RMM",
+   "installationPaths": [
+    "ManualLauncher.exe"
+   ],
+   "domains": [
+    "*.anysupport.net"
+   ]
+  },
+  {
+   "name": "N-Able Advanced Monitoring Agent",
+   "slug": "n-able-advanced-monitoring-agent",
+   "category": "RMM",
+   "installationPaths": [
+    "Agent_*_RW.exe",
+    "BASEClient.exe",
+    "BASupApp.exe",
+    "BASupSrvc.exe",
+    "BASupSrvcCnfg.exe",
+    "BASupTSHelper.exe"
+   ],
+   "domains": [
+    "remote.management",
+    "*.remote.management",
+    "*.logicnow.com",
+    "systemmonitor.us",
+    "*.systemmonitor.us",
+    "systemmonitor.eu.com",
+    "*.systemmonitor.eu.com",
+    "system-monitor.com",
+    "*.system-monitor.com",
+    "systemmonitor.us.cdn.cloudflare.net",
+    "cloudbackup.management",
+    "*.cloudbackup.management",
+    "systemmonitor.co.uk",
+    "*.systemmonitor.co.uk",
+    "*.n-able.com",
+    "beanywhere.com",
+    "*.beanywhere.com",
+    "*.swi-tc.com"
+   ]
+  },
+  {
+   "name": "Mikogo",
+   "slug": "mikogo",
+   "category": "RMM",
+   "installationPaths": [
+    "mikogo.exe",
+    "mikogo-starter.exe",
+    "mikogo-service.exe",
+    "mikogolauncher.exe",
+    "C:\\Users\\*\\AppData\\Roaming\\Mikogo\\*",
+    "*Users\\*\\AppData\\Roaming\\Mikogo\\*",
+    "*\\Mikogo-Service.exe",
+    "*\\Mikogo-Screen-Service.exe"
+   ],
+   "domains": [
+    "*.real-time-collaboration.com",
+    "*.mikogo4.com",
+    "*.mikogo.com",
+    "mikogo.com"
+   ]
+  },
+  {
+   "name": "Anyplace Control",
+   "slug": "anyplace-control",
+   "category": "RMM",
+   "installationPaths": [
+    "apc_host.exe"
+   ],
+   "domains": [
+    "anyplace-control.com"
+   ]
+  },
+  {
+   "name": "Site24x7",
+   "slug": "site24x7",
+   "category": "RMM",
+   "installationPaths": [
+    "MEAgentHelper.exe",
+    "MonitoringAgent.exe",
+    "Site24x7WindowsAgentTrayIcon.exe",
+    "Site24x7PluginAgent.exe"
+   ],
+   "domains": [
+    "plus*.site24x7.com",
+    "plus*.site24x7.eu",
+    "plus*.site24x7.in",
+    "plus*.site24x7.cn",
+    "plus*.site24x7.net.au"
+   ]
+  },
+  {
+   "name": "MyGreenPC",
+   "slug": "mygreenpc",
+   "category": "RMM",
+   "installationPaths": [
+    "mygreenpc.exe"
+   ],
+   "domains": [
+    "mygreenpc.com",
+    "*.mygreenpc.com"
+   ]
+  },
+  {
+   "name": "Remote Desktop Manager (Devolutions)",
+   "slug": "remote-desktop-manager-devolutions",
+   "category": "RAT",
+   "installationPaths": [],
+   "domains": []
+  },
+  {
+   "name": "Ivanti Remote Control",
+   "slug": "ivanti-remote-control",
+   "category": "RMM",
+   "installationPaths": [
+    "IvantiRemoteControl.exe",
+    "ArcUI.exe",
+    "AgentlessRC.exe"
+   ],
+   "domains": [
+    "*.ivanticloud.com"
+   ]
+  },
+  {
+   "name": "Sophos-Remote Management System",
+   "slug": "sophos-remote-management-system",
+   "category": "RMM",
+   "installationPaths": [
+    "clientmrinit.exe",
+    "mgntsvc.exe",
+    "routernt.exe"
+   ],
+   "domains": [
+    "*.sophos.com",
+    "*.sophosupd.com",
+    "*.sophosupd.net"
+   ]
+  },
+  {
+   "name": "OpsBridge Agent",
+   "slug": "opsbridge-agent",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\OpsBridge\\OpsBridgeAgent.exe",
+    "C:\\ProgramData\\OpsBridge\\*",
+    "C:\\Windows\\System32\\Tasks\\OpsBridge Agent"
+   ],
+   "domains": [
+    "opsbridge.digital"
+   ]
+  },
+  {
+   "name": "Panorama9",
+   "slug": "panorama9",
+   "category": "RMM",
+   "installationPaths": [
+    "p9agent*.exe"
+   ],
+   "domains": [
+    "trusted.panorama9.com",
+    "changes.panorama9.com",
+    "panorama9.com"
+   ]
+  },
+  {
+   "name": "TrustConnect",
+   "slug": "trustconnect",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files\\TrustConnect Agent\\TrustConnectAgent.exe",
+    "C:\\Program Files\\TrustConnect Agent\\*",
+    "C:\\ProgramData\\TrustConnect\\*",
+    "*\\TrustConnectAgent.exe",
+    "TrustConnectAgent.exe",
+    "DocConnect.Agent.exe"
+   ],
+   "domains": [
+    "trustconnectsoftware.com",
+    "networkservice.cyou"
+   ]
+  },
+  {
+   "name": "LocalXpose",
+   "slug": "localxpose",
+   "category": "RAT",
+   "installationPaths": [
+    "loclx.exe",
+    "loclx",
+    "*\\loclx.exe",
+    "C:\\Users\\*\\AppData\\Local\\Programs\\loclx\\loclx.exe",
+    "/usr/local/bin/loclx",
+    "%APPDATA%\\loclx\\*"
+   ],
+   "domains": [
+    "localxpose.io",
+    "*.localxpose.io",
+    "api.localxpose.io"
+   ]
+  },
+  {
+   "name": "Bitvise SSH Client",
+   "slug": "bitvise-ssh-client",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\Bitvise SSH Client\\*",
+    "*\\Bitvise SSH Client\\*",
+    "*\\BvSshClient-Inst.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "DesktopNow",
+   "slug": "desktopnow",
+   "category": "RMM",
+   "installationPaths": [
+    "desktopnow.exe"
+   ],
+   "domains": [
+    "*.nchuser.com"
+   ]
+  },
+  {
+   "name": "Faronics Deep Freeze",
+   "slug": "faronics-deep-freeze",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files\\Faronics\\Deep Freeze\\*",
+    "C:\\Program Files (x86)\\Faronics\\Deep Freeze\\*",
+    "C:\\Program Files (x86)\\Faronics\\Deep Freeze\\Install C-0\\*",
+    "C:\\Program Files (x86)\\Faronics\\Deep Freeze\\Install C-1\\*",
+    "C:\\Program Files\\Faronics Corporation\\Deep Freeze 7.00\\*",
+    "*\\Faronics\\Deep Freeze\\DFServ.exe",
+    "*\\Faronics\\Deep Freeze\\DFServEx.exe",
+    "*\\Faronics\\Deep Freeze\\DFWks.exe",
+    "*\\Faronics\\Deep Freeze\\DFC.exe",
+    "DFServ.exe",
+    "DFServEx.exe",
+    "DFWks.exe",
+    "DFStd.exe",
+    "DFStdInstall.exe",
+    "DFC.exe",
+    "CloudWksInstall.exe",
+    "DFInst.exe"
+   ],
+   "domains": [
+    "deepfreeze.com",
+    "www.deepfreeze.com",
+    "faronicscloud.com",
+    "cloud.faronics.com",
+    "upd.faronicslabs.com",
+    "faronics.com",
+    "www.faronics.com"
+   ]
+  },
+  {
+   "name": "MEGAsync",
+   "slug": "megasync",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Users\\*\\AppData\\Local\\MEGAsync\\*",
+    "*Users\\*\\AppData\\Local\\MEGAsync\\*",
+    "*ProgramData\\MEGAsync\\*",
+    "*\\MEGAsyncSetup64.exe",
+    "*\\MEGAupdater.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "WinSCP",
+   "slug": "winscp",
+   "category": "RAT",
+   "installationPaths": [
+    "C:\\Users\\IEUser\\Downloads\\WinSCP-5.21.6-Portable\\*",
+    "*\\WinSCP*Portable\\*",
+    "*\\WinSCP.exe",
+    "*\\WinSCP\\*"
+   ],
+   "domains": []
+  },
+  {
+   "name": "DeskShare",
+   "slug": "deskshare",
+   "category": "RMM",
+   "installationPaths": [
+    "TeamTaskManager.exe",
+    "DSGuest.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "MultCloud",
+   "slug": "multcloud",
+   "category": "RAT",
+   "installationPaths": [
+    "requires sign up"
+   ],
+   "domains": []
+  },
+  {
+   "name": "Connectwise Automate (LabTech)",
+   "slug": "connectwise-automate-labtech",
+   "category": "RMM",
+   "installationPaths": [
+    "ltsvc.exe",
+    "ltsvcmon.exe",
+    "lttray.exe"
+   ],
+   "domains": [
+    "*.hostedrmm.com"
+   ]
+  },
+  {
+   "name": "FastViewer",
+   "slug": "fastviewer",
+   "category": "RMM",
+   "installationPaths": [
+    "fastclient.exe",
+    "fastmaster.exe",
+    "FastViewer.exe"
+   ],
+   "domains": [
+    "*.fastviewer.com",
+    "fastviewer.com"
+   ]
+  },
+  {
+   "name": "TeleDesktop",
+   "slug": "teledesktop",
+   "category": "RMM",
+   "installationPaths": [
+    "pstlaunch.exe",
+    "ptdskclient.exe",
+    "ptdskhost.exe"
+   ],
+   "domains": [
+    "tele-desk.com"
+   ]
+  },
+  {
+   "name": "Centurion",
+   "slug": "centurion",
+   "category": "RMM",
+   "installationPaths": [
+    "ctiserv.exe"
+   ],
+   "domains": [
+    "centuriontech.com"
+   ]
+  },
+  {
+   "name": "NoteOn-desktop sharing",
+   "slug": "noteon-desktop-sharing",
+   "category": "RAT",
+   "installationPaths": [
+    "nateon*.exe",
+    "nateon.exe",
+    "nateonmain.exe"
+   ],
+   "domains": []
+  },
+  {
+   "name": "AnyViewer",
+   "slug": "anyviewer",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\AnyViewer\\*"
+   ],
+   "domains": [
+    "*.anyviewer.com",
+    "*.aomeisoftware.com"
+   ]
+  },
+  {
+   "name": "Neturo",
+   "slug": "neturo",
+   "category": "RMM",
+   "installationPaths": [
+    "neturo*.exe",
+    "ntrntservice.exe",
+    "neturo.exe"
+   ],
+   "domains": [
+    "neturo.uplus.co.kr"
+   ]
+  },
+  {
+   "name": "Quest KACE Agent (formerly Dell KACE)",
+   "slug": "quest-kace-agent-formerly-dell-kace",
+   "category": "RMM",
+   "installationPaths": [
+    "konea.exe"
+   ],
+   "domains": [
+    "*.kace.com"
+   ]
+  },
+  {
+   "name": "Action1",
+   "slug": "action1",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Windows\\Action1\\*"
+   ],
+   "domains": [
+    "*.action1.com",
+    "a1-backend-packages.s3.amazonaws.com"
+   ]
+  },
+  {
+   "name": "Netop Remote Control (Impero Connect)",
+   "slug": "netop-remote-control-impero-connect",
+   "category": "RMM",
+   "installationPaths": [
+    "nhostsvc.exe",
+    "nhstw32.exe",
+    "ngstw32.exe",
+    "Netop Ondemand.exe",
+    "nldrw32.exe",
+    "rmserverconsolemediator.exe",
+    "ImperoInit.exe",
+    "Connect.Backdrop.cloud*.exe",
+    "ImperoClientSVC.exe"
+   ],
+   "domains": [
+    "*.connect.backdrop.cloud",
+    "*.netop.com"
+   ]
+  },
+  {
+   "name": "MeshCentral",
+   "slug": "meshcentral",
+   "category": "RMM",
+   "installationPaths": [
+    "meshcentral*.exe",
+    "meshagent*.exe",
+    "/usr/local/mesh_services/meshagent/meshagent/*",
+    "/usr/local/mesh_services/meshagent/*"
+   ],
+   "domains": [
+    "meshcentral.com"
+   ]
+  },
+  {
+   "name": "RemotePC",
+   "slug": "remotepc",
+   "category": "RMM",
+   "installationPaths": [
+    "C:\\Program Files (x86)\\RemotePC\\*",
+    "Idrive.File-Transfer",
+    "*\\RemotePC\\*",
+    "remotepcservice.exe",
+    "RemotePC.exe",
+    "remotepchost.exe",
+    "idrive.RemotePCAgent",
+    "rpcsuite.exe",
+    "*\\RemotePCService.exe",
+    "RemotePCService.exe"
+   ],
+   "domains": [
+    "*.remotedesktop.com",
+    "*.remotepc.com",
+    "www.remotepc.com",
+    "remotepc.com"
+   ]
+  },
+  {
+   "name": "BeInSync",
+   "slug": "beinsync",
+   "category": "RAT",
+   "installationPaths": [
+    "Beinsync*.exe"
+   ],
+   "domains": [
+    "*.beinsync.net",
+    "*.beinsync.com"
+   ]
+  },
+  {
+   "name": "HelpWire",
+   "slug": "helpwire",
+   "category": "RMM",
+   "installationPaths": [
+    "helpwire.exe",
+    "HelpWire Quick.exe",
+    "HelpWire.lnk",
+    "HelpWire Unattended Access.lnk",
+    "/Applications/HelpWire Operator.app",
+    "helpwire-operator/bin/helpwire-operator",
+    "/lib/systemd/system/helpwire-unattended.service"
+   ],
+   "domains": [
+    "helpwire.app",
+    "get.helpwire.app",
+    "api.helpwire.app",
+    "staging.helpwire.app",
+    "account.flexihub.com",
+    "stun.helpwire.app",
+    "stunserver.stunprotocol.org"
+   ]
+  }
+ ]
+}

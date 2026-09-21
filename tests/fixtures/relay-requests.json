@@ -1,0 +1,66 @@
+{
+  "virustotal": {
+    "storage": { "vtApiKey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" },
+    "message": { "type": "reach:vt:lookup", "kind": "hash", "id": "d41d8cd98f00b204e9800998ecf8427e" },
+    "fetch": {
+      "url": "https://www.virustotal.com/api/v3/files/d41d8cd98f00b204e9800998ecf8427e",
+      "opts": { "method": "GET", "headers": { "x-apikey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "accept": "application/json" }, "credentials": "omit", "cache": "no-store" }
+    }
+  },
+  "circl": {
+    "storage": { "reach.enrich.circl.enabled": true },
+    "message": { "type": "reach:enrich:lookup", "source": "circl", "kind": "hash", "id": "8d5d5da6a9a3f7d1e5f2a4f6c1b1e0d9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3" },
+    "fetch": {
+      "url": "https://hashlookup.circl.lu/lookup/sha256/8d5d5da6a9a3f7d1e5f2a4f6c1b1e0d9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3",
+      "opts": { "method": "GET", "headers": { "accept": "application/json" }, "credentials": "omit", "cache": "no-store" }
+    }
+  },
+  "epss": {
+    "storage": { "reach.enrich.epss.enabled": true },
+    "message": { "type": "reach:enrich:lookup", "source": "epss", "kind": "cve", "id": "CVE-2021-44228" },
+    "fetch": {
+      "url": "https://api.first.org/data/v1/epss?cve=CVE-2021-44228",
+      "opts": { "method": "GET", "headers": { "accept": "application/json" }, "credentials": "omit", "cache": "no-store" }
+    }
+  },
+  "misp": {
+    "storage": { "reach.enrich.selfhosted.provider": "misp", "reach.enrich.selfhosted.origin": "https://misp.example.org", "reach.enrich.selfhosted.token": "rawkey123" },
+    "message": { "type": "reach:selfhosted:lookup", "kind": "url", "id": "http://evil.example/a b?c=1&d=2" },
+    "fetch": {
+      "url": "https://misp.example.org/attributes/restSearch?returnFormat=json&value=http%3A%2F%2Fevil.example%2Fa+b%3Fc%3D1%26d%3D2&includeEventTags=1&includeSightings=1",
+      "opts": { "method": "GET", "headers": { "accept": "application/json", "authorization": "rawkey123" }, "credentials": "omit", "cache": "no-store" }
+    }
+  },
+  "intelowl": {
+    "storage": { "reach.enrich.selfhosted.provider": "intelowl", "reach.enrich.selfhosted.origin": "https://intelowl.example.org:8443", "reach.enrich.selfhosted.token": "tok456" },
+    "message": { "type": "reach:selfhosted:lookup", "kind": "domain", "id": "example.com" },
+    "fetch": {
+      "url": "https://intelowl.example.org:8443/api/jobs?observable_name=example.com",
+      "opts": { "method": "GET", "headers": { "accept": "application/json", "authorization": "Token tok456" }, "credentials": "omit", "cache": "no-store" }
+    }
+  },
+  "misp-sighting": {
+    "storage": { "reach.enrich.selfhosted.provider": "misp", "reach.enrich.selfhosted.origin": "https://misp.example.org", "reach.enrich.selfhosted.token": "rawkey123", "reach.enrich.selfhosted.writes": true },
+    "message": { "type": "reach:selfhosted:write", "op": "sighting", "attributeId": "1" },
+    "fetch": {
+      "url": "https://misp.example.org/sightings/add/1",
+      "opts": { "method": "POST", "headers": { "accept": "application/json", "authorization": "rawkey123", "content-type": "application/json" }, "credentials": "omit", "cache": "no-store", "body": "{\"source\":\"Reach\"}" }
+    }
+  },
+  "misp-attribute": {
+    "storage": { "reach.enrich.selfhosted.provider": "misp", "reach.enrich.selfhosted.origin": "https://misp.example.org", "reach.enrich.selfhosted.token": "rawkey123", "reach.enrich.selfhosted.writes": true },
+    "message": { "type": "reach:selfhosted:write", "op": "attribute", "eventId": "2", "kind": "domain", "id": "proposed-by-reach.example.net", "comment": "held: seen in DNS from the T1003.001 host" },
+    "fetch": {
+      "url": "https://misp.example.org/attributes/add/2",
+      "opts": { "method": "POST", "headers": { "accept": "application/json", "authorization": "rawkey123", "content-type": "application/json" }, "credentials": "omit", "cache": "no-store", "body": "{\"type\":\"domain\",\"value\":\"proposed-by-reach.example.net\",\"comment\":\"held: seen in DNS from the T1003.001 host\",\"to_ids\":false}" }
+    }
+  },
+  "misp-events": {
+    "storage": { "reach.enrich.selfhosted.provider": "misp", "reach.enrich.selfhosted.origin": "https://misp.example.org", "reach.enrich.selfhosted.token": "rawkey123", "reach.enrich.selfhosted.writes": true },
+    "message": { "type": "reach:selfhosted:write", "op": "events" },
+    "fetch": {
+      "url": "https://misp.example.org/events/index/limit:8/sort:timestamp/direction:desc",
+      "opts": { "method": "GET", "headers": { "accept": "application/json", "authorization": "rawkey123" }, "credentials": "omit", "cache": "no-store" }
+    }
+  }
+}

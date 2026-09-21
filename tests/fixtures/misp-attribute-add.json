@@ -1,0 +1,24 @@
+{
+  "Attribute": {
+    "id": "8",
+    "event_id": "2",
+    "object_id": "0",
+    "object_relation": null,
+    "category": "Network activity",
+    "type": "domain",
+    "value1": "proposed-by-reach.example.net",
+    "value2": "",
+    "to_ids": false,
+    "uuid": "11dc7b78-2b0e-4606-b8c1-7c1c3a25fee4",
+    "timestamp": "1789923999",
+    "distribution": "5",
+    "sharing_group_id": "0",
+    "comment": "held: seen in DNS from the T1003.001 host",
+    "deleted": false,
+    "disable_correlation": false,
+    "first_seen": null,
+    "last_seen": null,
+    "value": "proposed-by-reach.example.net"
+  },
+  "AttributeTag": []
+}

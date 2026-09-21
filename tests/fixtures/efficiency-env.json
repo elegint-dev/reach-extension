@@ -1,0 +1,48 @@
+{
+  "note": "Discovered-layer records in the shape discovery.provenance() and the Sentinel schema step store (fields.<name>.provenance, fields.<name>.declared), one field per efficiency class.",
+  "splunk": {
+    "sourcetype": "xmlwineventlog",
+    "fields": {
+      "Image": { "provenance": [{ "kind": "extracted", "regex": "<Data Name='Image'>(?<Image>[^<]+)</Data>", "app": "TA-microsoft-sysmon", "attribute": "EXTRACT-image" }], "profile": { "count": 900, "top": [{ "value": "C:\\Windows\\System32\\cmd.exe", "count": 40 }] } },
+      "Account_Name": { "provenance": [{ "kind": "extracted", "transform": "sysmon-account", "regex": "Account Name:\\s+(?<Account_Name>\\S+)", "format": null, "app": "TA-microsoft-sysmon", "attribute": "REPORT-account" }], "profile": { "count": 900 } },
+      "user": { "provenance": [{ "kind": "alias", "from": "Account_Name", "statement": "Account_Name AS user", "app": "TA-microsoft-sysmon", "attribute": "FIELDALIAS-user" }], "profile": { "count": 900 } },
+      "dest": { "provenance": [{ "kind": "alias", "from": "ComputerName", "statement": "ComputerName AS dest", "app": "TA-microsoft-sysmon", "attribute": "FIELDALIAS-dest" }] },
+      "ComputerName": { "provenance": [{ "kind": "alias", "from": "host", "statement": "host AS ComputerName", "app": "TA-microsoft-sysmon", "attribute": "FIELDALIAS-computer" }] },
+      "risk_score": { "provenance": [{ "kind": "calculated", "statement": "if(EventCode=1, 10, 0)", "refs": ["EventCode"], "app": "TA-microsoft-sysmon", "attribute": "EVAL-risk_score" }] },
+      "asset_owner": { "provenance": [{ "kind": "lookup", "transform": "assets", "inputs": ["dest"], "statement": "assets dest OUTPUT owner AS asset_owner", "app": "SA-assets", "attribute": "LOOKUP-assets" }] },
+      "both": { "provenance": [{ "kind": "extracted", "regex": "(?<both>x)", "app": "a", "attribute": "EXTRACT-both" }, { "kind": "lookup", "transform": "t", "inputs": ["dest"], "statement": "t dest OUTPUT both", "app": "a", "attribute": "LOOKUP-t" }] },
+      "seen_only": { "profile": { "count": 12, "top": [{ "value": "a", "count": 12 }] } },
+      "loop_a": { "provenance": [{ "kind": "alias", "from": "loop_b", "attribute": "FIELDALIAS-a" }] },
+      "loop_b": { "provenance": [{ "kind": "alias", "from": "loop_a", "attribute": "FIELDALIAS-b" }] }
+    }
+  },
+  "sentinel": {
+    "table": "AuditLogs",
+    "fields": {
+      "OperationName": { "declared": { "type": "string", "raw": "System.String" } },
+      "InitiatedBy": { "declared": { "type": "dynamic", "raw": "System.Object" } },
+      "InitiatedBy.user.userPrincipalName": { "profile": { "count": 40 } },
+      "TimeGenerated": { "declared": { "type": "datetime", "raw": "System.DateTime" } }
+    }
+  },
+  "job": {
+    "entry": [
+      {
+        "name": "1758211200.4242",
+        "content": {
+          "sid": "1758211200.4242",
+          "isDone": true,
+          "dispatchState": "DONE",
+          "scanCount": 120000,
+          "eventCount": 400,
+          "resultCount": 400,
+          "runDuration": 12.53,
+          "earliestTime": "2026-09-17T12:00:00.000+00:00",
+          "latestTime": "2026-09-18T12:00:00.000+00:00",
+          "search": "search index=main sourcetype=xmlwineventlog Image=*\\cmd.exe | table _time host Image",
+          "optimizedSearch": "| search index=main sourcetype=xmlwineventlog Image=*\\cmd.exe | fields _time host Image | table _time host Image"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,4346 @@
+/* Reach: components (ARCHITECTURE §4.2). One block per component.
+ * Class names: r-<component>, r-<component>__part, r-<component>--variant.
+ *
+ * Hue appears in exactly three places: trust chips, hazard treatments, and
+ * the accent on interaction state. Everything else is graphite.
+ */
+
+/* ---- shared: fields --------------------------------------------------- */
+
+.r-field {
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.r-field__label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-1);
+  color: var(--fg-1);
+}
+
+.r-field__label code {
+  color: var(--fg-0);
+}
+
+.r-field__req,
+.r-step__req {
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+}
+
+.r-field__req::before,
+.r-step__req::before {
+  content: "\2022\00a0";
+}
+
+.r-field__input {
+  width: 100%;
+  min-width: 0;
+  padding: var(--sp-1) var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-2);
+  line-height: 1.6;
+  color: var(--fg-0);
+  background: var(--bg-0);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+  /* A placeholder wider than the input ends in an ellipsis, not mid-word
+   * (Chrome takes this from the input, not ::placeholder); the panel gets
+   * the short line from app/lib/copy.js, so this is the last resort. */
+  text-overflow: ellipsis;
+}
+
+.r-field__input::placeholder {
+  color: var(--fg-2);
+}
+
+.r-field__input:focus-visible {
+  border-color: var(--accent);
+  outline-offset: 0;
+}
+
+.r-field__hint {
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+}
+
+/* ---- chip ------------------------------------------------------------- */
+/* Trust chips are filled with their tint; layer and route chips are
+ * outline-only so grey `inferred` never reads as a layer chip. */
+
+.r-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  max-width: 100%;
+  height: 20px;
+  padding-inline: 0.5em;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+  border-radius: var(--radius-1);
+  border: 1px solid transparent;
+}
+
+.r-chip--layer {
+  color: var(--layer-fg);
+  background: transparent;
+  border-color: var(--line);
+  padding-left: 0;
+  overflow: hidden;
+}
+
+.r-chip__n {
+  display: inline-grid;
+  place-items: center;
+  align-self: stretch;
+  padding-inline: 0.45em;
+  font-weight: 700;
+  color: var(--layer-fg);
+  background: var(--layer-bg);
+  border-right: 1px solid var(--line);
+}
+
+.r-chip--route {
+  color: var(--fg-1);
+  border-color: var(--line);
+  /* The only chip that carries a sentence (the workflow's route line), so
+   * the only one allowed to wrap: in the panel it is wider than the page. */
+  height: auto;
+  min-height: 20px;
+  padding-block: 0.2em;
+  line-height: 1.3;
+  white-space: normal;
+  max-width: 100%;
+}
+
+.r-chip__glyph {
+  font-weight: 700;
+}
+
+.r-chip--trust,
+.r-chip--hazard {
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.r-chip--confirmed,
+.r-chip--validated {
+  color: var(--trust-confirmed-fg);
+  background: var(--trust-confirmed-bg);
+  border-color: color-mix(in srgb, var(--trust-confirmed-fg) 35%, transparent);
+}
+
+.r-chip--asserted {
+  color: var(--trust-asserted-fg);
+  background: var(--trust-asserted-bg);
+  border-color: color-mix(in srgb, var(--trust-asserted-fg) 35%, transparent);
+}
+
+.r-chip--suggested {
+  color: var(--trust-suggested-fg);
+  background: var(--trust-suggested-bg);
+  border-color: color-mix(in srgb, var(--trust-suggested-fg) 35%, transparent);
+}
+
+.r-chip--inferred {
+  color: var(--trust-inferred-fg);
+  background: var(--trust-inferred-bg);
+  border-color: color-mix(in srgb, var(--trust-inferred-fg) 35%, transparent);
+}
+
+.r-chip--hazard {
+  color: var(--hazard-fg);
+  background: var(--hazard-bg);
+  border-color: color-mix(in srgb, var(--hazard-fg) 45%, transparent);
+}
+
+/* confidence meter: three segments, same hue as the tier */
+
+.r-meter {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 0.15em;
+}
+
+.r-meter i {
+  display: block;
+  width: 5px;
+  height: 9px;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+  opacity: 0.45;
+}
+
+.r-meter i.is-on {
+  background: currentColor;
+  opacity: 1;
+}
+
+.r-chip__conf {
+  font-weight: 400;
+}
+
+/* ---- keycap ----------------------------------------------------------- */
+
+.r-keyhint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--fg-1);
+  font-size: var(--fs-1);
+}
+
+/* ---- omnibox ---------------------------------------------------------- */
+
+.r-omnibox {
+  position: relative;
+  /* basis 0, not auto: a flex-wrap line is judged on each item's
+   * hypothetical (unshrunk) size, and the omnibox's own content is wide
+   * enough to fill the panel row alone. With auto that hypothetical size
+   * left no room for a sibling before it (r-navctl, below), pushing it to
+   * its own row and taller than the bar needs to be. A floor of 140px
+   * (still enough for the placeholder to read, ellipsised) keeps the same
+   * sibling from squeezing it past useful on a wide tab that has no wrap
+   * to fall back on; whatever it does not get, r-keys gives up instead. */
+  flex: 1 1 0;
+  min-width: 140px;
+}
+
+.r-omnibox__field {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 38px;
+  padding-inline: var(--sp-3);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+}
+
+.r-omnibox--focused .r-omnibox__field,
+.r-omnibox:focus-within .r-omnibox__field {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.r-omnibox__hint kbd {
+  color: var(--fg-2);
+}
+
+.r-omnibox:focus-within .r-omnibox__hint,
+.r-omnibox--focused .r-omnibox__hint {
+  visibility: hidden;
+}
+
+.r-omnibox__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 36px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-3);
+  background: transparent;
+  border: 0;
+  color: var(--fg-0);
+  text-overflow: ellipsis;
+}
+
+.r-omnibox__input::placeholder {
+  font-family: var(--font-sans);
+  color: var(--fg-2);
+}
+
+.r-omnibox__input:focus {
+  outline: none;
+}
+
+.r-omnibox__classified {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding-inline: var(--sp-2);
+  font-size: var(--fs-1);
+  color: var(--fg-1);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+  white-space: nowrap;
+}
+
+.r-omnibox__classified::before {
+  content: "looks like";
+  margin-right: 0.4em;
+  color: var(--fg-2);
+}
+
+.r-omnibox__list {
+  display: none;
+  position: absolute;
+  z-index: 30;
+  inset-inline: 0;
+  top: calc(100% + 4px);
+  max-height: 50vh;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--sp-1) 0;
+  list-style: none;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.6);
+}
+
+.r-omnibox--open .r-omnibox__list {
+  display: block;
+}
+
+/* gallery shows the list in flow */
+.r-omnibox--static .r-omnibox__list {
+  position: static;
+  box-shadow: none;
+  margin-top: var(--sp-1);
+}
+
+.r-omnibox__option {
+  display: grid;
+  grid-template-columns: 6.5em minmax(0, 1fr);
+  column-gap: var(--sp-3);
+  align-items: baseline;
+  padding: var(--sp-1) var(--sp-3);
+  cursor: pointer;
+}
+
+.r-omnibox__option[aria-selected="true"] {
+  background: var(--accent-bg);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.r-omnibox__option:hover {
+  background: var(--bg-3);
+}
+
+.r-omnibox__optkind {
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+}
+
+.r-omnibox__optname {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2);
+  color: var(--fg-0);
+  overflow-wrap: anywhere;
+}
+
+.r-omnibox__opthint {
+  grid-column: 2;
+  font-size: var(--fs-1);
+  color: var(--fg-1);
+}
+
+/* ---- ledger ----------------------------------------------------------- */
+/* Cards, not tables. Cost is still carried by band order and the glyph;
+ * trust is still whatever chip the caller puts in a row. The map below adds
+ * a spatial jump-to-band shortcut on top of the same band/row data. The
+ * cards are the real, fully-keyboard-navigable content either way. */
+
+.r-ledger {
+  display: grid;
+  gap: var(--sp-6);
+}
+
+.r-ledger__band {
+  min-width: 0;
+}
+
+.r-ledger__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-2);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-2);
+}
+
+.r-ledger__glyph {
+  display: inline-grid;
+  place-items: center;
+  width: 1.2em;
+  font-family: var(--font-mono);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--fg-1);
+}
+
+.r-ledger__title {
+  color: var(--fg-1);
+}
+
+.r-ledger__count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  font-weight: 400;
+  color: var(--fg-2);
+}
+
+.r-ledger__note {
+  margin: 0 0 var(--sp-3) calc(1.2em + var(--sp-2));
+  font-size: var(--fs-2);
+  color: var(--fg-1);
+}
+
+.r-ledger__scroll {
+  overflow-x: hidden;
+}
+
+/* A collapsible band: the heading is the <summary>. The band glyph stays a
+ * band glyph; the disclosure caret is its own mark, at the end of the line
+ * where the count sits, so a closed band still reads as a band. */
+
+.r-ledger__summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.r-ledger__summary::-webkit-details-marker {
+  display: none;
+}
+
+.r-ledger__summary .r-ledger__head {
+  margin-bottom: 0;
+}
+
+.r-ledger__summary .r-ledger__count::after {
+  content: " ▸";
+  color: var(--fg-2);
+}
+
+.r-ledger__fold[open] > .r-ledger__summary .r-ledger__count::after {
+  content: " ▾";
+}
+
+.r-ledger__fold[open] > .r-ledger__summary {
+  margin-bottom: var(--sp-2);
+}
+
+.r-ledger__summary:hover .r-ledger__title {
+  color: var(--fg-0);
+}
+
+.r-ledger__summary:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-1);
+}
+
+.r-ledger__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--grid-min), 100%), 1fr));
+  gap: var(--sp-3);
+  align-items: start;
+}
+
+.r-ledger__wraptext {
+  white-space: normal;
+}
+
+.r-ledger__row {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  cursor: pointer;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  box-shadow: inset 3px 0 0 transparent;
+  text-align: left;
+}
+
+.r-ledger__row:hover {
+  background: var(--bg-3);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+}
+
+.r-ledger__row:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.r-ledger__row.is-selected {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.r-ledger__row--hazard {
+  box-shadow: inset 3px 0 0 var(--hazard-fg);
+}
+
+.r-ledger__row--hazard .r-ledger__lead {
+  color: var(--hazard-fg);
+}
+
+.r-ledger__row--disabled {
+  cursor: default;
+  background: transparent;
+}
+
+.r-ledger__row--disabled:hover {
+  background: transparent;
+  border-color: var(--line);
+}
+
+.r-ledger__cardhead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.r-ledger__lead {
+  font-size: var(--fs-3);
+  font-weight: 600;
+  color: var(--fg-0);
+  overflow-wrap: anywhere;
+}
+
+.r-ledger__basis {
+  flex: 0 0 auto;
+}
+
+.r-ledger__body {
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.r-ledger__field {
+  font-size: var(--fs-1);
+  color: var(--fg-1);
+  overflow-wrap: anywhere;
+}
+
+.r-ledger__field code {
+  white-space: normal;
+}
+
+.r-ledger__k {
+  display: inline;
+  color: var(--fg-2);
+}
+
+.r-ledger__k::after {
+  content: " ";
+}
+
+.r-ledger__empty {
+  grid-column: 1 / -1;
+  padding-block: var(--sp-3);
+  color: var(--fg-2);
+  font-style: normal;
+}
+
+/* Band-specific: the unreachable band is prose-heavy; give the lead room. */
+
+.r-ledger__band--unreachable .r-ledger__lead {
+  font-size: var(--fs-2);
+  font-weight: 500;
+  color: var(--fg-1);
+}
+
+/* ---- reach map ---------------------------------------------------------- */
+/* A spatial jump-to-band shortcut over the same automatic/one-join/suggested/
+ * unreachable bands the cards below already render in full. Monochrome, like
+ * the band glyphs it borrows from: cost is position, not hue. The
+ * unreachable spoke alone gets the hazard treatment, same as a hazard row. */
+
+.r-map {
+  position: relative;
+  width: 100%;
+  margin-bottom: var(--sp-2);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+}
+
+.r-map__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.r-map__line {
+  stroke: var(--fg-2);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.r-map__line--hazard {
+  stroke: var(--hazard-fg);
+  stroke-dasharray: 5 5;
+}
+
+.r-map__center {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  padding: var(--sp-2);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  font-weight: 600;
+  color: var(--fg-0);
+  background: var(--bg-2);
+  border: 2px solid var(--fg-1);
+  border-radius: 50%;
+  overflow-wrap: anywhere;
+}
+
+.r-map__node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 1px;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  padding: var(--sp-1);
+  text-align: center;
+  color: var(--fg-0);
+  background: var(--bg-2);
+  border: 2px solid var(--fg-1);
+  border-radius: 50%;
+}
+
+.r-map__node:hover {
+  background: var(--bg-3);
+  border-color: var(--accent);
+}
+
+.r-map__node:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.r-map__node--hazard {
+  border-color: var(--hazard-fg);
+}
+
+.r-map__node--hazard:hover {
+  border-color: var(--accent);
+}
+
+.r-map__glyph {
+  font-family: var(--font-mono);
+  font-size: var(--fs-3);
+  line-height: 1;
+  color: var(--fg-1);
+}
+
+.r-map__label {
+  font-size: var(--fs-1);
+  line-height: 1.15;
+  color: var(--fg-1);
+}
+
+.r-map__count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+}
+
+/* ---- drawer ----------------------------------------------------------- */
+
+.r-drawer {
+  display: grid;
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  min-width: 0;
+}
+
+.r-drawer[hidden] {
+  display: none;
+}
+
+.r-drawer > * {
+  /* Grid items default to min-width:auto, which sizes them to their content --
+     long SPL lines and monospace subtitles then overrun the panel instead of
+     wrapping inside it. */
+  min-width: 0;
+}
+
+.r-drawer__head {
+  display: grid;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.r-drawer__kicker {
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+}
+
+.r-drawer__title {
+  margin: 0;
+  font-size: var(--fs-4);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  color: var(--fg-0);
+}
+
+.r-drawer__sub {
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--fg-1);
+  overflow-wrap: anywhere;
+}
+
+.r-drawer--empty .r-drawer__title:empty,
+.r-drawer--empty .r-drawer__sub:empty {
+  display: none;
+}
+
+.r-drawer__empty p {
+  color: var(--fg-1);
+}
+
+.r-drawer__body {
+  display: grid;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.r-drawer__body > * {
+  min-width: 0;
+}
+
+.r-drawer__body[hidden],
+.r-drawer__empty[hidden],
+.r-drawer__error[hidden],
+.r-drawer__params[hidden],
+.r-drawer__hazards[hidden] {
+  display: none;
+}
+
+.r-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.r-tabs__tab {
+  padding: var(--sp-1) var(--sp-3) var(--sp-2);
+  margin-bottom: -1px;
+  font-size: var(--fs-2);
+  color: var(--fg-1);
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-1) var(--radius-1) 0 0;
+}
+
+.r-tabs__tab:hover {
+  color: var(--fg-0);
+}
+
+.r-tabs__tab[aria-selected="true"] {
+  color: var(--fg-0);
+  border-bottom-color: var(--accent);
+}
+
+.r-spl {
+  margin: 0;
+  padding: var(--sp-3);
+  background: var(--bg-0);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+  font-size: var(--fs-2);
+  line-height: 1.55;
+  color: var(--fg-0);
+  max-height: 60vh;
+  overflow: auto;
+  /* Soft-wrap rather than scroll sideways: every line, including the ASSERTED
+     and hazard comments, must be readable before it is pasted. A hanging indent
+     keeps a wrapped line visibly subordinate to the pipeline step it belongs to. */
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  padding-left: calc(var(--sp-3) + 2ch);
+  text-indent: -2ch;
+}
+
+.r-spl-wrap {
+  position: relative;
+}
+
+.r-spl__copy {
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  padding: 2px var(--sp-2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-1);
+  color: var(--fg-0);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+  opacity: 0;
+  transition: opacity 120ms;
+  cursor: pointer;
+}
+
+.r-spl-wrap:hover .r-spl__copy,
+.r-spl-wrap:focus-within .r-spl__copy {
+  opacity: 1;
+}
+
+.r-spl__copy:hover {
+  background: var(--bg-3);
+}
+
+.r-spl__copy:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .r-spl__copy {
+    opacity: 1;
+  }
+}
+
+.r-spl__param {
+  color: inherit;
+  background: transparent;
+  border-bottom: 1px dashed var(--fg-1);
+  padding-bottom: 1px;
+}
+
+.r-drawer__macros {
+  display: grid;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-1);
+}
+
+.r-drawer__macros[hidden] {
+  display: none;
+}
+
+.r-drawer__macro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2);
+  color: var(--fg-1);
+}
+
+.r-drawer__macro--missing {
+  color: var(--fg-0);
+}
+
+.r-drawer__macro-state {
+  color: inherit;
+}
+
+.r-drawer__macro--missing .r-drawer__macro-state {
+  font-weight: 600;
+}
+
+.r-drawer__macro .r-field__hint {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.r-drawer__copy--blocked,
+.r-spl__copy:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.r-drawer__params {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.r-drawer__hazards {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.r-drawer__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2); /* Copy and the open link share one line at 320 */
+  flex-wrap: wrap;
+}
+
+.r-drawer__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 32px;
+  padding-inline: var(--sp-3);
+  font-weight: 600;
+  color: var(--bg-0);
+  background: var(--fg-0);
+  border-radius: var(--radius-1);
+}
+
+.r-drawer__copy kbd {
+  color: inherit;
+  background: transparent;
+  border-color: color-mix(in srgb, var(--bg-0) 45%, transparent);
+}
+
+.r-drawer__copy:hover {
+  background: var(--fg-1);
+}
+
+.r-drawer--copied .r-drawer__copy {
+  color: var(--fg-0);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--fg-0);
+}
+
+.r-drawer__status {
+  font-size: var(--fs-1);
+  color: var(--fg-1);
+}
+
+.r-drawer__status:empty {
+  display: none;
+}
+
+.r-drawer--error .r-drawer__head {
+  opacity: 0.85;
+}
+
+/* ---- callout ---------------------------------------------------------- */
+
+.r-callout {
+  display: grid;
+  grid-template-columns: 1.2em minmax(0, 1fr);
+  grid-template-areas:
+    "glyph label"
+    "glyph body";
+  column-gap: var(--sp-2);
+  row-gap: 2px;
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-2);
+  color: var(--fg-1);
+  background: var(--bg-2);
+  border-left: 2px solid var(--fg-2);
+  border-radius: 0 var(--radius-1) var(--radius-1) 0;
+}
+
+.r-callout__glyph {
+  grid-area: glyph;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--fg-1);
+  line-height: var(--lh-body);
+}
+
+.r-callout__label {
+  grid-area: label;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+
+.r-callout__body {
+  grid-area: body;
+}
+
+.r-callout__body p {
+  max-width: 64ch;
+}
+
+.r-callout__body p + p {
+  margin-top: var(--sp-1);
+}
+
+.r-callout--why {
+  border-left-style: dotted;
+}
+
+.r-callout--expect {
+  border-left-style: dashed;
+}
+
+.r-callout--caution {
+  border-left-width: 4px;
+  border-left-color: var(--fg-0);
+}
+
+.r-callout--caution .r-callout__glyph {
+  color: var(--fg-0);
+}
+
+.r-callout--hazard {
+  color: var(--fg-0);
+  background: var(--hazard-bg);
+  border-left-width: 4px;
+  border-left-color: var(--hazard-fg);
+}
+
+.r-callout--hazard .r-callout__glyph,
+.r-callout--hazard .r-callout__label {
+  color: var(--hazard-fg);
+}
+
+.r-callout--note {
+  background: transparent;
+  border-left-color: var(--line);
+}
+
+.r-callout--asserted {
+  color: var(--fg-0);
+  background: var(--trust-asserted-bg);
+  border-left-width: 4px;
+  border-left-color: var(--trust-asserted-fg);
+}
+
+.r-callout--asserted .r-callout__glyph,
+.r-callout--asserted .r-callout__label {
+  color: var(--trust-asserted-fg);
+}
+
+/* ---- step ------------------------------------------------------------- */
+
+.r-step {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  column-gap: var(--sp-3);
+  padding-block: var(--sp-4);
+  border-top: 1px solid var(--line);
+}
+
+.r-step__head {
+  display: contents;
+}
+
+.r-step__n {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2);
+  font-weight: 700;
+  color: var(--fg-1);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+
+.r-step--current .r-step__n {
+  color: var(--bg-0);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.r-step--done .r-step__n {
+  color: var(--fg-2);
+}
+
+.r-step--done .r-step__n::before {
+  content: "\2713";
+}
+
+.r-step--done .r-step__n {
+  font-size: 0;
+}
+
+.r-step--done .r-step__n::before {
+  font-size: var(--fs-2);
+}
+
+.r-step__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-height: 28px;
+  font-size: var(--fs-4);
+  line-height: 28px;
+}
+
+.r-step__body {
+  grid-column: 2;
+  display: grid;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+
+.r-step__inputs {
+  display: grid;
+  gap: var(--sp-3);
+  max-width: 36em;
+}
+
+/* ---- table ------------------------------------------------------------ */
+
+.r-table-wrap {
+  overflow-x: auto;
+  /* x only: a wide table must not fling the page sideways, but the wheel
+     over a table has to keep scrolling the page vertically. */
+  overscroll-behavior-x: contain;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+}
+
+.r-table {
+  width: 100%;
+  font-size: var(--fs-2);
+}
+
+.r-table th,
+.r-table td {
+  padding: var(--sp-1) var(--sp-2);
+  text-align: left;
+  vertical-align: top;
+}
+
+.r-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  font-size: var(--fs-1);
+  font-weight: 500;
+  color: var(--fg-2);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.r-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--bg-2) 55%, transparent);
+}
+
+.r-table tbody tr:hover {
+  background: var(--bg-3);
+}
+
+.r-table__right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.r-table__mono {
+  font-family: var(--font-mono);
+}
+
+.r-table code {
+  white-space: nowrap;
+}
+
+/* ---- source table ----------------------------------------------------- */
+
+.r-source-table {
+  width: 100%;
+  font-size: var(--fs-2);
+}
+
+.r-source-table caption {
+  padding: var(--sp-2);
+  text-align: left;
+  font-size: var(--fs-1);
+  color: var(--fg-1);
+  caption-side: top;
+}
+
+.r-source-table th,
+.r-source-table td {
+  padding: var(--sp-2);
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px solid var(--line);
+}
+
+.r-source-table th {
+  font-size: var(--fs-1);
+  font-weight: 500;
+  color: var(--fg-2);
+  background: var(--bg-2);
+  white-space: nowrap;
+}
+
+.r-source-table__via {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  white-space: nowrap;
+}
+
+.r-source-table__st {
+  margin-top: var(--sp-1);
+  font-size: var(--fs-1);
+}
+
+.r-source-table__events code,
+.r-source-table__all code {
+  white-space: nowrap;
+}
+
+.r-source-table__more summary {
+  cursor: pointer;
+}
+
+.r-source-table__all {
+  margin-top: var(--sp-1);
+  line-height: 1.8;
+}
+
+.r-source-table__stmt {
+  min-width: 22em;
+}
+
+.r-source-table__stmt pre {
+  margin: 0;
+  padding: var(--sp-2);
+  max-width: 44em;
+  background: var(--bg-0);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ---- onboarding card --------------------------------------------------- */
+/* The first-install card on the bare catalogue start page (app/views/start.js,
+   app/components/onboarding.js). A callout with a dismiss button and its own
+   ordered list; no fixed widths so it survives the panel at 320px. */
+
+.r-onboard {
+  position: relative;
+  margin-bottom: var(--sp-6);
+  padding: var(--sp-3) var(--sp-6) var(--sp-3) var(--sp-3);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-2);
+}
+
+.r-onboard__dismiss {
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: var(--fs-3);
+  line-height: 1;
+  color: var(--fg-1);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-1);
+  cursor: pointer;
+}
+
+.r-onboard__dismiss:hover {
+  background: var(--bg-1);
+  color: var(--fg-0);
+}
+
+.r-onboard__line {
+  margin: 0 0 var(--sp-2);
+  max-width: 64ch;
+  overflow-wrap: anywhere;
+}
+
+.r-onboard__steps {
+  margin: 0 0 var(--sp-2);
+  padding-left: 1.4em;
+  display: grid;
+  gap: var(--sp-1);
+  max-width: 64ch;
+  overflow-wrap: anywhere;
+}
+
+.r-onboard__note {
+  margin: 0;
+  font-size: var(--fs-1);
+  color: var(--fg-1);
+}
+
+/* ---- empty ------------------------------------------------------------ */
+
+.r-empty {
+  display: grid;
+  gap: var(--sp-3);
+  padding-block: var(--sp-6);
+}
+
+.r-empty__title {
+  margin: 0;
+  font-size: var(--fs-6);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+  letter-spacing: -0.015em;
+  color: var(--fg-0);
+}
+
+.r-empty__line {
+  max-width: 60ch;
+  font-size: var(--fs-4);
+  color: var(--fg-1);
+}
+
+.r-empty__moves {
+  display: grid;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.r-empty__moves li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.r-empty__moves kbd {
+  min-width: 2em;
+}
+
+/* ---- meaning ---------------------------------------------------------- */
+
+.r-meaning {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.r-meaning__desc {
+  font-size: var(--fs-4);
+  line-height: 1.5;
+  max-width: 64ch;
+}
+
+.r-meaning__notes {
+  color: var(--fg-1);
+}
+
+.r-meaning__trust {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-2);
+  color: var(--fg-1);
+}
+
+.r-meaning__statement {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-0);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.r-meaning__evidence {
+  font-size: var(--fs-2);
+  color: var(--fg-1);
+}
+
+.r-meaning__evidence summary {
+  cursor: pointer;
+  width: max-content;
+  color: var(--fg-0);
+}
+
+.r-meaning__evidence[open] summary {
+  margin-bottom: var(--sp-1);
+}
+
+.r-meaning__evidence p {
+  padding-left: var(--sp-3);
+  border-left: 2px solid var(--line);
+}
+
+/* ---- settings disclosure (the bar) ------------------------------------ */
+
+.r-settings {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.r-settings__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 38px;
+  padding-inline: var(--sp-3);
+  font-size: var(--fs-2);
+  color: var(--fg-1);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  cursor: pointer;
+  list-style: none;
+}
+
+.r-settings__summary::-webkit-details-marker {
+  display: none;
+}
+
+.r-settings__glyph {
+  display: none;
+  font-size: var(--fs-4);
+  line-height: 1;
+}
+
+.r-settings[open] .r-settings__summary {
+  color: var(--fg-0);
+  border-color: var(--accent);
+}
+
+.r-settings__panel {
+  position: absolute;
+  top: calc(100% + var(--sp-2));
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: var(--sp-3);
+  width: min(420px, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100vh - var(--bar-h) - var(--sp-5));
+  overflow-y: auto;
+  padding: var(--sp-4);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+
+.r-settings__section {
+  display: grid;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.r-settings__label {
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+}
+
+.r-settings hr {
+  margin: 0;
+}
+
+.r-settings__pins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.r-settings__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.2em 0.3em 0.2em 0.6em;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--fg-0);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+}
+
+.r-settings__val {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fg-1);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.r-settings__rm {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  color: var(--fg-2);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-1);
+  cursor: pointer;
+}
+
+.r-settings__rm:hover {
+  color: var(--hazard-fg);
+  background: var(--hazard-bg);
+}
+
+.r-settings__pin {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: var(--sp-2);
+}
+
+.r-settings__pinbtn {
+  padding-inline: var(--sp-3);
+  font-size: var(--fs-2);
+  color: var(--fg-0);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+  cursor: pointer;
+}
+
+.r-settings__pinbtn:hover {
+  border-color: var(--accent);
+}
+
+/* The index chooser: a sourcetype that lives in several indexes, asked
+ * once, and the answers kept per sourcetype (scope.js). The count on the
+ * closed control says a question is waiting inside. */
+
+.r-settings__badge[hidden] {
+  display: none;
+}
+
+.r-settings__badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding-inline: 0.3em;
+  font-size: var(--fs-1);
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-radius: 999px;
+}
+
+.r-settings__chooser[hidden],
+.r-settings__perst[hidden] {
+  display: none;
+}
+
+.r-settings__chooser {
+  display: grid;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.r-settings__ask {
+  display: grid;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-1);
+}
+
+.r-settings__askline {
+  min-width: 0;
+  font-size: var(--fs-1);
+  color: var(--fg-1);
+  overflow-wrap: anywhere;
+}
+
+.r-settings__askline > code {
+  color: var(--fg-0);
+}
+
+.r-settings__askchoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.r-settings__choice {
+  max-width: 100%;
+  padding: 0.2em 0.6em;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--fg-0);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+  cursor: pointer;
+}
+
+.r-settings__choice:hover {
+  border-color: var(--accent);
+}
+
+.r-settings__perst {
+  display: grid;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+/* A folded block inside the settings panel (self-hosted enrichment): its
+ * own <details>, shut by default, for the one section that holds a pasted
+ * credential. */
+.r-settings__sub {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+}
+
+.r-settings__subsummary {
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+  cursor: pointer;
+  list-style: none;
+}
+
+.r-settings__subsummary::-webkit-details-marker {
+  display: none;
+}
+
+.r-settings__subpanel {
+  display: grid;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-3) var(--sp-3);
+  min-width: 0;
+}
+
+/* ---- the module list (moduleList.js): the settings fold and options.html */
+
+.r-modules {
+  display: grid;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.r-module {
+  display: grid;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding: var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+}
+
+.r-module--off {
+  color: var(--fg-2);
+}
+
+.r-module__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.r-module__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 24px;
+  cursor: pointer;
+}
+
+.r-module__label {
+  font-weight: 600;
+  color: var(--fg-0);
+}
+
+.r-module--off .r-module__label {
+  color: var(--fg-1);
+}
+
+.r-module__tier {
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  padding: 0 var(--sp-2);
+}
+
+.r-module__about,
+.r-module__sends {
+  margin: 0;
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+
+.r-module__body {
+  display: grid;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.r-module__body[hidden] {
+  display: none;
+}
+
+.r-module__keyrow {
+  display: flex;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.r-module__keyrow > .r-field__input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.r-module__actions {
+  margin: 0;
+}
+
+.r-module__status {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.r-module__status[aria-invalid="true"] {
+  color: var(--hazard-fg);
+}
+
+.r-module__status:empty {
+  display: none;
+}
+
+.r-tool--off {
+  color: var(--fg-2);
+}
+
+/* ---- holding panel (the side rail, above the paste) ------------------- */
+/* On the stacked surfaces app.js moves it above the ledger, where it is
+ * compact and its add form folds behind "Add" (the surfaces section). */
+
+.r-holding {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  min-width: 0;
+}
+
+.r-holding__head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.r-holding__title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--fs-2);
+  font-weight: 600;
+  color: var(--fg-0);
+}
+
+.r-holding__count[hidden] {
+  display: none;
+}
+
+.r-holding__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding-inline: 0.3em;
+  font-size: var(--fs-1);
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-radius: 999px;
+}
+
+.r-holding > *,
+.r-holding__group {
+  /* Grid items default to min-width:auto and would widen to a long chip. */
+  min-width: 0;
+}
+
+.r-holding__group {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.r-holding__group[hidden] {
+  display: none;
+}
+
+.r-holding__label {
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+}
+
+.r-holding__clear {
+  padding: 0;
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.r-holding__clear:hover {
+  color: var(--fg-0);
+}
+
+.r-holding__clear[hidden] {
+  display: none;
+}
+
+.r-holding__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.r-holding__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  max-width: 100%;
+  min-width: 0; /* a 32-hex value ellipsises inside the chip, never widens it */
+  padding: 0.2em 0.3em 0.2em 0.6em;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--fg-0);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+}
+
+.r-holding__chip > code,
+.r-holding__link > code,
+.r-settings__chip > code {
+  flex: none; /* the key never wraps; the value takes the ellipsis */
+  white-space: nowrap;
+}
+
+/* A pin the tab is shadowing: still kept, not what the search binds. */
+.r-holding__chip--muted {
+  color: var(--fg-2);
+  border-style: dashed;
+}
+
+.r-holding__val {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fg-1);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.r-holding__chip--muted .r-holding__val {
+  text-decoration: line-through;
+}
+
+.r-holding__act {
+  padding: 0 0.3em;
+  font-family: var(--font-sans);
+  font-size: var(--fs-1);
+  line-height: 16px;
+  color: var(--fg-2);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-1);
+  cursor: pointer;
+}
+
+.r-holding__act:hover {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.r-holding__act--rm {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+
+.r-holding__act--rm:hover {
+  color: var(--hazard-fg);
+  background: var(--hazard-bg);
+}
+
+.r-holding__add {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto;
+  gap: var(--sp-2);
+}
+
+.r-holding__addbtn {
+  padding-inline: var(--sp-3);
+  font-size: var(--fs-2);
+  color: var(--fg-0);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+  cursor: pointer;
+}
+
+.r-holding__addbtn:hover {
+  border-color: var(--accent);
+}
+
+.r-holding__headacts {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.r-holding__addtoggle {
+  display: none;
+  padding: 0;
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.r-holding__addtoggle:hover,
+.r-holding__addtoggle[aria-expanded="true"] {
+  color: var(--accent);
+}
+
+/* On the form itself, not just the toggle: Esc closes too (holding.js).
+ * Shown only where the toggle is (below, --bp-narrow): at wide widths the
+ * form has no closed state to return to, so Cancel would only clear it. */
+.r-holding__addcancel {
+  display: none;
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 0;
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.r-holding__addcancel:hover {
+  color: var(--accent);
+}
+
+/* ---- key-hint bar (used in the omnibox bar) --------------------------- */
+
+.r-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  align-items: center;
+}
+
+/* ===========================================================================
+ * Spine additions (app/views/*). Same r-<component> convention; no new hue,
+ * no new token: trust colours and the accent are the only colours here.
+ * ======================================================================== */
+
+/* ---- drawer: the error state still needs its inputs ---------------------
+ * generate() throws `unscoped_pid` until aid and the window are bound. That is
+ * the feature, so the escape route (the parameter inputs) has to stay on
+ * screen; only the SPL, its tabs and the copy button go away. */
+
+.r-drawer--error .r-drawer__body {
+  display: block;
+}
+
+.r-drawer--error .r-tabs,
+.r-drawer--error .r-drawer__panel,
+.r-drawer--error .r-drawer__actions {
+  display: none;
+}
+
+/* ---- boot failure ------------------------------------------------------- */
+
+.r-bootfail {
+  max-width: 68ch;
+  margin: var(--sp-7) auto;
+  padding: var(--sp-5);
+  background: var(--bg-1);
+  border: 1px solid var(--hazard-fg);
+  border-left-width: 3px;
+  border-radius: var(--radius-2);
+}
+
+.r-bootfail h1 {
+  font-size: var(--fs-5);
+  margin-bottom: var(--sp-3);
+}
+
+.r-bootfail p {
+  margin-bottom: var(--sp-3);
+}
+
+.r-bootfail__cmd {
+  padding: var(--sp-3);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  margin-bottom: var(--sp-3);
+  white-space: pre-wrap;
+}
+
+/* ---- skip link ---------------------------------------------------------- */
+
+.r-skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 40;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-2);
+  border: 1px solid var(--accent);
+}
+
+.r-skip:focus {
+  left: var(--sp-3);
+  top: var(--sp-2);
+}
+
+/* ---- the field page's own rows ------------------------------------------ */
+/* views/field.js: the chips the title block adds, the keep region under the
+   action row (the Hold and Mark benign blocks from popup-ui), a folded
+   section whose summary is its own h2, the Pivots section's parts. */
+
+.r-chip--decode a,
+.r-chip--profile a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.r-chip--decode a:hover,
+.r-chip--profile a:hover {
+  text-decoration: underline;
+}
+
+.r-chip--decode[data-state="pending"] {
+  color: var(--fg-2);
+}
+
+.r-chip--decode[data-state="some"] {
+  border-color: var(--trust-confirmed);
+}
+
+.r-chip--verdict[data-tier="normal"],
+.r-chip--verdict[data-tier="consistent"] {
+  background: var(--trust-confirmed-bg);
+  color: var(--trust-confirmed-fg);
+  border-color: var(--trust-confirmed);
+}
+
+.r-chip--verdict[data-tier="impersonation"] {
+  background: var(--hazard-bg);
+  color: var(--hazard-fg);
+  border-color: var(--hazard-fg);
+}
+
+.r-chip--verdict[data-tier="pending"] {
+  color: var(--fg-2);
+}
+
+.r-actions a.r-btn {
+  text-decoration: none;
+}
+
+.r-title__slot > * + * {
+  margin-top: var(--sp-2);
+}
+
+.r-title__keep {
+  margin-top: var(--sp-2);
+}
+
+.r-title__keep .reach-hold__where {
+  display: none; /* the scope line above says where */
+}
+
+.r-title__keep .reach-hold {
+  margin: 0;
+}
+
+.r-title__keep .reach-hold__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.r-title__keep .reach-hold:not(.reach-benign) .reach-hold__reason {
+  display: none; /* held on the tap; the notebook takes the reason */
+}
+
+.r-title__keep .reach-input {
+  min-width: 0;
+  flex: 1 1 160px;
+  font: inherit;
+  font-size: var(--fs-2);
+  padding: var(--sp-1) var(--sp-2);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-1);
+  background: var(--bg-0);
+  color: var(--fg-0);
+}
+
+.r-title__keep .reach-btn {
+  font: inherit;
+  font-size: var(--fs-2);
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-1);
+  background: var(--bg-1);
+  color: var(--fg-0);
+  cursor: pointer;
+}
+
+.r-title__keep .reach-hold__status,
+.r-title__keep .reach-benign__offer {
+  font-size: var(--fs-2);
+  color: var(--fg-1);
+  margin-top: var(--sp-1);
+  overflow-wrap: anywhere;
+}
+
+.r-title__keep .reach-hold__status:empty {
+  display: none;
+}
+
+.r-fold > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.r-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.r-fold > summary::before {
+  content: "▸";
+  color: var(--fg-2);
+  font-size: var(--fs-2);
+}
+
+.r-fold[open] > summary::before {
+  content: "▾";
+}
+
+.r-fold > summary > h2 {
+  margin: 0;
+}
+
+.r-others__list {
+  list-style: none;
+  padding: 0;
+  margin: var(--sp-3) 0 0;
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.r-pivots .r-packpivots__list {
+  margin-bottom: var(--sp-3);
+}
+
+.r-pivots .r-ledger {
+  gap: var(--sp-2); /* five folded bands read as a list, not five screens */
+}
+
+.r-pivots .r-ledger__fold[open] {
+  margin-bottom: var(--sp-4);
+}
+
+.r-pivots__platform {
+  margin-top: var(--sp-3);
+}
+
+.r-workflows .reach-workflows__link {
+  display: block;
+  padding-block: var(--sp-1);
+}
+
+.r-verdict .reach-row,
+.r-enrich .reach-row {
+  margin-top: var(--sp-2);
+}
+
+.r-cofields__lead {
+  margin: 0 0 var(--sp-1);
+}
+
+.r-meaning__disagree {
+  margin-top: var(--sp-2);
+}
+
+/* ---- the facts line under a profile or field head ----------------------- */
+
+.r-hold__role {
+  color: var(--fg-1);
+  margin-bottom: var(--sp-3);
+}
+
+/* ---- small text utilities ----------------------------------------------- */
+
+.r-inline {
+  display: inline;
+  overflow-wrap: anywhere;
+}
+
+.r-list {
+  max-width: 72ch;
+  color: var(--fg-1);
+}
+
+.r-list li + li {
+  margin-top: var(--sp-2);
+}
+
+.r-idlink {
+  text-decoration: none;
+}
+
+.r-idlink code {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  text-underline-offset: 0.15em;
+}
+
+.r-idlink:hover code {
+  text-decoration-color: var(--accent);
+}
+
+/* ---- co-fields / fields by role ----------------------------------------- */
+
+.r-cofields {
+  padding: var(--sp-4) 0 var(--sp-2);
+  border-top: 1px dashed var(--line);
+  margin-top: var(--sp-3);
+}
+
+.r-cofields > h4 {
+  margin-bottom: var(--sp-2);
+}
+
+.r-cofields__note {
+  font-size: var(--fs-1);
+  max-width: 78ch;
+  margin-bottom: var(--sp-3);
+}
+
+.r-rolelist {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.r-rolelist__group {
+  display: grid;
+  grid-template-columns: 12ch minmax(0, 1fr);
+  gap: var(--sp-3);
+  align-items: baseline;
+}
+
+.r-rolelist__role {
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+  text-align: right;
+  font-weight: 500;
+}
+
+/* A role group is a fold: the summary carries the role and its count. */
+.r-rolelist__group > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.r-rolelist__group > summary::-webkit-details-marker { display: none; }
+.r-rolelist__group > summary::before { content: "▸ "; }
+.r-rolelist__group[open] > summary::before { content: "▾ "; }
+
+.r-rolelist__controls {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.r-rolelist__filter { flex: 1 1 160px; max-width: 320px; }
+.r-rolelist__select { max-width: 200px; }
+.r-rolelist__bind { font-size: var(--fs-2); }
+
+/* A long name in the scope line breaks rather than pushing a line out of the clamp. */
+.r-scope code {
+  overflow-wrap: anywhere;
+}
+
+a.r-chip--link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.r-cofields__fill {
+  font-size: var(--fs-1);
+  margin-left: 2px;
+}
+
+.r-rolelist__fields {
+  max-width: none;
+  line-height: 1.9;
+}
+
+/* ---- ledger row sub-line ------------------------------------------------ */
+
+.r-ledger__sub {
+  font-size: var(--fs-1);
+  margin-top: var(--sp-1);
+  max-width: 60ch;
+}
+
+/* ---- start cards -------------------------------------------------------- */
+
+.r-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.r-card {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-4);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  text-decoration: none;
+  color: inherit;
+}
+
+.r-card:hover {
+  background: var(--bg-2);
+  border-color: var(--accent);
+}
+
+.r-card__title {
+  font-weight: 600;
+  font-size: var(--fs-4);
+}
+
+.r-card__line {
+  color: var(--fg-1);
+  font-size: var(--fs-2);
+}
+
+.r-card__count {
+  color: var(--fg-2);
+  font-size: var(--fs-1);
+  font-family: var(--font-mono);
+  /* Pack cards list field paths here; one unbreakable path is wider than
+   * a side panel, and a grid item's floor is its longest word. */
+  overflow-wrap: anywhere;
+}
+
+/* ---- details blocks (decode table, same-role, why-no-formula) ----------- */
+
+.r-decode,
+.r-samerole {
+  margin-top: var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  padding: var(--sp-3);
+  background: var(--bg-1);
+}
+
+.r-decode summary,
+.r-samerole summary {
+  cursor: pointer;
+  color: var(--fg-1);
+  font-size: var(--fs-2);
+}
+
+.r-decode[open] summary,
+.r-samerole[open] summary {
+  margin-bottom: var(--sp-3);
+}
+
+.r-decode__list li {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.r-decode__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+  gap: var(--sp-1) var(--sp-4);
+  list-style: none;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  font-size: var(--fs-2);
+}
+
+.r-decode__list code {
+  color: var(--fg-0);
+  margin-right: var(--sp-2);
+}
+
+/* ---- dictionary (values.js): format, values, examples, gotchas, reference */
+
+.r-dict__body > * + * {
+  margin-top: var(--sp-3);
+}
+
+.r-dict__format {
+  font-size: var(--fs-2);
+}
+
+.r-dict__values {
+  margin-top: var(--sp-3);
+}
+
+.r-dict__list {
+  grid-template-columns: 1fr;
+  max-height: none;
+}
+
+.r-dict__list li {
+  overflow-wrap: anywhere;
+  padding: var(--sp-1) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.r-dict__list li:last-child {
+  border-bottom: 0;
+}
+
+.r-dict__list code {
+  font-weight: 600;
+}
+
+.r-dict__examples code,
+.r-dict__binding code {
+  color: var(--fg-0);
+}
+
+.r-dict__gotchas .r-callout + .r-callout {
+  margin-top: var(--sp-2);
+}
+
+.r-dict__quote q {
+  color: var(--fg-1);
+}
+
+.r-dict__ref .r-chip {
+  margin-right: var(--sp-1);
+}
+
+.r-dict__ref a,
+.r-dict__binding a,
+.r-dict__cite a {
+  overflow-wrap: anywhere;
+}
+
+/* the value page's own-meaning row: a literal can be any length */
+.r-value h2,
+.r-value__meaning {
+  overflow-wrap: anywhere;
+}
+
+/* ---- value page: the popups' blocks on the app's tokens ------------------ */
+/* views/value.js composes meaningBlock, everywhereBlock and workflowsBlock
+   (popup-ui.js) under registry headings; their popup classes map here. */
+
+.r-view--value .r-section[data-band] {
+  margin-top: var(--sp-5);
+}
+
+/* The action row holds Hold and Mark benign; what each opens (the reason,
+   the expiry, the status, the exclusion offer) is the keep row under it,
+   a sibling of the action row, each block a line of its own. */
+.r-view--value .r-actions .r-action-hold,
+.r-view--value .r-actions .r-action-benign {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.r-view--value .r-title__keep .reach-hold__bar:empty {
+  display: none;
+}
+
+.r-view--value .r-title__keep .reach-hold__bar[hidden],
+.r-view--value .r-title__keep .reach-benign__form[hidden],
+.r-view--value .r-title__keep .reach-hold__after[hidden] {
+  display: none;
+}
+
+.r-view--value .r-title__keep .reach-benign__form,
+.r-view--value .r-title__keep .reach-hold__after {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.r-view--value .r-title__keep .reach-hold--compact .reach-hold__reason {
+  display: block; /* the reason lands on the pin once the value is held */
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.r-view--value .r-title__keep .reach-hold__status,
+.r-view--value .r-title__keep .reach-benign__offer {
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+}
+
+.r-view--value .r-title__keep .reach-hold__status:empty,
+.r-view--value .r-title__keep .reach-benign__offer:empty {
+  display: none;
+}
+
+.r-view--value .r-title__keep .reach-benign__expiry {
+  flex: 0 1 auto;
+  width: auto;
+}
+
+.r-view--value .reach-meaning__field {
+  color: var(--accent);
+}
+
+.r-view--value .reach-meaning,
+.r-view--value .reach-everywhere,
+.r-view--value .reach-workflows {
+  --rc-fg: var(--fg-0);
+  --rc-fg2: var(--fg-1);
+  --rc-bg3: var(--bg-2);
+  --rc-link: var(--accent);
+  --rc-warn: var(--trust-asserted-fg);
+  --rc-warn-bg: var(--trust-asserted-bg);
+  --rc-ok: var(--trust-confirmed-fg);
+  --rc-ok-bg: var(--trust-confirmed-bg);
+  --rc-purple: var(--fg-1);
+  --rc-purple-bg: var(--bg-2);
+  --rc-info: var(--accent);
+  --rc-info-bg: var(--accent-bg);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.r-view--value .reach-meaning__text { color: var(--rc-fg); line-height: 1.5; }
+.r-view--value .reach-meaning__notes { color: var(--rc-fg2); font-size: var(--fs-1); margin-top: var(--sp-1); }
+.r-view--value .reach-meaning__concept { color: var(--rc-fg); margin-bottom: var(--sp-1); }
+.r-view--value .reach-meaning__concept b { font-weight: 600; }
+.r-view--value .reach-meaning__tags { font-size: var(--fs-1); color: var(--rc-fg2); margin-top: var(--sp-1); }
+.r-view--value .reach-meaning__tags code { color: var(--rc-fg); }
+.r-view--value .reach-meaning__formatText { color: var(--rc-fg); }
+.r-view--value .reach-row__body { color: var(--rc-fg); margin: 0 0 var(--sp-2); }
+.r-view--value .reach-row__body--muted { color: var(--rc-fg2); font-style: italic; }
+.r-view--value .reach-row__body--warn { color: var(--rc-fg); background: var(--rc-warn-bg); border-left: 3px solid var(--rc-warn); border-radius: 2px; padding: var(--sp-2) var(--sp-3); }
+.r-view--value .reach-meaning .reach-chip,
+.r-view--value .reach-verdict__corpus { display: inline-block; font-size: var(--fs-1); line-height: 18px; font-weight: 600; border-radius: 9px; padding: 0 8px; background: var(--rc-bg3); color: var(--rc-fg); white-space: nowrap; }
+.r-view--value .reach-meaning .reach-chip[data-basis="confirmed"] { background: var(--rc-ok-bg); color: var(--rc-ok); }
+.r-view--value .reach-meaning .reach-chip[data-basis="user"] { background: var(--rc-info-bg); color: var(--rc-info); }
+.r-view--value .reach-verdict__corpus { background: transparent; color: var(--fg-2); font-weight: 400; padding: 0; margin-bottom: var(--sp-1); }
+.r-view--value .reach-everywhere__list { list-style: none; margin: 0; padding: 0; }
+.r-view--value .reach-everywhere__row { margin: 0 0 var(--sp-1); min-height: var(--tap); display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-1); }
+.r-view--value .reach-everywhere__how { font-size: var(--fs-1); color: var(--rc-fg2); }
+.r-view--value .reach-link { display: flex; align-items: center; margin-top: var(--sp-1); color: var(--rc-link); text-decoration: none; min-height: var(--tap); }
+.r-view--value .reach-link:hover { text-decoration: underline; }
+.r-view--value .r-pivots__platform { margin-top: var(--sp-3); }
+
+.r-fold > .r-fold__summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.r-fold > .r-fold__summary::-webkit-details-marker { display: none; }
+.r-fold > .r-fold__summary::before { content: "▸"; color: var(--fg-2); }
+.r-fold[open] > .r-fold__summary::before { content: "▾"; }
+.r-fold > .r-fold__summary > h2 { display: inline; margin: 0; }
+
+.r-title__copy {
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--fs-1);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--fg-1);
+}
+
+/* ---- workflow: gate, results, troubleshooting, chain -------------------- */
+
+.r-gate {
+  margin-top: var(--sp-3);
+  padding: var(--sp-3);
+  border: 1px solid var(--hazard-fg);
+  border-radius: var(--radius-2);
+  background: var(--hazard-bg);
+}
+
+.r-gate__ask {
+  margin-bottom: var(--sp-3);
+}
+
+.r-gate__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.r-gate__btn,
+.r-result__btn {
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  background: var(--bg-1);
+  color: var(--fg-0);
+  font-size: var(--fs-2);
+}
+
+.r-gate__btn:hover,
+.r-result__btn:hover {
+  border-color: var(--accent);
+}
+
+.r-gate__btn[aria-pressed="true"],
+.r-result__btn[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--fg-0);
+}
+
+.r-result__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.r-result__note {
+  color: var(--fg-1);
+  margin-bottom: var(--sp-3);
+}
+
+/* A hunt's run controls and rows (views/workflow.js). The table scrolls
+   sideways inside its wrap; a path cell wraps at the slashes. */
+.r-hunt__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+  margin-bottom: var(--sp-2);
+}
+
+.r-hunt__env {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.r-hunt__status {
+  margin-bottom: var(--sp-2);
+  overflow-wrap: anywhere;
+}
+
+.r-hunt__rows .r-table td {
+  max-width: 24em;
+  overflow-wrap: anywhere;
+}
+
+.r-hunt__cell code {
+  overflow-wrap: anywhere;
+}
+
+.r-trouble {
+  margin-bottom: var(--sp-4);
+}
+
+.r-trouble h4 {
+  margin-bottom: var(--sp-2);
+}
+
+.r-chain__link {
+  font-weight: 600;
+}
+
+/* ---- key map overlay ---------------------------------------------------- */
+
+.r-keymap {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+  background: color-mix(in srgb, var(--bg-0) 78%, transparent);
+}
+
+.r-keymap__panel {
+  width: min(560px, 100%);
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: var(--sp-5);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-drawer);
+}
+
+.r-keymap__panel h2 {
+  margin-bottom: var(--sp-4);
+}
+
+.r-keymap__list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+
+.r-keymap__list li {
+  display: grid;
+  grid-template-columns: 6ch minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--sp-3);
+}
+
+.r-keymap__label {
+  color: var(--fg-1);
+}
+
+.r-keymap__close {
+  margin-top: var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  background: var(--bg-2);
+}
+
+.r-keymap__close:hover {
+  border-color: var(--accent);
+}
+
+/* ---- start lede --------------------------------------------------------- */
+
+.r-lede {
+  margin-bottom: var(--sp-4);
+}
+
+.r-lede__line {
+  color: var(--fg-1);
+  font-size: var(--fs-4);
+  margin: 0 0 var(--sp-3);
+  max-width: 62ch;
+}
+
+/* Tighter than the shared .r-empty: the start page's teach block sits
+   under two lede lines, and the first h2 has to clear the C1 budget. */
+.r-lede .r-empty {
+  padding-block: var(--sp-3);
+}
+
+.r-workflows__pack + .r-workflows__pack {
+  margin-top: var(--sp-5);
+}
+
+.r-workflows__packname {
+  margin: 0 0 var(--sp-2);
+  font-weight: 600;
+  color: var(--fg-0);
+}
+
+.r-tools__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.r-tool {
+  min-height: var(--tap, 32px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--sp-1);
+  overflow-wrap: anywhere;
+}
+
+/* A field on 176 events would otherwise push the rest of the ledger off the
+ * page. The event list scrolls; the bands below it stay reachable. */
+
+.r-ledger__band--here .r-ledger__scroll {
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+/* Co-fields can run to 70 names on a rich event; the band below has to stay
+ * reachable, so the list scrolls and the heading and its note do not. */
+
+.r-cofields .r-rolelist {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* ---- ledger: automatic band ------------------------------------------- */
+/* Cost is position: this band sits between HERE and ONE JOIN because it is
+   free where the TA's stanza fires, but only there. No hue of its own;
+   see .r-ledger__glyph, which is monochrome for every band already. */
+
+.r-ledger__yields {
+  font-size: var(--fs-1);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+/* ---- convert widgets ---------------------------------------------------- */
+
+.r-convert {
+  display: grid;
+  gap: var(--sp-2);
+  margin-block: var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  max-width: 36em;
+}
+
+.r-convert__in {
+  font-family: var(--font-mono);
+}
+
+.r-convert__out {
+  display: block;
+  min-height: 1.4em;
+  font-size: var(--fs-2);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.r-convert__miss {
+  color: var(--fg-1);
+}
+
+.r-convert__note {
+  font-size: var(--fs-1);
+  margin: 0;
+}
+
+/* ---- drawer: run in Splunk -------------------------------------------- */
+
+.r-drawer__run {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: var(--sp-1) var(--sp-3);
+  font-size: var(--fs-2);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: var(--radius-1);
+  text-decoration: none;
+}
+
+.r-drawer__run:hover {
+  background: var(--accent-bg);
+}
+
+/* inline-flex above beats the hidden attribute; the link must go when the drawer says so */
+.r-drawer__run[hidden],
+.r-drawer__runhint[hidden] {
+  display: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Catalogue: annotation editor, buttons, inputs, sourcetype lists
+ * ------------------------------------------------------------------------- */
+
+.r-btn {
+  font: inherit;
+  font-size: var(--fs-2);
+  font-weight: 600;
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--radius-1);
+  border: 1px solid var(--control-line);
+  background: var(--control-bg);
+  color: var(--fg-0);
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.08s ease, opacity 0.12s ease;
+}
+.r-btn:hover { background: var(--bg-2); }
+.r-btn:active { transform: scale(0.96); }
+.r-btn:disabled { opacity: 0.5; cursor: default; }
+.r-btn:disabled:active { transform: none; }
+.r-btn--primary { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); }
+.r-btn--primary:hover { filter: brightness(0.92); }
+.r-btn--danger { color: var(--hazard-fg); }
+.r-btn--small { font-size: var(--fs-1); padding: 2px var(--sp-2); }
+
+/* Inline spinner for a button awaiting a response. */
+@keyframes r-spin { to { transform: rotate(360deg); } }
+.r-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: r-spin 0.6s linear infinite;
+  opacity: 0.85;
+}
+
+.r-input {
+  font: inherit;
+  font-size: var(--fs-2);
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius-1);
+  border: 1px solid var(--control-line);
+  background: var(--control-bg);
+  color: var(--fg-0);
+}
+.r-input:hover { border-color: var(--fg-0); }
+.r-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+textarea.r-input { resize: vertical; min-height: 56px; }
+
+.r-ann { margin: var(--sp-2) 0; }
+.r-ann__concept { margin: 0 0 var(--sp-1); font-size: var(--fs-3); line-height: var(--lh-body); }
+.r-ann__concept b { font-weight: 600; }
+.r-ann__desc { margin: 0 0 var(--sp-1); font-size: var(--fs-3); line-height: var(--lh-body); }
+.r-ann__desc .r-chip { vertical-align: middle; margin-left: var(--sp-1); }
+.r-ann__notes, .r-ann__tax, .r-ann__when { margin: 0 0 var(--sp-1); }
+.r-ann__under { margin: var(--sp-1) 0; }
+.r-ann__under summary { cursor: pointer; color: var(--fg-1); font-size: var(--fs-1); }
+.r-ann__form { display: grid; gap: var(--sp-2); max-width: 640px; margin: var(--sp-2) 0; }
+.r-ann__field { display: grid; gap: 2px; }
+.r-ann__label { font-size: var(--fs-1); color: var(--fg-1); }
+.r-ann__row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+.r-ann__actions { display: flex; gap: var(--sp-2); align-items: center; }
+
+.r-stlist { display: grid; gap: var(--sp-2); }
+.r-stlist__row {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr) auto;
+  gap: var(--sp-4);
+  align-items: baseline;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  background: var(--bg-1);
+}
+.r-stlist__row:hover { background: var(--bg-2); }
+.r-stlist__name { min-width: 0; }
+.r-stlist__name code { font-size: var(--fs-3); overflow-wrap: anywhere; }
+.r-stlist__meta { min-width: 0; color: var(--fg-1); font-size: var(--fs-1); }
+.r-stlist__src { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.r-fieldgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--grid-min), 100%), 1fr)); gap: var(--sp-1) var(--sp-3); }
+.r-fieldgrid__row { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-2); align-items: baseline; font-size: var(--fs-2); }
+.r-fieldgrid__row .r-muted { font-size: var(--fs-1); }
+.r-fieldgrid__desc { color: var(--fg-1); font-size: var(--fs-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.r-share__box { display: grid; gap: var(--sp-2); max-width: 640px; }
+.r-share__file { font: inherit; color: var(--fg-1); }
+.r-share__mode { max-width: 260px; }
+.r-stat { display: inline-block; margin-right: var(--sp-4); }
+.r-stat b { font-size: var(--fs-5); font-weight: 600; display: block; }
+.r-nowrap { white-space: nowrap; }
+.r-nav { display: flex; gap: var(--sp-3); align-items: center; font-size: var(--fs-2); }
+.r-nav a { color: var(--fg-1); text-decoration: none; }
+.r-nav a:hover { color: var(--accent); }
+.r-nav a.r-nav__sweep { color: var(--fg-2); font-size: var(--fs-1); white-space: nowrap; }
+
+/* Back/forward: they fit the 320px panel without pushing the bar (measured
+ * with the panel-width harness), so they show at every width, alongside
+ * whatever browser chrome a wide tab also has. */
+.r-navctl { display: flex; gap: var(--sp-1); }
+.r-navctl__btn { line-height: 1; }
+/* The name keeps its width until it is wider than the column, then wraps
+ * inside it rather than running into the next column; the description
+ * takes what is left on the line, or (panel) the next line. */
+.r-fieldgrid__row > a { flex: 0 0 auto; max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.r-fieldgrid__desc { flex: 1; min-width: 0; }
+.r-fieldgrid__row .r-chip { flex: none; }
+.r-profile__top { max-width: 520px; margin-top: var(--sp-2); }
+.r-prov { display: grid; gap: var(--sp-2); }
+.r-prov__row { min-width: 0; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--radius-2); background: var(--bg-1); overflow-wrap: anywhere; }
+.r-prov__head { font-size: var(--fs-2); }
+.r-prov__stmt { margin: var(--sp-1) 0 0; padding: var(--sp-2); background: var(--bg-0); border-radius: var(--radius-1); font-size: var(--fs-1); white-space: pre-wrap; word-break: break-word; max-height: 240px; overflow: auto; }
+
+/* The advisor: the class line, the paste box, the findings; and the
+ * drawer's folded line under the code. Every finding wraps: a span of the
+ * query is code that can be long. */
+.r-advisor__class { margin: 0 0 var(--sp-1); font-size: var(--fs-2); line-height: var(--lh-body); }
+.r-advisor__class .r-chip { vertical-align: middle; margin-right: var(--sp-1); }
+.r-advisor__advice { margin: 0 0 var(--sp-2); font-size: var(--fs-2); line-height: var(--lh-body); }
+.r-advisor__input { font-family: var(--font-mono); font-size: var(--fs-1); }
+.r-advisor__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-2); margin: var(--sp-2) 0; }
+.r-advisor__hint { font-size: var(--fs-1); min-width: 0; }
+.r-advisor__status { margin: 0 0 var(--sp-1); font-size: var(--fs-2); }
+.r-advisor__findings { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+.r-advisor__finding { padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--radius-2); background: var(--bg-1); min-width: 0; }
+.r-advisor__finding--caution { border-color: var(--trust-asserted); }
+.r-advisor__head, .r-advisor__why, .r-advisor__fix, .r-advisor__reading { margin: 0; font-size: var(--fs-2); line-height: var(--lh-body); overflow-wrap: anywhere; }
+.r-advisor__head .r-chip { vertical-align: middle; }
+.r-advisor__why { margin-top: 2px; color: var(--fg-1); }
+.r-advisor__fix { margin-top: 2px; }
+.r-advisor__fix code, .r-advisor__span { white-space: pre-wrap; word-break: break-word; }
+.r-advisor__measured { display: grid; gap: var(--sp-1); }
+.r-advisor--line { margin: var(--sp-1) 0 0; font-size: var(--fs-1); }
+.r-advisor--line > summary { cursor: pointer; list-style: none; color: var(--fg-2); }
+.r-advisor--line > summary::-webkit-details-marker { display: none; }
+.r-advisor--line > summary::before { content: "▸ "; }
+.r-advisor--line[open] > summary::before { content: "▾ "; }
+.r-advisor--line.r-advisor--cautions > summary { color: var(--fg-1); }
+.r-advisor--line .r-advisor__body { margin-top: var(--sp-1); }
+
+/* Record-type list on a sourcetype page: columns, not a wall of links. */
+.r-typelist__wrap > summary { cursor: pointer; list-style: none; }
+.r-typelist__wrap > summary::-webkit-details-marker { display: none; }
+.r-typelist__wrap > summary::before { content: "▸ "; color: var(--fg-2); }
+.r-typelist__wrap[open] > summary::before { content: "▾ "; }
+.r-typelist__h { display: inline; }
+.r-typelist { list-style: none; margin: var(--sp-2) 0 0; padding: 0; columns: 220px; column-gap: var(--sp-4); }
+.r-typelist li { break-inside: avoid; padding: 1px 0; font-size: var(--fs-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-typelist .r-idlink code { text-decoration: none; }
+.r-typelist__n { font-size: var(--fs-1); }
+.r-view--discover h2, .r-view--share h2 { margin-top: var(--sp-5); }
+.r-view--discover .r-ann__actions { margin-bottom: var(--sp-2); }
+.r-packpivots tr[data-row-id] { cursor: pointer; }
+.r-packpivots tr.r-selected td { background: var(--accent-bg); }
+.r-packrow .r-stlist__name p { margin: var(--sp-1) 0 0; }
+
+/* Coverage page: the column table, the confirm result row, the sibling offer. */
+.r-cov__table td { vertical-align: top; }
+.r-cov__table tr[data-row-id]:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
+.r-cov__h2meta { font-weight: 400; font-size: var(--fs-1); }
+.r-cov__env { max-width: 100%; }
+.r-cov__feedsel { max-width: 260px; }
+.r-cov__feedrow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-2); margin-bottom: var(--sp-2); }
+.r-cov__feed { margin-top: var(--sp-3); }
+.r-cov__feed > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-1) var(--sp-2); min-height: var(--tap); }
+.r-cov__feedname { display: inline; margin: 0; }
+.r-cov__aside { margin-top: var(--sp-3); }
+.r-cov__meaning { min-width: 220px; }
+.r-cov__why { margin: var(--sp-1) 0 0; font-size: var(--fs-1); }
+.r-cov__actions { white-space: nowrap; }
+.r-cov__actions .r-btn { margin-right: var(--sp-1); }
+.r-cov__choose { display: flex; gap: var(--sp-1); align-items: center; flex-wrap: wrap; }
+.r-cov__choose .r-input { max-width: 320px; }
+.r-cov__result:empty { display: none; }
+.r-cov__done { margin: 0 0 var(--sp-3); padding: var(--sp-2) var(--sp-3); background: var(--accent-bg); border-radius: var(--radius-1); }
+.r-cov__done > .r-btn { margin-left: var(--sp-2); }
+.r-cov__reason { font-size: var(--fs-1); }
+.r-cov__reason:empty { display: none; }
+.r-cov__siblings { margin-top: var(--sp-2); display: grid; gap: var(--sp-1); }
+.r-cov__siblings p { margin: 0; }
+.r-cov__sib { display: block; font-size: var(--fs-2); }
+.r-cov__aside > summary { cursor: pointer; }
+.r-cov__on { white-space: nowrap; }
+.r-cov__status:empty, .r-cov__gaps:empty { display: none; }
+.r-view--coverage h2 { margin-top: var(--sp-5); }
+
+/* ---- the paste's fold (stacked surfaces; layout in base.css) ------------ */
+/* One line above the ledger: "Query" and the selected pivot's title, the
+ * drawer beneath it once open. app.js opens it when a row fills the drawer
+ * and closes it when the route resets it. */
+
+.r-paste__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-2);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  cursor: pointer;
+  list-style: none;
+}
+
+.r-paste__summary::-webkit-details-marker {
+  display: none;
+}
+
+.r-paste__summary::after {
+  content: "▸";
+  margin-left: auto;
+  color: var(--fg-2);
+}
+
+.r-paste[open] > .r-paste__summary::after {
+  content: "▾";
+}
+
+.r-paste[open] > .r-paste__summary {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.r-paste[open] > .r-drawer {
+  border-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.r-paste__label {
+  font-weight: 600;
+  color: var(--fg-0);
+}
+
+.r-paste__title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fg-1);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- the notebook (app/views/notebook.js) ------------------------------- */
+/* The header names the investigation in place; the timeline is one line
+ * per entry with its actions on the right; threads are folds. Long values
+ * (a command line, a URL) wrap anywhere rather than widen the page. */
+
+.r-holding__notebook {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--fs-1);
+  color: var(--fg-1);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.r-holding__notebook:hover {
+  color: var(--accent);
+}
+
+.r-view--notebook h2 {
+  margin-top: var(--sp-5);
+}
+
+.r-title__h1 .r-nb__title {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  font-size: var(--fs-5);
+  font-weight: 600;
+}
+
+.r-nb__copy {
+  position: relative;
+}
+
+.r-nb__copymenu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + var(--sp-1));
+  z-index: 5;
+  display: flex;
+  gap: var(--sp-1);
+  padding: var(--sp-1);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.2);
+}
+
+.r-nb__copymenu[hidden] {
+  display: none;
+}
+
+.r-nb__label {
+  display: block;
+  margin-top: var(--sp-2);
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+}
+
+.r-nb__trigger {
+  display: block;
+  width: 100%;
+  margin-top: var(--sp-1);
+}
+
+.r-nb__headacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+
+.r-nb__day {
+  margin: var(--sp-3) 0 var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  font-weight: 600;
+  color: var(--fg-2);
+}
+
+.r-nb__lines {
+  display: grid;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.r-nb__line {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--sp-2);
+  align-items: baseline;
+  min-width: 0;
+  padding: var(--sp-1) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.r-nb__line:last-child {
+  border-bottom: 0;
+}
+
+.r-nb__time {
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+}
+
+.r-nb__entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-1) var(--sp-2);
+  min-width: 0;
+}
+
+.r-nb__kind {
+  flex: none;
+  padding: 0 0.5em;
+  font-size: var(--fs-1);
+  line-height: 18px;
+  color: var(--trust-inferred-fg);
+  background: var(--trust-inferred-bg);
+  border-radius: 999px;
+}
+
+.r-nb__entry--pin .r-nb__kind {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.r-nb__entry--parked .r-nb__kind {
+  color: var(--trust-asserted-fg);
+  background: var(--trust-asserted-bg);
+}
+
+.r-nb__entry--verdict .r-nb__kind,
+.r-nb__entry--enrichment .r-nb__kind {
+  color: var(--trust-confirmed-fg);
+  background: var(--trust-confirmed-bg);
+}
+
+.r-nb__text {
+  flex: 1 1 200px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.r-nb__acts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin-left: auto;
+}
+
+.r-nb__act {
+  padding: 0 0.4em;
+  font-family: var(--font-sans);
+  font-size: var(--fs-1);
+  line-height: 18px;
+  color: var(--fg-2);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-1);
+  cursor: pointer;
+}
+
+.r-nb__act:hover {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+/* Search history: the name and where it ran on one line, the query on the
+   next as a single clipped line (the full text in its title), the actions
+   after it. */
+.r-nb__entry--search .r-nb__text {
+  flex: 1 1 160px;
+}
+
+.r-nb__sname {
+  font-weight: 600;
+}
+
+.r-nb__query {
+  flex: 1 0 100%;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+}
+
+.r-nb__edit {
+  flex: 1 0 100%;
+  display: grid;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+}
+
+.r-nb__edit[hidden] {
+  display: none;
+}
+
+.r-nb__ta {
+  width: 100%;
+  min-height: 56px;
+  resize: vertical;
+}
+
+.r-nb__editacts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.r-nb__finding {
+  font-size: var(--fs-1);
+  color: var(--fg-1);
+}
+
+.r-nb__thread {
+  margin-top: var(--sp-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  background: var(--bg-1);
+}
+
+.r-nb__thread--parked {
+  border-style: dashed;
+}
+
+.r-nb__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-3);
+  cursor: pointer;
+  list-style: none;
+}
+
+.r-nb__summary::-webkit-details-marker {
+  display: none;
+}
+
+.r-nb__summary::before {
+  content: "▸";
+  color: var(--fg-2);
+}
+
+.r-nb__thread[open] > .r-nb__summary::before {
+  content: "▾";
+}
+
+.r-nb__threadtitle {
+  flex: 1 1 160px;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2);
+  overflow-wrap: anywhere;
+}
+
+.r-nb__count {
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+}
+
+.r-nb__thread > .r-nb__lines {
+  padding: 0 var(--sp-3) var(--sp-2);
+}
+
+.r-nb__invs {
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.r-nb__inv {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-1) var(--sp-2);
+  min-width: 0;
+  padding: var(--sp-1) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.r-nb__inv--current {
+  font-weight: 600;
+}
+
+.r-nb__meta {
+  flex: 1 1 200px;
+  min-width: 0;
+  font-size: var(--fs-1);
+  font-weight: 400;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+
+.r-nb__rulegroup {
+  margin-top: var(--sp-3);
+}
+
+.r-nb__rulehead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-1) var(--sp-2);
+  margin: 0;
+  font-size: var(--fs-1);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.r-nb__rule {
+  overflow-wrap: anywhere;
+}
+
+.r-nb__status:empty {
+  display: none;
+}
+
+/* ---- the frame -------------------------------------------------------- */
+/* app.js buildChrome. Row 1 (44px): back, forward, the compact title, the
+ * platform badge, search, menu. Row 2 (28px): the trail. Row 3 (28px): the
+ * Holding line. The rows stay these heights; a chip and the line get a
+ * 44px hit area through a pseudo-element that overlaps the neighbours.
+ * The wide tab draws only the trail row (base.css). */
+
+.r-frame__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  height: 44px;
+  padding-inline: var(--gutter);
+  border-bottom: 1px solid var(--line);
+}
+
+.r-bar--frame .r-navctl {
+  gap: 0;
+}
+
+.r-bar--frame .r-trail {
+  border-bottom: 1px solid var(--line);
+}
+
+.r-bar--frame .r-navctl__btn,
+.r-frame__search,
+.r-frame__menubtn {
+  width: 36px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: var(--fs-5);
+  line-height: 1;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+}
+
+.r-frame__menubtn[aria-expanded="true"] {
+  color: var(--accent);
+}
+
+.r-frame__title {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--fs-3);
+  font-weight: 600;
+  color: var(--fg-0);
+}
+
+.r-frame__badge {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  font-weight: 600;
+  color: var(--fg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+}
+
+.r-frame__menu {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: var(--sp-3);
+  max-height: calc(100vh - 44px);
+  overflow-y: auto;
+  padding: var(--sp-3) var(--gutter);
+  background: var(--bg-0);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+
+.r-frame__menu[hidden] {
+  display: none;
+}
+
+.r-frame__menu > .r-nav,
+.r-frame__menu > .r-settings {
+  order: 0;
+}
+
+.r-frame__menu .r-nav {
+  flex-wrap: wrap;
+  gap: 0 var(--sp-3);
+}
+
+.r-frame__menu .r-settings,
+.r-frame__menu .r-settings__panel,
+.r-frame__menu .r-omnibox__list {
+  position: static;
+  width: auto;
+  max-height: none;
+  box-shadow: none;
+}
+
+.r-frame__menu .r-settings__panel {
+  margin-top: var(--sp-2);
+}
+
+.r-frame__menu .r-settings__word {
+  display: inline;
+}
+
+.r-frame__menu .r-settings__glyph {
+  display: none;
+}
+
+.r-frame__keys {
+  justify-self: start;
+}
+
+.r-trail {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  height: 28px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  padding-inline: var(--gutter);
+}
+
+/* No entity hops yet: the row takes no space, as .r-paste[hidden] does. */
+.r-trail[hidden] {
+  display: none;
+}
+
+.r-trail__chip {
+  position: relative;
+  flex: 0 1 auto;
+  max-width: 80px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 6px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--fg-1);
+  text-decoration: none;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-1);
+}
+
+a.r-trail__chip:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.r-trail__chip--here {
+  color: var(--fg-0);
+  border-color: var(--accent);
+}
+
+.r-trail__chip::after {
+  content: "";
+  position: absolute;
+  inset: -12px 0;
+}
+
+.r-trail__sep {
+  flex: 0 0 8px;
+  width: 8px;
+  text-align: center;
+  font-size: var(--fs-1);
+  color: var(--fg-2);
+}
+
+.r-holding__line {
+  position: relative;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 28px;
+  min-width: 0;
+  padding: 0 var(--gutter);
+  font: inherit;
+  font-size: var(--fs-1);
+  color: var(--fg-1);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.r-holding__line::after {
+  content: "";
+  position: absolute;
+  inset: -8px 0;
+}
+
+.r-holding__word {
+  flex: 0 0 auto;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+
+.r-holding__summary {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+
+.r-holding__caret {
+  flex: 0 0 auto;
+  color: var(--fg-2);
+}
+
+.r-holding.is-open .r-holding__caret {
+  transform: rotate(90deg);
+}
+
+.r-holding__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+}
+
+.r-holding__link:hover .r-holding__val {
+  color: var(--accent);
+}
+
+.r-holding__body {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+/* ---- the title block ---------------------------------------------------- */
+/* components/titleBlock.js: the first thing in main on every page. */
+
+.r-title {
+  margin-bottom: var(--sp-4);
+}
+
+.r-title__h1 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-6);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.r-title__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.r-scope {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-2);
+  line-height: 20px;
+  color: var(--fg-2);
+}
+
+.r-scope a {
+  color: var(--fg-1);
+}
+
+.r-scope__sep {
+  padding-inline: 2px;
+}
+
+.r-title__callout {
+  margin-block: var(--sp-2);
+}
+
+/* The field page's first screen: the title block, the paste fold and the
+   first h2 inside the 320 budget (page contract, C1). */
+.r-view--field .r-title {
+  margin-bottom: var(--sp-1);
+}
+
+.r-view--field > .r-paste {
+  margin-block: var(--sp-1);
+}
+
+.r-view--field .r-title__chips,
+.r-view--field .r-scope,
+.r-view--field .r-title__held {
+  margin-bottom: var(--sp-1);
+}
+
+.r-view--field .r-title__callout {
+  margin-block: 0;
+}
+
+.r-view--field .r-actions {
+  margin-top: var(--sp-1);
+}
+
+.r-view--field .r-actions .r-btn {
+  padding-inline: var(--sp-2);
+}
+
+.r-view--field .r-title__callout .r-callout {
+  padding: var(--sp-1) var(--sp-2);
+}
+
+.r-title__held {
+  margin: 0 0 var(--sp-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-2);
+  line-height: 20px;
+}
+
+/* The field page's value line: a long decode gives way first, so the value
+   and the arrow to its page stay on screen. A bitmask folds its flag list
+   under the line (details), closed until clicked. */
+.r-view--field .r-title__held > span,
+.r-view--field .r-title__flags > summary > span {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3em;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.r-view--field .r-title__held > span > *,
+.r-view--field .r-title__flags > summary > span > * {
+  flex: none;
+}
+
+.r-view--field .r-title__held .r-title__decode {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.r-view--field .r-title__flags .r-title__decode {
+  display: flex;
+  align-items: baseline;
+  overflow: visible;
+}
+
+.r-view--field .r-title__flags .r-title__decode > * {
+  flex: none;
+}
+
+.r-view--field .r-title__flags .r-title__decode-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.r-view--field .r-title__held {
+  white-space: normal;
+}
+
+.r-title__flags > summary {
+  cursor: pointer;
+  list-style: none;
+  line-height: 20px;
+}
+
+.r-title__flags > summary::-webkit-details-marker {
+  display: none;
+}
+
+.r-title__flags > summary .r-title__decode::after {
+  content: " ▸";
+  color: var(--fg-2);
+}
+
+.r-title__flags[open] > summary .r-title__decode::after {
+  content: " ▾";
+}
+
+.r-title__flaglist {
+  margin: var(--sp-1) 0 0;
+  padding: 0 0 0 var(--sp-3);
+  font-size: var(--fs-1);
+  line-height: 18px;
+  list-style: none;
+}
+
+.r-title__flaglist li {
+  break-inside: avoid;
+}
+
+.r-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+
+.r-chip--state {
+  color: var(--fg-2);
+  border-color: var(--line);
+}
+
+/* ===========================================================================
+ * Surfaces: every component's width rule, in one place.
+ *
+ * Three surfaces (tokens.css): wide, the tab with the rail beside the
+ * ledger; narrow, a tab under 900px where the rail stacks; panel, up to
+ * 599px, which is Chrome's side panel (320px to 400px by default) and any
+ * tab that narrow. The page grid per surface is in base.css; everything a
+ * component does differently is here, and nowhere else, so a component's
+ * own block above is its wide-surface design. Rules read --tap and
+ * --grid-min, which base.css re-declares per surface, and the boundaries
+ * are written out because a media query cannot read a token.
+ *
+ * What changes, and why:
+ *   narrow  the rail is under the ledger, so app.js moves Holding and the
+ *           paste above it: Holding is compact and its add form folds
+ *           behind "Add"; the key-hint bar goes (no room, and the keys are
+ *           on ? anyway).
+ *   panel   one column everywhere: the sourcetype and pack rows, the
+ *           role groups, the field grid (a name line, then a description
+ *           line: a 40-character name and a one-line description cannot
+ *           share 288px); the reach map goes (its nodes do not fit); the
+ *           Settings popover hangs off the bar, gutter to gutter; every
+ *           control the finger lands on is --tap (44px) tall, and the
+ *           small chip actions get a 44px hit area without growing; the
+ *           tables' code stops refusing to wrap, so fewer of them scroll.
+ * ======================================================================== */
+
+/* narrow and panel. tokens.css --bp-narrow. */
+@media (max-width: 899px) {
+  /* Holding is the frame's third row: one line, the rail behind it. */
+  .r-holding {
+    gap: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .r-holding--empty {
+    display: none;
+  }
+
+  .r-holding__line {
+    display: flex;
+  }
+
+  .r-holding__body {
+    display: none;
+    padding: var(--sp-3) var(--gutter);
+    border-top: 1px solid var(--line);
+  }
+
+  .r-holding.is-open .r-holding__body {
+    display: grid;
+  }
+
+  .r-paste {
+    margin-bottom: var(--sp-4);
+  }
+
+  .r-holding__addtoggle {
+    display: inline;
+  }
+
+  .r-holding__addcancel {
+    display: inline;
+  }
+
+  .r-holding:not(.is-adding) .r-holding__add,
+  .r-holding:not(.is-adding) .r-holding__hint {
+    display: none;
+  }
+
+  .r-keys {
+    display: none;
+  }
+}
+
+/* panel. tokens.css --bp-panel. */
+@media (max-width: 599px) {
+  /* ---- one column --------------------------------------------------- */
+
+  .r-map {
+    display: none;
+  }
+
+  .r-holding__add {
+    /* four columns do not fit in 320px: inputs on one row, buttons on the next */
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .r-rolelist__group {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-1);
+  }
+
+  .r-rolelist__role {
+    text-align: left;
+  }
+
+  .r-stlist__row {
+    /* a fixed first column pushed the counts past the edge */
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-1);
+    align-items: start;
+  }
+
+  .r-fieldgrid__desc {
+    /* its own line, still one line: the ellipsis stays */
+    flex: 1 0 100%;
+  }
+
+  .r-typelist li {
+    /* one column here, so a long record type wraps instead of ellipsising */
+    white-space: normal;
+    overflow: visible;
+  }
+
+  .r-ann__row,
+  .r-settings__pin {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* ---- tables stack ---------------------------------------------------- */
+  /* Five columns do not fit in 288px, and a table that scrolls sideways is
+   * a table nobody reads on a phone-width panel. Each row becomes a block:
+   * its cells one under the other, each led by its column heading (app.js
+   * writes the heading into data-label). The thead goes; a caption stays.
+   * Empty cells (a blank action column) take no line. */
+
+  .r-table-wrap {
+    overflow-x: visible;
+    border: 0;
+  }
+
+  .r-table,
+  .r-source-table,
+  .r-table > tbody,
+  .r-source-table > tbody {
+    display: block;
+  }
+
+  .r-table > thead,
+  .r-source-table > thead {
+    display: none;
+  }
+
+  .r-table > tbody > tr,
+  .r-source-table > tbody > tr {
+    display: grid;
+    gap: var(--sp-1);
+    padding: var(--sp-2) var(--sp-3);
+    margin-bottom: var(--sp-2);
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-2);
+  }
+
+  .r-table > tbody > tr:nth-child(even),
+  .r-table > tbody > tr:hover {
+    background: var(--bg-1);
+  }
+
+  .r-table > tbody > tr > td,
+  .r-source-table > tbody > tr > td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+    border: 0;
+  }
+
+  .r-table > tbody > tr > td:empty,
+  .r-source-table > tbody > tr > td:empty {
+    display: none;
+  }
+
+  /* A pack pivot row on the panel: the pivot and its basis; the kind,
+   * target and cardinality are the drawer's subtitle once the row is picked. */
+  .r-packpivots > tbody > tr {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .r-packpivots > tbody > tr > td:nth-child(2),
+  .r-packpivots > tbody > tr > td:nth-child(3),
+  .r-packpivots > tbody > tr > td:nth-child(4) {
+    display: none;
+  }
+
+  .r-packpivots > tbody > tr > td:nth-child(5)::before {
+    content: none;
+  }
+
+  td[data-label]:not([data-label=""])::before {
+    content: attr(data-label) " ";
+    font-family: var(--font-sans);
+    font-size: var(--fs-1);
+    color: var(--fg-2);
+  }
+
+  .r-table code,
+  .r-source-table__via,
+  .r-source-table__events code,
+  .r-source-table__all code,
+  .r-cov__actions,
+  .r-cov__on,
+  .r-nowrap {
+    white-space: normal;
+  }
+
+  .r-source-table__stmt,
+  .r-cov__meaning {
+    min-width: 0;
+  }
+
+  .r-cov__actions .r-btn {
+    margin-top: var(--sp-1);
+  }
+
+  pre code {
+    /* one long token (a lookup name, a macro) breaks rather than scrolls
+     * the block: base.css sets pre code back to normal for the wide tab */
+    overflow-wrap: anywhere;
+  }
+
+  .r-ann__desc,
+  .r-callout__body,
+  .r-dict__body p {
+    /* an ARN or a dotted path in prose breaks rather than pushing past the column */
+    overflow-wrap: anywhere;
+  }
+
+  /* ---- the bar --------------------------------------------------------- */
+  /* The frame's menu holds the omnibox, the nav links and Settings (a
+   * gear here, the word is too wide beside a 200px search). */
+
+  .r-nav {
+    /* six links do not fit 320px on one row: they wrap, at no row gap */
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    order: 3;
+    gap: 0 var(--sp-2);
+  }
+
+  .r-trail__chip {
+    max-width: 80px;
+  }
+
+  .r-settings {
+    order: 2;
+  }
+
+  .r-settings__word {
+    display: none;
+  }
+
+  .r-settings__glyph {
+    display: inline;
+  }
+
+  .r-settings__summary {
+    padding-inline: var(--sp-3);
+  }
+
+  /* ---- the Settings popover ------------------------------------------ */
+  /* The control shares the omnibox's row, so a panel hung off its right
+   * edge leaves the viewport at 320px. Hang it off the bar instead: the
+   * bar is sticky, so it is the containing block once the control stops
+   * being one, and the panel spans it gutter to gutter. The bar is two
+   * rows here, so the height budget is what is left under it, not under
+   * --bar-h. */
+
+  .r-settings {
+    position: static;
+  }
+
+  .r-settings__panel {
+    top: calc(100% + var(--sp-2));
+    right: var(--gutter);
+    left: var(--gutter);
+    width: auto;
+    max-height: calc(100vh - 100% - var(--sp-5));
+  }
+
+  /* ---- tap targets ---------------------------------------------------- */
+  /* Everything the finger lands on is at least --tap (44px) tall. Buttons
+   * and inputs grow; text-sized controls (nav links, fold summaries) get
+   * the height as padding; the 16px chip actions keep their size and get
+   * the hit area from a pseudo-element, so a chip stays a chip. */
+
+  .r-btn,
+  .r-input,
+  .r-field__input,
+  .r-holding__addbtn,
+  .r-settings__pinbtn,
+  .r-settings__choice,
+  .r-gate__btn,
+  .r-result__btn,
+  .r-keymap__close,
+  .r-drawer__copy,
+  .r-drawer__run,
+  .r-settings__summary,
+  .r-tabs__tab,
+  .r-omnibox__field {
+    min-height: var(--tap);
+  }
+
+  textarea.r-input {
+    min-height: 88px;
+  }
+
+  .r-btn {
+    /* a link styled as a button centres its label like the button does */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Three title-block actions share one 288px row (Describe, Discover,
+   * Bind columns); the tap height stays. */
+  .r-title .r-actions .r-btn {
+    padding-inline: var(--sp-2);
+  }
+
+  /* The scope line's leading name keeps the line to one: it ellipsizes,
+   * with the full name in title and on its page. */
+  .r-scope__name {
+    display: inline-block;
+    max-width: 50%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+
+  .r-omnibox__input {
+    height: calc(var(--tap) - 2px);
+  }
+
+  .r-nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+  }
+
+  .r-ledger__summary,
+  .r-typelist__wrap > summary,
+  .r-decode summary,
+  .r-samerole summary,
+  .r-cov__aside > summary,
+  .r-cov__feed > summary,
+  .r-source-table__more summary,
+  .r-ann__under summary,
+  .r-meaning__evidence summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    min-height: var(--tap);
+  }
+
+  .r-meaning__evidence summary {
+    width: auto;
+  }
+
+  .r-nb__summary,
+  .r-holding__notebook {
+    min-height: var(--tap);
+  }
+
+  .r-holding__notebook {
+    display: flex;
+    align-items: center;
+  }
+
+  .r-nb__line {
+    /* the time above the entry: a 320px column has no room beside it */
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .r-nb__acts {
+    flex: 1 0 100%;
+    margin-left: 0;
+  }
+
+  .r-holding__act,
+  .r-holding__clear,
+  .r-holding__addtoggle,
+  .r-holding__addcancel,
+  .r-nb__act,
+  .r-settings__rm,
+  .r-spl__copy,
+  .r-omnibox__option {
+    position: relative;
+  }
+
+  .r-holding__act::after,
+  .r-holding__clear::after,
+  .r-holding__addtoggle::after,
+  .r-holding__addcancel::after,
+  .r-nb__act::after,
+  .r-settings__rm::after,
+  .r-spl__copy::after {
+    content: "";
+    position: absolute;
+    inset: calc((var(--tap) - 100%) / -2) calc(-1 * var(--sp-1));
+  }
+
+  .r-omnibox__option {
+    min-height: var(--tap);
+    align-content: center;
+  }
+
+  .r-map__node,
+  .r-ledger__row {
+    min-height: var(--tap);
+  }
+}
+
+/* panel, 360px and wider: the search button sits beside the badge and the
+ * trail chips widen (104px at 380: three chips and two separators inside
+ * 348). Under 360 the omnibox is the menu's first row and / opens it. */
+@media (max-width: 359px) {
+  .r-frame__search {
+    display: none;
+  }
+}
+
+@media (min-width: 360px) and (max-width: 599px) {
+  .r-trail__chip {
+    max-width: 104px;
+  }
+}
+
+/* Runbook page: the steps walk, each with a checkbox in its title */
+.r-runbook__label { display: inline-flex; align-items: flex-start; gap: var(--sp-2); cursor: pointer; overflow-wrap: anywhere; }
+.r-runbook__check { flex: 0 0 auto; margin: 3px 0 0; width: 16px; height: 16px; accent-color: var(--accent); }
+.r-runbook__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-2); }
+.r-runbook__actions .r-btn { min-height: var(--tap); }
+.r-runbook__bound { flex: 1 1 100%; margin: 0; font-size: var(--fs-1); overflow-wrap: anywhere; }
+.r-runbook__step.r-selected { box-shadow: inset 3px 0 0 var(--accent); }
+.r-runbook__step .r-step__title { font-weight: 500; }
+.r-runbook__notes { margin: var(--sp-3) 0 0; font-size: var(--fs-1); overflow-wrap: anywhere; white-space: pre-line; }
+.r-runbook__share { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+.r-runbook__share .r-btn { min-height: var(--tap); }
+/* edit mode: the question is the step's title, the note and pivot below it */
+.r-runbook__step--edit .r-step__title { flex: 1 1 auto; min-width: 0; }
+.r-runbook__q { display: block; width: 100%; font: inherit; }
+.r-runbook__field { display: block; margin-top: var(--sp-2); font-size: var(--fs-1); color: var(--fg-2); }
+.r-runbook__field .r-input { display: block; width: 100%; margin-top: var(--sp-1); }
+.r-runbook__ta { min-height: 48px; resize: vertical; }
+.r-runbook__pivot { max-width: 100%; }
+.r-runbook__controls { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
+.r-runbook__controls .r-btn { min-height: var(--tap); min-width: var(--tap); }
+.r-runbook__status:empty { display: none; }
+.r-runbook__closeacts { flex-wrap: wrap; }
+.r-runbook__draftsteps { margin: var(--sp-2) 0 0; padding-left: 1.4em; }
+.r-runbook__draftstep { margin: var(--sp-1) 0; overflow-wrap: anywhere; }
+.r-runbook__draftstep--present { color: var(--fg-2); }
+.r-runbook__draftoutcome, .r-runbook__draftcond { margin: var(--sp-2) 0 0; font-size: var(--fs-1); overflow-wrap: anywhere; }
+.r-runbook__draft .r-secondary .r-chip { margin-right: var(--sp-1); }

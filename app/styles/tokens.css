@@ -1,0 +1,215 @@
+/* Reach: design tokens (ARCHITECTURE §4.1)
+ *
+ * Sentinel build: the palette is Fluent's, so the catalogue page reads as a
+ * continuation of the Azure portal it is opened from. Light is the default
+ * and lives on :root. Dark is declared twice, byte for byte: once under
+ * prefers-color-scheme (guarded so an explicit light choice wins) and once
+ * under [data-theme="dark"] for an explicit choice.
+ *
+ * The [data-theme="…"] selectors are also matched on non-root elements so a
+ * page (the gallery) can show both themes side by side in wrapper sections.
+ * Custom properties inherit, so a wrapper's values override the page's.
+ *
+ * Hue budget: five trust colours and one accent blue. Nothing else
+ * carries hue. Every --trust-*-fg is a literal hex so tests/contrast.test.js
+ * and the gallery can compute the same WCAG ratios the browser paints.
+ */
+
+:root {
+  --font-sans: "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: "Cascadia Code", "Cascadia Mono", Consolas, Menlo, ui-monospace, monospace;
+
+  --fs-1: 12px;
+  --fs-2: 13px;
+  --fs-3: 14px;
+  --fs-4: 16px;
+  --fs-5: 20px;
+  --fs-6: 24px;
+  --lh-body: 1.45;
+  --lh-tight: 1.2;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  --radius-1: 2px;
+  --radius-2: 4px;
+
+  --bg-0: #faf9f8;
+  --bg-1: #ffffff;
+  --bg-2: #f3f2f1;
+  --bg-3: #edebe9;
+
+  --fg-0: #323130;
+  --fg-1: #605e5c;
+  --fg-2: #767574;
+  --line: #e1dfdd;
+
+  --accent: #0078d4;
+  --accent-fg: #ffffff;
+  --accent-bg: #deecf9;
+
+  --control-bg: #ffffff;
+  --control-line: #8a8886;
+
+  --trust-confirmed: #107c10;
+  --trust-confirmed-fg: #107c10;
+  --trust-confirmed-bg: #dff6dd;
+  --trust-asserted: #8a6d00;
+  --trust-asserted-fg: #8a6d00;
+  --trust-asserted-bg: #fff4ce;
+  --trust-suggested: #5c2e91;
+  --trust-suggested-fg: #5c2e91;
+  --trust-suggested-bg: #efe6fc;
+  --trust-inferred: #605e5c;
+  --trust-inferred-fg: #605e5c;
+  --trust-inferred-bg: #f3f2f1;
+  --hazard: #a4262c;
+  --hazard-fg: #a4262c;
+  --hazard-bg: #fde7e9;
+
+  --layer-fg: #484644;
+  --layer-bg: #f3f2f1;
+
+  --focus-ring: 2px solid var(--accent);
+  --focus-ring-offset: 2px;
+
+  /* Surfaces. The app has three widths, one stylesheet: the wide tab (the
+   * rail beside the ledger, 900px and up), the narrow tab (the rail under
+   * the ledger, 600px to 899px) and the side panel (Chrome's panel is 320px
+   * to 400px by default and drags wider; anything up to 599px). A media
+   * query cannot read a custom property, so the two boundaries are written
+   * into the queries in base.css and components.css and into
+   * app/lib/surface.js, each with a comment pointing here; these tokens are
+   * the values every other rule reads. --tap is the smallest control the
+   * finger gets (44px in the panel, per Apple's and Google's guidance;
+   * pointer-sized elsewhere). --grid-min is the narrowest card column; the
+   * grids read min(var(--grid-min), 100%) so a column is never wider than
+   * its container. Both are re-declared per surface in base.css. */
+  --bp-panel: 599px;
+  --bp-narrow: 899px;
+  --panel-min: 320px;
+  --panel-max: 400px;
+  --tap: 32px;
+  --grid-min: 280px;
+
+  --shadow-drawer: 0 0 0 1px var(--line), 0 6.4px 14.4px rgb(0 0 0 / 0.13), 0 1.2px 3.6px rgb(0 0 0 / 0.11);
+  --scheme: light;
+  color-scheme: light;
+}
+
+[data-theme="light"] {
+  --bg-0: #faf9f8;
+  --bg-1: #ffffff;
+  --bg-2: #f3f2f1;
+  --bg-3: #edebe9;
+  --fg-0: #323130;
+  --fg-1: #605e5c;
+  --fg-2: #767574;
+  --line: #e1dfdd;
+  --accent: #0078d4;
+  --accent-fg: #ffffff;
+  --accent-bg: #deecf9;
+  --control-bg: #ffffff;
+  --control-line: #8a8886;
+  --trust-confirmed: #107c10;
+  --trust-confirmed-fg: #107c10;
+  --trust-confirmed-bg: #dff6dd;
+  --trust-asserted: #8a6d00;
+  --trust-asserted-fg: #8a6d00;
+  --trust-asserted-bg: #fff4ce;
+  --trust-suggested: #5c2e91;
+  --trust-suggested-fg: #5c2e91;
+  --trust-suggested-bg: #efe6fc;
+  --trust-inferred: #605e5c;
+  --trust-inferred-fg: #605e5c;
+  --trust-inferred-bg: #f3f2f1;
+  --hazard: #a4262c;
+  --hazard-fg: #a4262c;
+  --hazard-bg: #fde7e9;
+  --layer-fg: #484644;
+  --layer-bg: #f3f2f1;
+  --shadow-drawer: 0 0 0 1px var(--line), 0 6.4px 14.4px rgb(0 0 0 / 0.13), 0 1.2px 3.6px rgb(0 0 0 / 0.11);
+  --scheme: light;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]),
+  :root:not([data-theme="light"]) [data-theme]:not([data-theme="light"]) {
+    --bg-0: #161514;
+    --bg-1: #1b1a19;
+    --bg-2: #252423;
+    --bg-3: #323130;
+    --fg-0: #f3f2f1;
+    --fg-1: #c8c6c4;
+    --fg-2: #a19f9d;
+    --line: #3b3a39;
+    --accent: #2899f5;
+    --accent-fg: #1b1a19;
+    --accent-bg: #0f3357;
+    --control-bg: #1b1a19;
+    --control-line: #8a8886;
+    --trust-confirmed: #92c353;
+    --trust-confirmed-fg: #92c353;
+    --trust-confirmed-bg: #1f3a1c;
+    --trust-asserted: #f2c661;
+    --trust-asserted-fg: #f2c661;
+    --trust-asserted-bg: #3d3016;
+    --trust-suggested: #c3a5f0;
+    --trust-suggested-fg: #c3a5f0;
+    --trust-suggested-bg: #322346;
+    --trust-inferred: #a19f9d;
+    --trust-inferred-fg: #a19f9d;
+    --trust-inferred-bg: #292827;
+    --hazard: #f1707b;
+    --hazard-fg: #f1707b;
+    --hazard-bg: #442726;
+    --layer-fg: #c8c6c4;
+    --layer-bg: #292827;
+    --shadow-drawer: 0 0 0 1px var(--line), 0 6.4px 14.4px rgb(0 0 0 / 0.5), 0 1.2px 3.6px rgb(0 0 0 / 0.4);
+    --scheme: dark;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"],
+[data-theme="dark"] {
+    --bg-0: #161514;
+    --bg-1: #1b1a19;
+    --bg-2: #252423;
+    --bg-3: #323130;
+    --fg-0: #f3f2f1;
+    --fg-1: #c8c6c4;
+    --fg-2: #a19f9d;
+    --line: #3b3a39;
+    --accent: #2899f5;
+    --accent-fg: #1b1a19;
+    --accent-bg: #0f3357;
+    --control-bg: #1b1a19;
+    --control-line: #8a8886;
+    --trust-confirmed: #92c353;
+    --trust-confirmed-fg: #92c353;
+    --trust-confirmed-bg: #1f3a1c;
+    --trust-asserted: #f2c661;
+    --trust-asserted-fg: #f2c661;
+    --trust-asserted-bg: #3d3016;
+    --trust-suggested: #c3a5f0;
+    --trust-suggested-fg: #c3a5f0;
+    --trust-suggested-bg: #322346;
+    --trust-inferred: #a19f9d;
+    --trust-inferred-fg: #a19f9d;
+    --trust-inferred-bg: #292827;
+    --hazard: #f1707b;
+    --hazard-fg: #f1707b;
+    --hazard-bg: #442726;
+    --layer-fg: #c8c6c4;
+    --layer-bg: #292827;
+    --shadow-drawer: 0 0 0 1px var(--line), 0 6.4px 14.4px rgb(0 0 0 / 0.5), 0 1.2px 3.6px rgb(0 0 0 / 0.4);
+    --scheme: dark;
+    color-scheme: dark;
+}

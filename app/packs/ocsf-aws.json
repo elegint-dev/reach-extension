@@ -1,0 +1,4358 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "ocsf-aws",
+  "name": "Amazon Security Lake (OCSF) sources",
+  "pack_version": "0.1.0",
+  "description": "Six AWS log sources normalized to OCSF by Amazon Security Lake and indexed verbatim: CloudTrail and EKS audit API activity, Route 53 Resolver DNS queries, VPC Flow Logs connections, AWS WAF HTTP inspections and Security Hub findings (detection, compliance and vulnerability).",
+  "source": "OCSF 1.1.0 schema (schema.ocsf.io); AWS Security Lake's own OCSF source-identification table; Splunk_TA_aws props.conf for the six [ocsf:aws:*] stanzas",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "ocsf_aws",
+    "label": "Amazon Security Lake (OCSF) sources",
+    "description": "AWS log sources as Amazon Security Lake converts them to OCSF and Splunk_TA_aws indexes them verbatim: CloudTrail and EKS audit API calls, Route 53 Resolver DNS queries, VPC Flow Logs connections, AWS WAF HTTP inspections and Security Hub findings.",
+    "tags": [
+      "aws",
+      "ocsf",
+      "security-lake",
+      "cloud"
+    ],
+    "discriminator": "ocsf_class"
+  },
+  "concepts": {
+    "ocsf_class": {
+      "label": "OCSF class",
+      "type": "record_type",
+      "description": "Which OCSF event class the record belongs to; decides which other attributes are present. The discriminator for this family."
+    },
+    "ocsf_category": {
+      "label": "OCSF category",
+      "type": "enum",
+      "description": "The broader grouping a class belongs to (category_uid, category_name): Findings, Network Activity or Application Activity."
+    },
+    "ocsf_type_tag": {
+      "label": "OCSF type tag",
+      "type": "identifier",
+      "description": "type_uid and type_name: a calculated fully-qualified name for the record (class_uid times 100, plus activity_id), for example 'Network Activity: Refuse'."
+    },
+    "severity": {
+      "label": "Severity",
+      "type": "enum",
+      "description": "How severe OCSF normalizes this record's severity (severity_id, severity); shared across every class in this family."
+    },
+    "event_status": {
+      "label": "Event status",
+      "type": "outcome",
+      "description": "Whether the call this record describes succeeded (status_id, status); seen on the API Activity records."
+    },
+    "action": {
+      "label": "Action",
+      "type": "enum",
+      "description": "The policy decision a network control made on this connection or query (action_id, action)."
+    },
+    "disposition": {
+      "label": "Disposition",
+      "type": "enum",
+      "description": "The finer-grained outcome a security control reached (disposition_id, disposition): what actually happened to the request or connection, beyond plain allow/deny."
+    },
+    "observable_name": {
+      "label": "Observable pointer",
+      "type": "text",
+      "description": "Which attribute of this same record the observable entry is pivoting on, given as a dotted path, e.g. actor.user.name."
+    },
+    "observable_type": {
+      "label": "Observable type",
+      "type": "enum",
+      "description": "What kind of thing the observable's value is (type_id, type): a hostname, IP address, hash, resource id or one of 23 fixed OCSF kinds."
+    },
+    "observable_value": {
+      "label": "Observable value",
+      "type": "text",
+      "description": "The pivotable value itself, copied from the attribute observable_name points at."
+    },
+    "cloud_provider": {
+      "label": "Cloud provider",
+      "type": "enum",
+      "description": "The cloud vendor the record's resources live in; AWS on every record in this family."
+    },
+    "cloud_region": {
+      "label": "Cloud region",
+      "type": "region",
+      "description": "The AWS Region the event or resource belongs to."
+    },
+    "cloud_account_id": {
+      "label": "Cloud account id",
+      "type": "account_id",
+      "description": "The AWS account id the record's resources belong to."
+    },
+    "cloud_zone": {
+      "label": "Availability zone",
+      "type": "text",
+      "description": "The AWS Availability Zone the record's resource runs in."
+    },
+    "metadata_product_name": {
+      "label": "Product name",
+      "type": "text",
+      "description": "Which AWS service produced the underlying log, per AWS Security Lake's own source-identification table."
+    },
+    "metadata_product_vendor": {
+      "label": "Product vendor",
+      "type": "text",
+      "description": "The vendor of the product that generated the record; AWS throughout this family."
+    },
+    "metadata_product_feature": {
+      "label": "Product feature",
+      "type": "text",
+      "description": "Which feature of the product produced the record, per AWS Security Lake's source table."
+    },
+    "metadata_profiles": {
+      "label": "OCSF profiles",
+      "type": "text",
+      "description": "Which optional OCSF profiles (attribute bundles) this record was built with, e.g. cloud, security_control, datetime."
+    },
+    "metadata_version": {
+      "label": "OCSF schema version",
+      "type": "version",
+      "description": "The OCSF schema version this record was produced against, SemVer."
+    },
+    "metadata_product_version": {
+      "label": "Product version",
+      "type": "version",
+      "description": "The version of the AWS service/product that produced the record."
+    },
+    "metadata_uid": {
+      "label": "Metadata event id",
+      "type": "event_id",
+      "description": "A unique id the logging system assigned to this event instance."
+    },
+    "metadata_log_version": {
+      "label": "Source log schema version",
+      "type": "version",
+      "description": "The version of the original (pre-OCSF) log format this record was mapped from, e.g. the Kubernetes audit.k8s.io API version."
+    },
+    "metadata_log_level": {
+      "label": "Audit level",
+      "type": "enum",
+      "description": "The audit level the original log was generated at."
+    },
+    "metadata_processed_time": {
+      "label": "Processed time",
+      "type": "event_time",
+      "description": "When Security Lake's own pipeline processed this record, distinct from when the underlying event happened."
+    },
+    "metadata_extensions": {
+      "label": "Schema extensions",
+      "type": "text",
+      "description": "Which OCSF schema extensions were used to build this record."
+    },
+    "src_ip": {
+      "label": "Source address",
+      "type": "source_ip",
+      "description": "The network address the connection, query or request came from.",
+      "hazards": [
+        "ip_shared"
+      ]
+    },
+    "src_port": {
+      "label": "Source port",
+      "type": "count",
+      "description": "The TCP or UDP port the connection came from."
+    },
+    "dst_ip": {
+      "label": "Destination address",
+      "type": "dest_ip",
+      "description": "The network address the connection was made to.",
+      "hazards": [
+        "ip_shared"
+      ]
+    },
+    "dst_port": {
+      "label": "Destination port",
+      "type": "count",
+      "description": "The TCP or UDP port the connection was made to."
+    },
+    "endpoint_instance_uid": {
+      "label": "Instance id",
+      "type": "resource_id",
+      "description": "The EC2 instance (or resolver endpoint) id behind this network endpoint."
+    },
+    "endpoint_interface_uid": {
+      "label": "Network interface id",
+      "type": "resource_id",
+      "description": "The elastic network interface id the traffic crossed."
+    },
+    "endpoint_subnet_uid": {
+      "label": "Subnet id",
+      "type": "resource_id",
+      "description": "The VPC subnet id the network interface sits in."
+    },
+    "endpoint_vpc_uid": {
+      "label": "VPC id",
+      "type": "resource_id",
+      "description": "The VPC id the endpoint belongs to."
+    },
+    "endpoint_svc_name": {
+      "label": "Endpoint service name",
+      "type": "text",
+      "description": "The name of the AWS-managed service behind this endpoint, when there is one, else a placeholder."
+    },
+    "endpoint_uid": {
+      "label": "Endpoint resource id",
+      "type": "resource_id",
+      "description": "The id of the AWS resource (load balancer, API Gateway stage, CloudFront distribution) that terminated this HTTP request."
+    },
+    "endpoint_country": {
+      "label": "Endpoint country",
+      "type": "region",
+      "description": "The country GeoIP maps this endpoint's address to."
+    },
+    "connection_direction": {
+      "label": "Connection direction",
+      "type": "enum",
+      "description": "Which way the connection or query is travelling relative to the VPC boundary (direction_id, direction)."
+    },
+    "connection_protocol_name": {
+      "label": "Protocol name",
+      "type": "text",
+      "description": "The IANA transport protocol name in lowercase."
+    },
+    "connection_protocol_num": {
+      "label": "Protocol number",
+      "type": "count",
+      "description": "The IANA transport protocol number."
+    },
+    "connection_protocol_ver": {
+      "label": "IP version",
+      "type": "enum",
+      "description": "Which IP version this connection used."
+    },
+    "connection_boundary": {
+      "label": "Connection boundary",
+      "type": "enum",
+      "description": "Where this connection crosses relative to the VPC: same VPC, an internet or virtual private gateway, VPC peering, or one of 13 fixed OCSF boundaries."
+    },
+    "connection_tcp_flags": {
+      "label": "TCP flags",
+      "type": "bitmask",
+      "description": "The bitwise-OR of TCP control flags seen across the flow's aggregation window."
+    },
+    "traffic_bytes": {
+      "label": "Bytes transferred",
+      "type": "count",
+      "description": "The number of bytes transferred during the flow's aggregation window."
+    },
+    "traffic_packets": {
+      "label": "Packets transferred",
+      "type": "count",
+      "description": "The number of packets transferred during the flow's aggregation window."
+    },
+    "start_time": {
+      "label": "Start time",
+      "type": "event_time",
+      "description": "When this flow or operation began.",
+      "hazards": [
+        "index_time_ok_false"
+      ]
+    },
+    "end_time": {
+      "label": "End time",
+      "type": "event_time",
+      "description": "When this flow ended.",
+      "hazards": [
+        "index_time_ok_false"
+      ]
+    },
+    "flow_status_code": {
+      "label": "Flow log status",
+      "type": "enum",
+      "description": "Whether VPC Flow Logs captured this aggregation window normally."
+    },
+    "firewall_rule_uid": {
+      "label": "Firewall rule id",
+      "type": "resource_id",
+      "description": "The id of the rule that decided this record's disposition."
+    },
+    "activity_api": {
+      "label": "API activity",
+      "type": "enum",
+      "description": "Which CRUD-style bucket this API call falls into (activity_id, activity_name); shared by CloudTrail and EKS audit, both API Activity class."
+    },
+    "activity_network": {
+      "label": "Network activity",
+      "type": "enum",
+      "description": "The connection lifecycle stage this record reports (activity_id, activity_name); Network Activity class, VPC Flow Logs."
+    },
+    "activity_http": {
+      "label": "HTTP activity",
+      "type": "enum",
+      "description": "The HTTP method this request used, normalized (activity_id, activity_name); HTTP Activity class, AWS WAF."
+    },
+    "activity_dns": {
+      "label": "DNS activity",
+      "type": "enum",
+      "description": "Whether this record reports a query or a traffic summary (activity_id, activity_name); DNS Activity class, Route 53 Resolver."
+    },
+    "activity_finding": {
+      "label": "Finding activity",
+      "type": "enum",
+      "description": "Whether this finding record is a create, update or close (activity_id, activity_name); shared by all three Security Hub finding classes."
+    },
+    "api_operation": {
+      "label": "API operation",
+      "type": "text",
+      "description": "The API verb/operation this call invoked, e.g. DescribeDirectConnectGateways."
+    },
+    "api_service_name": {
+      "label": "API service name",
+      "type": "text",
+      "description": "Which AWS service endpoint received the call."
+    },
+    "api_request_uid": {
+      "label": "API request id",
+      "type": "request_id",
+      "description": "The unique id AWS assigned to this API request; ties CloudTrail records to the AWS-side request log."
+    },
+    "api_response_data": {
+      "label": "API response body",
+      "type": "raw_object",
+      "description": "The API call's response payload, as the service returned it."
+    },
+    "api_response_code": {
+      "label": "API response code",
+      "type": "count",
+      "description": "The status code the Kubernetes API server returned for this request."
+    },
+    "api_version": {
+      "label": "API group version",
+      "type": "version",
+      "description": "The Kubernetes API group/version this call targeted, e.g. v1."
+    },
+    "http_user_agent": {
+      "label": "User agent",
+      "type": "user_agent",
+      "description": "The caller's self-reported client string."
+    },
+    "actor_user_name": {
+      "label": "Actor user name",
+      "type": "user_name",
+      "description": "The human-readable IAM user name that made the call.",
+      "hazards": [
+        "example_placeholder"
+      ]
+    },
+    "actor_user_uid": {
+      "label": "Actor principal",
+      "type": "principal",
+      "description": "The actor's own identifier: an IAM principal ARN for CloudTrail, absent for the EKS worker-node identity in this sample."
+    },
+    "actor_user_uid_alt": {
+      "label": "Actor unique id",
+      "type": "user_id",
+      "description": "A second, stable IAM identifier for the actor that survives a user rename, distinct from the ARN."
+    },
+    "actor_credential_uid": {
+      "label": "Credential id",
+      "type": "access_key",
+      "description": "The id of the credential (access key or session token) that authenticated this call."
+    },
+    "actor_user_type": {
+      "label": "Actor identity type",
+      "type": "enum",
+      "description": "What kind of AWS or Kubernetes identity the actor is."
+    },
+    "actor_account_uid": {
+      "label": "Actor account id",
+      "type": "account_id",
+      "description": "The AWS account id the actor's identity belongs to."
+    },
+    "actor_session_uid": {
+      "label": "Session id",
+      "type": "session_id",
+      "description": "The Kubernetes API server's session identifier for this authenticated connection."
+    },
+    "actor_session_issuer": {
+      "label": "Session issuer",
+      "type": "principal",
+      "description": "The IAM principal (ARN) that issued the credentials behind this session, e.g. the assumed role."
+    },
+    "actor_user_groups": {
+      "label": "Actor groups",
+      "type": "text",
+      "description": "The Kubernetes RBAC groups the actor's identity belongs to, e.g. system:masters, system:authenticated."
+    },
+    "resources_name": {
+      "label": "Kubernetes object name",
+      "type": "text",
+      "description": "The name of the Kubernetes object this audit event's request or response body describes."
+    },
+    "resources_namespace": {
+      "label": "Kubernetes namespace",
+      "type": "text",
+      "description": "The Kubernetes namespace the object lives in; empty for cluster-scoped objects such as Node."
+    },
+    "resources_type": {
+      "label": "Kubernetes object kind",
+      "type": "text",
+      "description": "The Kubernetes Kind of the affected object, e.g. Node, Pod, ConfigMap."
+    },
+    "resources_uid": {
+      "label": "Kubernetes object uid",
+      "type": "resource_id",
+      "description": "The Kubernetes-assigned unique id of the object."
+    },
+    "resources_version": {
+      "label": "Kubernetes apiVersion",
+      "type": "version",
+      "description": "The Kubernetes apiVersion the affected object was read or written under."
+    },
+    "eks_message": {
+      "label": "Audit message",
+      "type": "text",
+      "description": "A short, source-specific summary line for the audit event."
+    },
+    "query_hostname": {
+      "label": "Query hostname",
+      "type": "domain",
+      "description": "The domain name the client queried."
+    },
+    "query_type": {
+      "label": "DNS record type",
+      "type": "enum",
+      "description": "The DNS resource record type of the query or answer, e.g. A, AAAA, CNAME."
+    },
+    "query_class": {
+      "label": "DNS record class",
+      "type": "enum",
+      "description": "The DNS class of the query or answer; almost always IN (internet)."
+    },
+    "dns_answer_rdata": {
+      "label": "Answer data",
+      "type": "text",
+      "description": "The resource data the DNS answer carried, e.g. the resolved IP address."
+    },
+    "rcode": {
+      "label": "Response code",
+      "type": "enum",
+      "description": "The DNS server's response code for the query, per RFC 6895 (rcode_id, rcode)."
+    },
+    "dns_firewall_domain_list_id": {
+      "label": "DNS Firewall domain list id",
+      "type": "resource_id",
+      "description": "The id of the Route 53 Resolver DNS Firewall domain list that matched this query, when one did."
+    },
+    "vpcflow_sublocation_type": {
+      "label": "Sublocation type",
+      "type": "enum",
+      "description": "Whether this flow's network interface sits in a Wavelength zone, an Outpost or a Local Zone."
+    },
+    "vpcflow_sublocation_id": {
+      "label": "Sublocation id",
+      "type": "identifier",
+      "description": "The id of the sublocation named by sublocation_type."
+    },
+    "http_method": {
+      "label": "HTTP method",
+      "type": "enum",
+      "description": "The HTTP request method."
+    },
+    "http_url_hostname": {
+      "label": "Request hostname",
+      "type": "domain",
+      "description": "The Host header (or CloudFront/ALB-resolved host) the request targeted."
+    },
+    "http_url_path": {
+      "label": "Request path",
+      "type": "text",
+      "description": "The URL path component of the request."
+    },
+    "http_request_uid": {
+      "label": "HTTP request id",
+      "type": "request_id",
+      "description": "The id the front-end AWS service (ALB, CloudFront, API Gateway) assigned this request; the ALB trace id for Application Load Balancer."
+    },
+    "http_request_version": {
+      "label": "HTTP version",
+      "type": "version",
+      "description": "The HTTP protocol version of the request."
+    },
+    "http_request_args": {
+      "label": "Query string",
+      "type": "text",
+      "description": "The request's query string arguments, as AWS WAF captured them."
+    },
+    "http_x_forwarded_for": {
+      "label": "X-Forwarded-For",
+      "type": "text",
+      "description": "The client address chain a proxy or load balancer recorded ahead of this request."
+    },
+    "http_status": {
+      "label": "HTTP status code",
+      "type": "count",
+      "description": "The numeric HTTP response status code, when AWS WAF's log captured one for this request."
+    },
+    "tls_ja3_hash": {
+      "label": "JA3 hash",
+      "type": "identifier",
+      "description": "The MD5 hash of the client's TLS ClientHello fingerprint (JA3)."
+    },
+    "tls_version": {
+      "label": "TLS version",
+      "type": "version",
+      "description": "The negotiated TLS protocol version."
+    },
+    "ja4_fingerprint": {
+      "label": "JA4 fingerprint",
+      "type": "identifier",
+      "description": "A 36-character hash of the client's TLS ClientHello, a newer alternative to JA3."
+    },
+    "firewall_rule_name": {
+      "label": "Firewall rule name",
+      "type": "text",
+      "description": "The human-assigned name of the rule."
+    },
+    "firewall_rule_type": {
+      "label": "Firewall rule type",
+      "type": "enum",
+      "description": "What kind of rule matched: an ordinary rule, a rate-based rule, or a rule group."
+    },
+    "firewall_rule_condition": {
+      "label": "Match condition",
+      "type": "text",
+      "description": "The category of threat or condition the rule tested for, e.g. SQL_INJECTION."
+    },
+    "firewall_rule_match_location": {
+      "label": "Match location",
+      "type": "text",
+      "description": "Which part of the request the matched data was found in."
+    },
+    "firewall_rule_match_details": {
+      "label": "Match details",
+      "type": "text",
+      "description": "The literal data in the request that triggered the rule."
+    },
+    "firewall_rule_rate_limit": {
+      "label": "Rate limit",
+      "type": "count",
+      "description": "The configured request-rate ceiling for a rate-based rule."
+    },
+    "firewall_rule_sensitivity": {
+      "label": "Rule sensitivity",
+      "type": "enum",
+      "description": "The configured sensitivity level of the matched inspection rule (e.g. a SQLi/XSS body-inspection rule)."
+    },
+    "waf_rule_group_id": {
+      "label": "Rule group id",
+      "type": "identifier",
+      "description": "The id of the rule group that acted on this request."
+    },
+    "waf_http_fragment": {
+      "label": "URL fragment",
+      "type": "text",
+      "description": "The part of the request URL after the # symbol."
+    },
+    "waf_http_host": {
+      "label": "Raw Host header",
+      "type": "domain",
+      "description": "The Host header value AWS WAF's httpRequest object captured, before any front-end normalization."
+    },
+    "waf_http_scheme": {
+      "label": "Request scheme",
+      "type": "text",
+      "description": "The URL scheme (http/https) AWS WAF's httpRequest object captured."
+    },
+    "compliance_control": {
+      "label": "Compliance control",
+      "type": "text",
+      "description": "The specific control (e.g. a Security Hub control or CIS benchmark item) this finding checks."
+    },
+    "compliance_requirements": {
+      "label": "Compliance requirements",
+      "type": "text",
+      "description": "Which specific requirements of a standard (e.g. a NIST 800-53 control) this finding is checked against."
+    },
+    "compliance_standards": {
+      "label": "Compliance standards",
+      "type": "text",
+      "description": "Which named standards or benchmarks this finding is evaluated against."
+    },
+    "finding_status": {
+      "label": "Finding status",
+      "type": "outcome",
+      "description": "Where this finding stands in its lifecycle; the same normalized status backs both the finding's top-level status and its nested compliance.status."
+    },
+    "evidence_data": {
+      "label": "Evidence data",
+      "type": "raw_object",
+      "description": "The raw artifact data backing one piece of supporting evidence for a Detection Finding."
+    },
+    "evidence_city": {
+      "label": "Evidence source city",
+      "type": "text",
+      "description": "The city GeoIP maps the evidence's source address to."
+    },
+    "evidence_coordinates": {
+      "label": "Evidence source coordinates",
+      "type": "text",
+      "description": "The latitude/longitude GeoIP maps the evidence's source address to."
+    },
+    "finding_uid": {
+      "label": "Finding id",
+      "type": "event_id",
+      "description": "The unique id of this finding, stable across its create/update/close lifecycle."
+    },
+    "finding_title": {
+      "label": "Finding title",
+      "type": "text",
+      "description": "A short phrase summarizing the finding."
+    },
+    "finding_desc": {
+      "label": "Finding description",
+      "type": "text",
+      "description": "The full description of the finding."
+    },
+    "finding_types": {
+      "label": "Finding types",
+      "type": "text",
+      "description": "The taxonomy path(s) the finding provider classified this finding under."
+    },
+    "finding_src_url": {
+      "label": "Finding source URL",
+      "type": "text",
+      "description": "A link to this finding in the originating product's own console."
+    },
+    "finding_created_time": {
+      "label": "Finding created time",
+      "type": "event_time",
+      "description": "When the finding was created."
+    },
+    "finding_first_seen_time": {
+      "label": "Finding first seen",
+      "type": "event_time",
+      "description": "When the underlying issue was first observed; can predate created_time."
+    },
+    "finding_last_seen_time": {
+      "label": "Finding last seen",
+      "type": "event_time",
+      "description": "When the underlying issue was most recently observed."
+    },
+    "finding_modified_time": {
+      "label": "Finding modified time",
+      "type": "event_time",
+      "description": "When the finding record was last modified."
+    },
+    "remediation_desc": {
+      "label": "Remediation guidance",
+      "type": "text",
+      "description": "The recommended fix, for the finding as a whole or for one affected package."
+    },
+    "remediation_references": {
+      "label": "Remediation references",
+      "type": "text",
+      "description": "Supporting URLs for the remediation guidance."
+    },
+    "finding_resource_uid": {
+      "label": "Affected resource id",
+      "type": "resource_id",
+      "description": "The id of the AWS resource this finding is about."
+    },
+    "finding_resource_type": {
+      "label": "Affected resource type",
+      "type": "text",
+      "description": "The AWS resource type this finding is about, e.g. AwsEc2Instance."
+    },
+    "finding_resource_region": {
+      "label": "Affected resource region",
+      "type": "region",
+      "description": "The AWS Region the affected resource lives in."
+    },
+    "finding_resource_partition": {
+      "label": "Affected resource partition",
+      "type": "text",
+      "description": "The AWS partition the affected resource lives in: standard, China or GovCloud."
+    },
+    "finding_resource_data": {
+      "label": "Affected resource data",
+      "type": "raw_object",
+      "description": "A snapshot of the affected resource's own attributes, shape depends on its resource type."
+    },
+    "cve_uid": {
+      "label": "CVE id",
+      "type": "identifier",
+      "description": "The CVE identifier for the vulnerability."
+    },
+    "cve_cvss_base_score": {
+      "label": "CVSS base score",
+      "type": "count",
+      "description": "The CVSS numeric severity score for the CVE."
+    },
+    "cve_cvss_vector": {
+      "label": "CVSS vector",
+      "type": "text",
+      "description": "The CVSS vector string the base score was computed from."
+    },
+    "cve_cvss_version": {
+      "label": "CVSS version",
+      "type": "version",
+      "description": "Which CVSS scoring standard version this score uses."
+    },
+    "cve_created_time": {
+      "label": "CVE created time",
+      "type": "event_time",
+      "description": "When this CVE record was published."
+    },
+    "cve_modified_time": {
+      "label": "CVE modified time",
+      "type": "event_time",
+      "description": "When this CVE record was last updated upstream."
+    },
+    "cve_epss_score": {
+      "label": "EPSS score",
+      "type": "count",
+      "description": "The Exploit Prediction Scoring System probability that this CVE is exploited in the next 30 days."
+    },
+    "cve_references": {
+      "label": "CVE references",
+      "type": "text",
+      "description": "Reference URLs for the CVE."
+    },
+    "vuln_is_exploit_available": {
+      "label": "Exploit available",
+      "type": "flag",
+      "description": "Whether a public exploit or proof-of-concept exists for this vulnerability."
+    },
+    "vuln_is_fix_available": {
+      "label": "Fix available",
+      "type": "flag",
+      "description": "Whether a vendor fix exists for this vulnerability."
+    },
+    "vuln_vendor_name": {
+      "label": "Vulnerability vendor",
+      "type": "text",
+      "description": "The vendor or scanner that identified the vulnerability, e.g. Amazon Inspector."
+    },
+    "vuln_references": {
+      "label": "Vulnerability references",
+      "type": "text",
+      "description": "Reference URLs for the vulnerability as a whole."
+    },
+    "pkg_name": {
+      "label": "Package name",
+      "type": "text",
+      "description": "The name of an affected software package."
+    },
+    "pkg_version": {
+      "label": "Package version",
+      "type": "version",
+      "description": "The installed version of the affected package."
+    },
+    "pkg_fixed_in_version": {
+      "label": "Fixed-in version",
+      "type": "version",
+      "description": "The package version that resolves the vulnerability, when known."
+    },
+    "pkg_architecture": {
+      "label": "Package architecture",
+      "type": "text",
+      "description": "The CPU architecture the affected package was built for."
+    },
+    "pkg_epoch": {
+      "label": "Package epoch",
+      "type": "text",
+      "description": "The package manager's epoch field, used to order versions when the version string alone cannot."
+    },
+    "pkg_package_manager": {
+      "label": "Package manager",
+      "type": "enum",
+      "description": "Which package manager or ecosystem the affected package belongs to."
+    },
+    "pkg_release": {
+      "label": "Package release",
+      "type": "text",
+      "description": "The distribution-specific release field of the affected package's version."
+    },
+    "unmapped_recipient_account": {
+      "label": "Recipient account id",
+      "type": "account_id",
+      "description": "CloudTrail's own recipientAccountId field, preserved verbatim in unmapped because OCSF's mapping did not carry it into cloud.account.uid on every record shape.",
+      "hazards": [
+        "unmapped_passthrough"
+      ]
+    },
+    "securityhub_record_state": {
+      "label": "Record state",
+      "type": "enum",
+      "description": "Whether Security Hub still shows this finding as active.",
+      "hazards": [
+        "unmapped_passthrough"
+      ]
+    },
+    "securityhub_workflow_state": {
+      "label": "Workflow state",
+      "type": "enum",
+      "description": "The retired single-value predecessor of ASFF's Workflow.Status investigation-tracking field.",
+      "hazards": [
+        "unmapped_passthrough"
+      ]
+    },
+    "securityhub_sample": {
+      "label": "Sample finding flag",
+      "type": "flag",
+      "description": "Whether this finding is one of Security Hub's own fictitious sample findings, not a real detection.",
+      "hazards": [
+        "unmapped_passthrough"
+      ]
+    },
+    "k8s_event_kind": {
+      "label": "Audit event kind",
+      "type": "text",
+      "description": "The Kubernetes API object kind of the audit log entry itself; Event on every record.",
+      "hazards": [
+        "unmapped_passthrough"
+      ]
+    },
+    "k8s_object_kind": {
+      "label": "Kubernetes object kind (raw)",
+      "type": "text",
+      "description": "The Kind of the object in the request or response body, from the original Kubernetes audit record.",
+      "hazards": [
+        "unmapped_passthrough"
+      ]
+    },
+    "k8s_object_name": {
+      "label": "Kubernetes object name (raw)",
+      "type": "text",
+      "description": "The name of the object in the request or response body, from the original Kubernetes audit record.",
+      "hazards": [
+        "unmapped_passthrough"
+      ]
+    },
+    "k8s_source_ips": {
+      "label": "Kubernetes audit source IPs",
+      "type": "source_ip",
+      "description": "The client address chain the Kubernetes API server itself recorded, from the original audit record's sourceIPs list.",
+      "hazards": [
+        "unmapped_passthrough",
+        "ip_shared"
+      ]
+    },
+    "k8s_provider_id": {
+      "label": "Node provider id",
+      "type": "resource_id",
+      "description": "The cloud-provider identity string Kubernetes stores for this Node, linking it back to the EC2 instance.",
+      "hazards": [
+        "unmapped_passthrough"
+      ]
+    },
+    "record_time": {
+      "label": "Event time",
+      "type": "event_time",
+      "description": "The record's own primary timestamp: when the underlying activity happened, per OCSF's normalization.",
+      "hazards": [
+        "index_time_ok_false"
+      ]
+    },
+    "metadata_event_code": {
+      "label": "Source event code",
+      "type": "text",
+      "description": "CloudTrail's own eventType value (e.g. AwsApiCall), carried through into OCSF's metadata.event_code."
+    },
+    "http_header": {
+      "label": "HTTP header",
+      "type": "text",
+      "description": "One captured request header's name or value."
+    },
+    "http_referrer": {
+      "label": "HTTP referrer",
+      "type": "text",
+      "description": "The Referer header of the request, when present."
+    }
+  },
+  "containers": {
+    "ocsf:aws:cloudtrail": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "CloudTrail management, data and network activity events, delivered to Splunk_TA_aws as Amazon Security Lake's own OCSF API Activity mapping (class_uid 6003), one JSON object per event.",
+      "tags": [
+        "aws",
+        "cloudtrail",
+        "ocsf",
+        "security-lake",
+        "api"
+      ],
+      "note": "KV_MODE=json only; no REPORT/FIELDALIAS/modinput touches this stanza (same shape as aws:asl). index_time_ok is false."
+    },
+    "ocsf:aws:eks:audit": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Amazon EKS control-plane (Kubernetes) audit log events, mapped by Security Lake to OCSF API Activity (class_uid 6003); the request/response Kubernetes object bodies survive in unmapped.*.",
+      "tags": [
+        "aws",
+        "eks",
+        "kubernetes",
+        "ocsf",
+        "security-lake",
+        "api"
+      ],
+      "note": "KV_MODE=json only, no modinput. The unmapped.* Node status/capacity/labels/conditions dump is large and mostly left out of this pack; see the report for what."
+    },
+    "ocsf:aws:route53resolver": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Route 53 Resolver query log entries, mapped by Security Lake to OCSF DNS Activity (class_uid 4003), one query-log record per event.",
+      "tags": [
+        "aws",
+        "route53",
+        "dns",
+        "ocsf",
+        "security-lake"
+      ],
+      "note": "KV_MODE=json only, no modinput. index_time_ok is false."
+    },
+    "ocsf:aws:vpcflow": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "VPC Flow Logs connection records, mapped by Security Lake to OCSF Network Activity (class_uid 4001), one flow-log aggregation-window record per event.",
+      "tags": [
+        "aws",
+        "vpc",
+        "flow-logs",
+        "ocsf",
+        "security-lake",
+        "network"
+      ],
+      "note": "KV_MODE=json, TIME_FORMAT=%s%3N. index_time_ok is false."
+    },
+    "ocsf:aws:waf": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "AWS WAF web ACL traffic logs, mapped by Security Lake to OCSF HTTP Activity (class_uid 4002), one inspected request per event.",
+      "tags": [
+        "aws",
+        "waf",
+        "http",
+        "ocsf",
+        "security-lake"
+      ],
+      "note": "KV_MODE=json, TIME_PREFIX targets the top-level time key specifically (time_dt is a second, nested timestamp string). index_time_ok is false."
+    },
+    "ocsf:aws:securityhub:finding": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "AWS Security Hub findings (from GuardDuty, Inspector, compliance standard checks and Security Hub's own controls), mapped by Security Lake to one of three OCSF finding classes depending on the finding's own kind.",
+      "tags": [
+        "aws",
+        "security-hub",
+        "findings",
+        "ocsf",
+        "security-lake",
+        "guardduty",
+        "inspector"
+      ],
+      "note": "KV_MODE=json, no modinput. Carries three OCSF classes on one sourcetype: Detection Finding (GuardDuty-style), Compliance Finding (standard checks) and Vulnerability Finding (Inspector)."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "activity_id",
+      "concept": "activity_api",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "activity_name",
+      "concept": "activity_api",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "actor.user.account.uid",
+      "concept": "actor_account_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "actor.user.credential_uid",
+      "concept": "actor_credential_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "actor.user.name",
+      "concept": "actor_user_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "actor.user.type",
+      "concept": "actor_user_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "actor.user.uid",
+      "concept": "actor_user_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "actor.user.uid_alt",
+      "concept": "actor_user_uid_alt",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "api.operation",
+      "concept": "api_operation",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "api.request.uid",
+      "concept": "api_request_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "api.response.data",
+      "concept": "api_response_data",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "api.service.name",
+      "concept": "api_service_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "category_name",
+      "concept": "ocsf_category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "category_uid",
+      "concept": "ocsf_category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "class_name",
+      "concept": "ocsf_class",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "class_uid",
+      "concept": "ocsf_class",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "cloud.provider",
+      "concept": "cloud_provider",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "cloud.region",
+      "concept": "cloud_region",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "http_request.user_agent",
+      "concept": "http_user_agent",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "metadata.event_code",
+      "concept": "metadata_event_code",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "metadata.product.feature.name",
+      "concept": "metadata_product_feature",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "metadata.product.name",
+      "concept": "metadata_product_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "metadata.product.vendor_name",
+      "concept": "metadata_product_vendor",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "metadata.product.version",
+      "concept": "metadata_product_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "metadata.profiles{}",
+      "concept": "metadata_profiles",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "metadata.uid",
+      "concept": "metadata_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "metadata.version",
+      "concept": "metadata_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "observables{}.name",
+      "concept": "observable_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "observables{}.type",
+      "concept": "observable_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "observables{}.type_id",
+      "concept": "observable_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "observables{}.value",
+      "concept": "observable_value",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "severity",
+      "concept": "severity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "severity_id",
+      "concept": "severity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "src_endpoint.ip",
+      "concept": "src_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "status",
+      "concept": "event_status",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "time",
+      "concept": "record_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "time_dt",
+      "concept": "record_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "type_name",
+      "concept": "ocsf_type_tag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "type_uid",
+      "concept": "ocsf_type_tag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:cloudtrail",
+      "column": "unmapped.recipientAccountId",
+      "concept": "unmapped_recipient_account",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "activity_id",
+      "concept": "activity_api",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "activity_name",
+      "concept": "activity_api",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "actor.session.credential_uid",
+      "concept": "actor_credential_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "actor.session.issuer",
+      "concept": "actor_session_issuer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "actor.session.uid",
+      "concept": "actor_session_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "actor.user.groups{}.name",
+      "concept": "actor_user_groups",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "actor.user.name",
+      "concept": "actor_user_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "actor.user.type_id",
+      "concept": "actor_user_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "actor.user.uid",
+      "concept": "actor_user_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "api.operation",
+      "concept": "api_operation",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "api.request.uid",
+      "concept": "api_request_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "api.response.code",
+      "concept": "api_response_code",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "api.version",
+      "concept": "api_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "category_name",
+      "concept": "ocsf_category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "category_uid",
+      "concept": "ocsf_category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "class_name",
+      "concept": "ocsf_class",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "class_uid",
+      "concept": "ocsf_class",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "cloud.account.uid",
+      "concept": "cloud_account_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "cloud.provider",
+      "concept": "cloud_provider",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "http_request.url.path",
+      "concept": "http_url_path",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "http_request.user_agent",
+      "concept": "http_user_agent",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "message",
+      "concept": "eks_message",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "metadata.log_level",
+      "concept": "metadata_log_level",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "metadata.product.feature.name",
+      "concept": "metadata_product_feature",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "metadata.product.name",
+      "concept": "metadata_product_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "metadata.product.vendor_name",
+      "concept": "metadata_product_vendor",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "metadata.product.version",
+      "concept": "metadata_product_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "metadata.profiles{}",
+      "concept": "metadata_profiles",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "metadata.version",
+      "concept": "metadata_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "observables{}.name",
+      "concept": "observable_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "observables{}.type",
+      "concept": "observable_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "observables{}.type_id",
+      "concept": "observable_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "observables{}.value",
+      "concept": "observable_value",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "resources{}.name",
+      "concept": "resources_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "resources{}.namespace",
+      "concept": "resources_namespace",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "resources{}.type",
+      "concept": "resources_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "resources{}.uid",
+      "concept": "resources_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "resources{}.version",
+      "concept": "resources_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "severity",
+      "concept": "severity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "severity_id",
+      "concept": "severity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "src_endpoint.ip",
+      "concept": "src_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "start_time",
+      "concept": "start_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "start_time_dt",
+      "concept": "start_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "time",
+      "concept": "record_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "time_dt",
+      "concept": "record_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "type_name",
+      "concept": "ocsf_type_tag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "type_uid",
+      "concept": "ocsf_type_tag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "unmapped.kind",
+      "concept": "k8s_event_kind",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "unmapped.requestObject.kind",
+      "concept": "k8s_object_kind",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "unmapped.responseObject.kind",
+      "concept": "k8s_object_kind",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "unmapped.requestObject.metadata.name",
+      "concept": "k8s_object_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "unmapped.responseObject.metadata.name",
+      "concept": "k8s_object_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "unmapped.requestObject.spec.providerID",
+      "concept": "k8s_provider_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "unmapped.responseObject.spec.providerID",
+      "concept": "k8s_provider_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:eks:audit",
+      "column": "unmapped.sourceIPs[]",
+      "concept": "k8s_source_ips",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "action",
+      "concept": "action",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "action_id",
+      "concept": "action",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "activity_id",
+      "concept": "activity_dns",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "activity_name",
+      "concept": "activity_dns",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "answers{}.class",
+      "concept": "query_class",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "answers{}.rdata",
+      "concept": "dns_answer_rdata",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "answers{}.type",
+      "concept": "query_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "category_name",
+      "concept": "ocsf_category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "category_uid",
+      "concept": "ocsf_category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "class_name",
+      "concept": "ocsf_class",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "class_uid",
+      "concept": "ocsf_class",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "cloud.account.uid",
+      "concept": "cloud_account_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "cloud.provider",
+      "concept": "cloud_provider",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "cloud.region",
+      "concept": "cloud_region",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "connection_info.direction",
+      "concept": "connection_direction",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "connection_info.direction_id",
+      "concept": "connection_direction",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "connection_info.protocol_name",
+      "concept": "connection_protocol_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "disposition",
+      "concept": "disposition",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "dst_endpoint.instance_uid",
+      "concept": "endpoint_instance_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "dst_endpoint.interface_uid",
+      "concept": "endpoint_interface_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "firewall_rule.uid",
+      "concept": "firewall_rule_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "metadata.product.feature.name",
+      "concept": "metadata_product_feature",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "metadata.product.name",
+      "concept": "metadata_product_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "metadata.product.vendor_name",
+      "concept": "metadata_product_vendor",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "metadata.product.version",
+      "concept": "metadata_product_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "metadata.profiles{}",
+      "concept": "metadata_profiles",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "metadata.version",
+      "concept": "metadata_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "observables{}.name",
+      "concept": "observable_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "observables{}.type",
+      "concept": "observable_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "observables{}.type_id",
+      "concept": "observable_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "observables{}.value",
+      "concept": "observable_value",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "query.class",
+      "concept": "query_class",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "query.hostname",
+      "concept": "query_hostname",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "query.type",
+      "concept": "query_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "rcode",
+      "concept": "rcode",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "rcode_id",
+      "concept": "rcode",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "severity",
+      "concept": "severity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "severity_id",
+      "concept": "severity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "src_endpoint.ip",
+      "concept": "src_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "src_endpoint.port",
+      "concept": "src_port",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "src_endpoint.vpc_uid",
+      "concept": "endpoint_vpc_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "time",
+      "concept": "record_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "time_dt",
+      "concept": "record_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "type_name",
+      "concept": "ocsf_type_tag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "type_uid",
+      "concept": "ocsf_type_tag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:route53resolver",
+      "column": "unmapped.firewall_domain_list_id",
+      "concept": "dns_firewall_domain_list_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "action",
+      "concept": "action",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "action_id",
+      "concept": "action",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "activity_id",
+      "concept": "activity_network",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "activity_name",
+      "concept": "activity_network",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "category_name",
+      "concept": "ocsf_category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "category_uid",
+      "concept": "ocsf_category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "class_name",
+      "concept": "ocsf_class",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "class_uid",
+      "concept": "ocsf_class",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "cloud.account.uid",
+      "concept": "cloud_account_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "cloud.provider",
+      "concept": "cloud_provider",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "cloud.region",
+      "concept": "cloud_region",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "cloud.zone",
+      "concept": "cloud_zone",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "connection_info.boundary",
+      "concept": "connection_boundary",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "connection_info.boundary_id",
+      "concept": "connection_boundary",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "connection_info.direction",
+      "concept": "connection_direction",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "connection_info.direction_id",
+      "concept": "connection_direction",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "connection_info.protocol_num",
+      "concept": "connection_protocol_num",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "connection_info.protocol_ver",
+      "concept": "connection_protocol_ver",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "connection_info.tcp_flags",
+      "concept": "connection_tcp_flags",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "disposition",
+      "concept": "disposition",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "dst_endpoint.instance_uid",
+      "concept": "endpoint_instance_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "dst_endpoint.interface_uid",
+      "concept": "endpoint_interface_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "dst_endpoint.ip",
+      "concept": "dst_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "dst_endpoint.port",
+      "concept": "dst_port",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "dst_endpoint.subnet_uid",
+      "concept": "endpoint_subnet_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "dst_endpoint.svc_name",
+      "concept": "endpoint_svc_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "dst_endpoint.vpc_uid",
+      "concept": "endpoint_vpc_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "end_time_dt",
+      "concept": "end_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "metadata.product.feature.name",
+      "concept": "metadata_product_feature",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "metadata.product.name",
+      "concept": "metadata_product_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "metadata.product.vendor_name",
+      "concept": "metadata_product_vendor",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "metadata.product.version",
+      "concept": "metadata_product_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "metadata.profiles{}",
+      "concept": "metadata_profiles",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "metadata.version",
+      "concept": "metadata_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "observables{}.name",
+      "concept": "observable_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "observables{}.type",
+      "concept": "observable_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "observables{}.type_id",
+      "concept": "observable_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "observables{}.value",
+      "concept": "observable_value",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "severity",
+      "concept": "severity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "severity_id",
+      "concept": "severity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "src_endpoint.ip",
+      "concept": "src_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "src_endpoint.port",
+      "concept": "src_port",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "src_endpoint.svc_name",
+      "concept": "endpoint_svc_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "start_time_dt",
+      "concept": "start_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "status_code",
+      "concept": "flow_status_code",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "time",
+      "concept": "record_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "time_dt",
+      "concept": "record_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "traffic.bytes",
+      "concept": "traffic_bytes",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "traffic.packets",
+      "concept": "traffic_packets",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "type_name",
+      "concept": "ocsf_type_tag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "type_uid",
+      "concept": "ocsf_type_tag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "unmapped.sublocation_id",
+      "concept": "vpcflow_sublocation_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:vpcflow",
+      "column": "unmapped.sublocation_type",
+      "concept": "vpcflow_sublocation_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "action",
+      "concept": "action",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "action_id",
+      "concept": "action",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "activity_id",
+      "concept": "activity_http",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "activity_name",
+      "concept": "activity_http",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "category_name",
+      "concept": "ocsf_category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "category_uid",
+      "concept": "ocsf_category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "class_name",
+      "concept": "ocsf_class",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "class_uid",
+      "concept": "ocsf_class",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "cloud.provider",
+      "concept": "cloud_provider",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "disposition",
+      "concept": "disposition",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "disposition_id",
+      "concept": "disposition",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "firewall_rule.condition",
+      "concept": "firewall_rule_condition",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "firewall_rule.match_details{}",
+      "concept": "firewall_rule_match_details",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "firewall_rule.match_location",
+      "concept": "firewall_rule_match_location",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "firewall_rule.name",
+      "concept": "firewall_rule_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "firewall_rule.rate_limit",
+      "concept": "firewall_rule_rate_limit",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "firewall_rule.sensitivity",
+      "concept": "firewall_rule_sensitivity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "firewall_rule.type",
+      "concept": "firewall_rule_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "firewall_rule.uid",
+      "concept": "firewall_rule_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "http_request.args",
+      "concept": "http_request_args",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "http_request.http_headers{}.name",
+      "concept": "http_header",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "http_request.http_headers{}.value",
+      "concept": "http_header",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "http_request.http_method",
+      "concept": "http_method",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "http_request.referrer",
+      "concept": "http_referrer",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "http_request.uid",
+      "concept": "http_request_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "http_request.url.hostname",
+      "concept": "http_url_hostname",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "http_request.url.path",
+      "concept": "http_url_path",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "http_request.user_agent",
+      "concept": "http_user_agent",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "http_request.version",
+      "concept": "http_request_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "http_request.x_forwarded_for{}",
+      "concept": "http_x_forwarded_for",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "http_status",
+      "concept": "http_status",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "ja4_fingerprint_list{}.value",
+      "concept": "ja4_fingerprint",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "metadata.product.name",
+      "concept": "metadata_product_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "metadata.product.vendor_name",
+      "concept": "metadata_product_vendor",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "metadata.product.version",
+      "concept": "metadata_product_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "metadata.profiles{}",
+      "concept": "metadata_profiles",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "metadata.version",
+      "concept": "metadata_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "observables{}.name",
+      "concept": "observable_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "observables{}.type",
+      "concept": "observable_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "observables{}.type_id",
+      "concept": "observable_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "observables{}.value",
+      "concept": "observable_value",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "severity",
+      "concept": "severity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "severity_id",
+      "concept": "severity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "src_endpoint.ip",
+      "concept": "src_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "src_endpoint.location.country",
+      "concept": "endpoint_country",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "src_endpoint.svc_name",
+      "concept": "endpoint_svc_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "src_endpoint.uid",
+      "concept": "endpoint_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "time",
+      "concept": "record_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "time_dt",
+      "concept": "record_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "tls.ja3_hash.value",
+      "concept": "tls_ja3_hash",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "tls.version",
+      "concept": "tls_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "type_name",
+      "concept": "ocsf_type_tag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "type_uid",
+      "concept": "ocsf_type_tag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "unmapped.httpRequest.fragment",
+      "concept": "waf_http_fragment",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "unmapped.httpRequest.host",
+      "concept": "waf_http_host",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "unmapped.httpRequest.scheme",
+      "concept": "waf_http_scheme",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:waf",
+      "column": "unmapped.ruleGroupList[].ruleGroupId",
+      "concept": "waf_rule_group_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "activity_id",
+      "concept": "activity_finding",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "activity_name",
+      "concept": "activity_finding",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "category_name",
+      "concept": "ocsf_category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "category_uid",
+      "concept": "ocsf_category",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "class_name",
+      "concept": "ocsf_class",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "class_uid",
+      "concept": "ocsf_class",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "cloud.account.uid",
+      "concept": "cloud_account_id",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "cloud.provider",
+      "concept": "cloud_provider",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "cloud.region",
+      "concept": "cloud_region",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "compliance.control",
+      "concept": "compliance_control",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "compliance.requirements{}",
+      "concept": "compliance_requirements",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "compliance.standards{}",
+      "concept": "compliance_standards",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "compliance.status",
+      "concept": "finding_status",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "evidences{}.api.operation",
+      "concept": "api_operation",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "evidences{}.api.service.name",
+      "concept": "api_service_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "evidences{}.data",
+      "concept": "evidence_data",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "evidences{}.src_endpoint.ip",
+      "concept": "src_ip",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "evidences{}.src_endpoint.location.city",
+      "concept": "evidence_city",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "evidences{}.src_endpoint.location.coordinates{}",
+      "concept": "evidence_coordinates",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "evidences{}.src_endpoint.location.country",
+      "concept": "endpoint_country",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "finding_info.created_time_dt",
+      "concept": "finding_created_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "finding_info.desc",
+      "concept": "finding_desc",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "finding_info.first_seen_time_dt",
+      "concept": "finding_first_seen_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "finding_info.last_seen_time_dt",
+      "concept": "finding_last_seen_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "finding_info.modified_time_dt",
+      "concept": "finding_modified_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "finding_info.src_url",
+      "concept": "finding_src_url",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "finding_info.title",
+      "concept": "finding_title",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "finding_info.types{}",
+      "concept": "finding_types",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "finding_info.uid",
+      "concept": "finding_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "metadata.extensions{}.name",
+      "concept": "metadata_extensions",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "metadata.extensions{}.uid",
+      "concept": "metadata_extensions",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "metadata.extensions{}.version",
+      "concept": "metadata_extensions",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "metadata.log_version",
+      "concept": "metadata_log_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "metadata.processed_time_dt",
+      "concept": "metadata_processed_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "metadata.product.name",
+      "concept": "metadata_product_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "metadata.product.vendor_name",
+      "concept": "metadata_product_vendor",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "metadata.product.version",
+      "concept": "metadata_product_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "metadata.profiles{}",
+      "concept": "metadata_profiles",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "metadata.version",
+      "concept": "metadata_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "observables{}.name",
+      "concept": "observable_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "observables{}.type",
+      "concept": "observable_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "observables{}.type_id",
+      "concept": "observable_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "observables{}.value",
+      "concept": "observable_value",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "remediation.desc",
+      "concept": "remediation_desc",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "remediation.references{}",
+      "concept": "remediation_references",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "resource.cloud_partition",
+      "concept": "finding_resource_partition",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "resource.data",
+      "concept": "finding_resource_data",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "resource.region",
+      "concept": "finding_resource_region",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "resource.type",
+      "concept": "finding_resource_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "resource.uid",
+      "concept": "finding_resource_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "resources{}.cloud_partition",
+      "concept": "finding_resource_partition",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "resources{}.data",
+      "concept": "finding_resource_data",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "resources{}.region",
+      "concept": "finding_resource_region",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "resources{}.type",
+      "concept": "finding_resource_type",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "resources{}.uid",
+      "concept": "finding_resource_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "severity",
+      "concept": "severity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "severity_id",
+      "concept": "severity",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "status",
+      "concept": "finding_status",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "time",
+      "concept": "record_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "time_dt",
+      "concept": "record_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "type_name",
+      "concept": "ocsf_type_tag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "type_uid",
+      "concept": "ocsf_type_tag",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "unmapped.RecordState",
+      "concept": "securityhub_record_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "unmapped.Sample",
+      "concept": "securityhub_sample",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "unmapped.WorkflowState",
+      "concept": "securityhub_workflow_state",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.affected_packages{}.architecture",
+      "concept": "pkg_architecture",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.affected_packages{}.epoch",
+      "concept": "pkg_epoch",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.affected_packages{}.fixed_in_version",
+      "concept": "pkg_fixed_in_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.affected_packages{}.name",
+      "concept": "pkg_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.affected_packages{}.package_manager",
+      "concept": "pkg_package_manager",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.affected_packages{}.release",
+      "concept": "pkg_release",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.affected_packages{}.remediation.desc",
+      "concept": "remediation_desc",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.affected_packages{}.version",
+      "concept": "pkg_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.cve.created_time_dt",
+      "concept": "cve_created_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.cve.cvss{}.base_score",
+      "concept": "cve_cvss_base_score",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.cve.cvss{}.vector_string",
+      "concept": "cve_cvss_vector",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.cve.cvss{}.version",
+      "concept": "cve_cvss_version",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.cve.epss.score",
+      "concept": "cve_epss_score",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.cve.modified_time_dt",
+      "concept": "cve_modified_time",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.cve.references{}",
+      "concept": "cve_references",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.cve.uid",
+      "concept": "cve_uid",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.is_exploit_available",
+      "concept": "vuln_is_exploit_available",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.is_fix_available",
+      "concept": "vuln_is_fix_available",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.references{}",
+      "concept": "vuln_references",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.remediation.desc",
+      "concept": "remediation_desc",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "ocsf:aws:securityhub:finding",
+      "column": "vulnerabilities{}.vendor_name",
+      "concept": "vuln_vendor_name",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Splunk_TA_aws indexes the Amazon Security Lake OCSF object as JSON verbatim (KV_MODE=json, no REPORT/FIELDALIAS/modinput on this stanza); the column is the OCSF attribute's dotted path."
+      }
+    }
+  ],
+  "hazards": {
+    "ip_shared": {
+      "text": "A NAT gateway, load balancer or shared egress can put many hosts behind one address; a match is a lead, not a link."
+    },
+    "id_caption_pair": {
+      "text": "OCSF pairs a numeric _id with a caption string for the same fact; both are bound to this one concept. They never disagree in a well-formed record."
+    },
+    "example_placeholder": {
+      "text": "AWS's OCSF examples repo uses EXAMPLE-suffixed ARNs, keys and zeroed account/instance ids as stand-ins; the shape is real, the value is not."
+    },
+    "unmapped_passthrough": {
+      "text": "unmapped.* holds an original source field OCSF's own mapping did not carry into a named attribute, verbatim and unvalidated by the schema."
+    },
+    "index_time_ok_false": {
+      "text": "index_time_ok is false for every sourcetype in this family: the record's own time field, not _time, is the event time to trust."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

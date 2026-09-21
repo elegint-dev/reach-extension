@@ -1,0 +1,806 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "aws-vpcflow",
+  "name": "Amazon VPC Flow Logs",
+  "pack_version": "0.1.0",
+  "description": "Amazon VPC Flow Logs as the Splunk Add-on for AWS ingests them: one record per network flow per aggregation interval, its 5-tuple, packet/byte counts and accept/reject action.",
+  "source": "Amazon VPC User Guide's Flow log records and Flow log record examples pages (AWS's own field-by-field reference and default-format examples, read 2026-09-19); Splunk Add-on for AWS field aliases, extractions and lookups (Splunk_TA_aws default/props.conf and default/transforms.conf, read directly), checked against 60,611 live-indexed events in the dev Splunk instance.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "aws_vpcflow",
+    "label": "Amazon VPC Flow Logs",
+    "description": "Layer 3/4 IP flow records for a VPC network interface: one record per 5-tuple flow per aggregation interval, with packet and byte counts and whether the traffic was accepted or rejected.",
+    "tags": [
+      "aws",
+      "cloud",
+      "network",
+      "flow"
+    ]
+  },
+  "concepts": {
+    "flow_schema_version": {
+      "label": "Flow log schema version",
+      "type": "version",
+      "description": "The VPC Flow Logs record schema version. 2 for the default format; a custom format's version is the highest version among the fields it selects.",
+      "role": "version"
+    },
+    "flow_account": {
+      "label": "AWS account id",
+      "type": "account_id",
+      "description": "The AWS account that owns the source network interface the flow was recorded on. AWS's own page notes a network interface an AWS service created (a VPC endpoint, a Network Load Balancer) may show unknown here instead.",
+      "role": "identifier",
+      "tags": [
+        "account"
+      ],
+      "hazards": [
+        "acct_four_columns"
+      ]
+    },
+    "flow_interface": {
+      "label": "Network interface id (ENI)",
+      "type": "resource_id",
+      "description": "The elastic network interface id the flow was recorded on, for example eni-1235b8ca123456789. Reads - for flows on a regional NAT gateway, which has no single owning interface.",
+      "role": "identifier",
+      "tags": [
+        "join"
+      ]
+    },
+    "flow_src_ip": {
+      "label": "Source address",
+      "type": "source_ip",
+      "description": "For incoming traffic, the IP address the traffic came from. For outgoing traffic, the network interface's own private IPv4 or IPv6 address (its own address, not the far end's).",
+      "role": "ip",
+      "tags": [
+        "network"
+      ],
+      "hazards": [
+        "nat_vpn"
+      ]
+    },
+    "flow_dest_ip": {
+      "label": "Destination address",
+      "type": "dest_ip",
+      "description": "For outgoing traffic, the IP address the traffic is going to. For incoming traffic, the network interface's own IPv4 (always its private address) or IPv6 address.",
+      "role": "ip",
+      "tags": [
+        "network"
+      ],
+      "hazards": [
+        "nat_vpn"
+      ]
+    },
+    "flow_src_port": {
+      "label": "Source port",
+      "type": "count",
+      "description": "The source transport-layer port of the flow.",
+      "role": "other"
+    },
+    "flow_dest_port": {
+      "label": "Destination port",
+      "type": "count",
+      "description": "The destination transport-layer port of the flow, usually the more useful of the pair for spotting which service was reached.",
+      "role": "other"
+    },
+    "flow_protocol_code": {
+      "label": "IP protocol number",
+      "type": "count",
+      "description": "The IANA protocol number of the traffic (0-255), for example 6 for TCP or 17 for UDP. Reads the literal unknown when the raw record's protocol field was - (EVAL-protocol_code in Splunk_TA_aws/default/props.conf); never -1, which appears only as a fallback row in the separate protocol-name lookup, not in this column.",
+      "role": "other"
+    },
+    "flow_protocol_label": {
+      "label": "Protocol name (TA lookup)",
+      "type": "text",
+      "description": "The Splunk Add-on for AWS's own name for protocol_code, from its bundled protocol-code lookup. Not an AWS-published field; see the protocol_tcp_quirk hazard for where this disagrees with transport.",
+      "role": "other",
+      "hazards": [
+        "protocol_tcp_quirk"
+      ]
+    },
+    "flow_transport": {
+      "label": "Transport name (TA lookup, CIM)",
+      "type": "text",
+      "description": "The Splunk Add-on for AWS's CIM transport field for protocol_code, from the same bundled lookup as flow_protocol_label. This is the column that reliably reads tcp/udp/icmp.",
+      "role": "other",
+      "hazards": [
+        "protocol_tcp_quirk"
+      ]
+    },
+    "flow_protocol_full_name": {
+      "label": "Protocol full name (TA lookup)",
+      "type": "text",
+      "description": "The IANA-style descriptive protocol name for protocol_code from the TA's bundled lookup, for example Transmission Control for code 6.",
+      "role": "other"
+    },
+    "flow_packets": {
+      "label": "Packets transferred",
+      "type": "count",
+      "description": "The number of packets transferred during the flow's aggregation window. See the aggregation_window hazard: this is one interval's count, not a whole connection's.",
+      "role": "other",
+      "hazards": [
+        "aggregation_window"
+      ]
+    },
+    "flow_bytes": {
+      "label": "Bytes transferred",
+      "type": "count",
+      "description": "The number of bytes transferred during the flow's aggregation window. See the aggregation_window hazard.",
+      "role": "other",
+      "hazards": [
+        "aggregation_window"
+      ]
+    },
+    "flow_start": {
+      "label": "Aggregation window start",
+      "type": "event_time",
+      "description": "The time, in Unix seconds, when the first packet of the flow was received within the aggregation interval. This is the field TIME_PREFIX/TIME_FORMAT resolve _time from on this container; see the time_basis hazard.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_basis",
+        "aggregation_window"
+      ]
+    },
+    "flow_end": {
+      "label": "Aggregation window end",
+      "type": "event_time",
+      "description": "The time, in Unix seconds, when the last packet of the flow was received within the aggregation interval. Not the field _time is drawn from on this container; see the time_basis hazard.",
+      "role": "timestamp",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "time_basis",
+        "aggregation_window"
+      ]
+    },
+    "flow_duration": {
+      "label": "Flow duration (TA calculated)",
+      "type": "count",
+      "description": "end_time minus start_time, computed by the TA (EVAL-duration). The aggregation window's own span, not a connection's total lifetime; see the aggregation_window hazard.",
+      "role": "other",
+      "hazards": [
+        "aggregation_window"
+      ]
+    },
+    "flow_action": {
+      "label": "Traffic action",
+      "type": "outcome",
+      "description": "Whether the flow's traffic was accepted or rejected by the VPC (a security group, a network ACL, or because packets arrived after the connection closed).",
+      "role": "enum"
+    },
+    "flow_log_status": {
+      "label": "Logging status",
+      "type": "outcome",
+      "description": "Whether this flow log record represents real traffic (OK), an interval with no traffic (NODATA), or an interval where some records could not be captured because of an internal AWS capacity constraint or error (SKIPDATA).",
+      "role": "enum",
+      "hazards": [
+        "dash_to_unknown"
+      ]
+    },
+    "flow_product_label": {
+      "label": "Feed product label (TA constant)",
+      "type": "text",
+      "description": "A constant string ('AWS VPC Flow Logs') the TA sets on every event of this sourcetype, for CIM app/vendor_product correlation. Not an AWS-published field.",
+      "role": "other"
+    },
+    "flow_ip_version_guess": {
+      "label": "IP version (TA guess)",
+      "type": "enum",
+      "description": "The TA's own guess at IPv4 vs IPv6, computed by regex-matching dest_ip's shape (EVAL-protocol_version). Not an AWS-published field and not the vendor's own version-3 type field (IPv4/IPv6/EFA), which this container does not carry in the observed set: when dest_ip is - or unknown, or malformed, the guess itself reads unknown.",
+      "role": "enum"
+    },
+    "flow_vpc_id": {
+      "label": "VPC id",
+      "type": "resource_id",
+      "description": "The id of the VPC that contains the network interface the traffic was recorded on.",
+      "role": "identifier",
+      "tags": [
+        "join"
+      ]
+    },
+    "flow_subnet_id": {
+      "label": "Subnet id",
+      "type": "resource_id",
+      "description": "The id of the subnet that contains the network interface the traffic was recorded on. Reads - for flows on a regional NAT gateway.",
+      "role": "identifier",
+      "tags": [
+        "join"
+      ]
+    },
+    "flow_instance_id": {
+      "label": "Instance id",
+      "type": "resource_id",
+      "description": "The id of the instance associated with the network interface, when the instance is owned by the account. Reads - for a requester-managed network interface such as a NAT gateway's.",
+      "role": "identifier",
+      "tags": [
+        "join"
+      ]
+    },
+    "flow_tcp_flags": {
+      "label": "TCP flags bitmask",
+      "type": "bitmask",
+      "description": "A bitmask of TCP flags seen during the aggregation window: FIN=1, SYN=2, RST=4, SYN-ACK=18 (flags can be OR-ed together within one window, for example 3 for SYN+FIN). 0 if no supported flag was seen; - if the combination could not be calculated. ACK and PSH are not represented.",
+      "role": "other"
+    },
+    "flow_ip_type": {
+      "label": "Traffic type (vendor field)",
+      "type": "enum",
+      "description": "AWS's own traffic-type field for a custom-format record: IPv4, IPv6 or EFA (Elastic Fabric Adapter). Distinct from flow_ip_version_guess, which is this container's TA-computed approximation, not this field.",
+      "role": "enum"
+    },
+    "flow_pkt_src_ip": {
+      "label": "Packet-level source address",
+      "type": "source_ip",
+      "description": "The original source IP address of the traffic, as distinct from src_ip (srcaddr), which can be an intermediate hop's address, for example a NAT gateway's network interface.",
+      "role": "ip",
+      "tags": [
+        "network"
+      ],
+      "hazards": [
+        "nat_vpn"
+      ]
+    },
+    "flow_pkt_dest_ip": {
+      "label": "Packet-level destination address",
+      "type": "dest_ip",
+      "description": "The original destination IP address of the traffic, as distinct from dest_ip (dstaddr), which can be an intermediate hop's address.",
+      "role": "ip",
+      "tags": [
+        "network"
+      ],
+      "hazards": [
+        "nat_vpn"
+      ]
+    },
+    "flow_region": {
+      "label": "AWS region",
+      "type": "region",
+      "description": "The AWS region that contains the network interface the traffic was recorded on.",
+      "role": "enum",
+      "tags": [
+        "region"
+      ]
+    },
+    "flow_az_id": {
+      "label": "Availability zone id",
+      "type": "resource_id",
+      "description": "The id of the availability zone that contains the network interface. Reads - if the traffic is from a sublocation instead.",
+      "role": "identifier"
+    },
+    "flow_sublocation_type": {
+      "label": "Sublocation type",
+      "type": "enum",
+      "description": "The kind of sublocation in sublocation_id: wavelength, outpost or localzone. Reads - if the traffic is not from a sublocation.",
+      "role": "enum"
+    },
+    "flow_sublocation_id": {
+      "label": "Sublocation id",
+      "type": "resource_id",
+      "description": "The id of the sublocation (a Wavelength zone, an Outpost or a Local Zone) that contains the network interface. Reads - if the traffic is not from a sublocation.",
+      "role": "identifier"
+    },
+    "flow_pkt_src_service": {
+      "label": "Source AWS service name",
+      "type": "enum",
+      "description": "The AWS service whose published IP range covers pkt_srcaddr, when the source address belongs to one (for example S3 or EC2). Only set for AWS-owned source addresses.",
+      "role": "enum"
+    },
+    "flow_pkt_dst_service": {
+      "label": "Destination AWS service name",
+      "type": "enum",
+      "description": "The AWS service whose published IP range covers pkt_dstaddr, when the destination address belongs to one. Only set for AWS-owned destination addresses.",
+      "role": "enum"
+    },
+    "flow_direction": {
+      "label": "Flow direction",
+      "type": "enum",
+      "description": "Whether the flow is ingress or egress with respect to the interface where the traffic was captured.",
+      "role": "enum"
+    },
+    "flow_traffic_path": {
+      "label": "Egress traffic path",
+      "type": "enum",
+      "description": "For egress traffic (see flow_direction), the path taken to the destination: through another resource in the same VPC, a gateway, a peering connection, or similar. Not set (-) for ingress traffic or when none of the documented paths apply.",
+      "role": "enum"
+    }
+  },
+  "containers": {
+    "aws:cloudwatchlogs:vpcflow": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Amazon VPC Flow Logs delivered to CloudWatch Logs and pulled by the Splunk Add-on for AWS's CloudWatch Logs input. One record per network flow (a 5-tuple) per aggregation interval: source and destination, ports, protocol, packet and byte counts, and whether the traffic was accepted or rejected.",
+      "note": "This container's props stanza carries three positional field extractions (report-vpcflowlogs-default, -custom and -select-all), matching the three field layouts a VPC flow log can be configured to publish. Every event in this dev index (60,611 of 60,611) matches the 14-field default layout; this pack's observed-provenance concepts cover that layout plus the TA's own aliases, lookups and EVALs on top of it. The custom layout's extra columns (vpc_id, subnet_id, instance_id, tcp_flags, type, pkt_srcaddr, pkt_dstaddr, region, az_id, sublocation_type, sublocation_id, pkt_src_aws_service, pkt_dst_aws_service, flow_direction, traffic_path) are documented from the vendor page and from reading the regex that would extract them, not from an observed event. The select-all layout shares the custom layout's field set in alphabetical order and is not bound separately; see the time_basis hazard for why its _time would be wrong.",
+      "hazards": [
+        "time_basis",
+        "aggregation_window",
+        "acct_four_columns",
+        "protocol_tcp_quirk",
+        "dash_to_unknown",
+        "custom_format_undobserved"
+      ]
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "version",
+      "concept": "flow_schema_version",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "account_id",
+      "concept": "flow_account",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "aws_account_id",
+      "concept": "flow_account",
+      "note": "TA CIM alias.",
+      "alias_of": "account_id",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "user_id",
+      "concept": "flow_account",
+      "note": "TA CIM alias; despite the column name this is the account id, not a person or IAM identity.",
+      "alias_of": "account_id",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "vendor_account",
+      "concept": "flow_account",
+      "note": "TA CIM alias.",
+      "alias_of": "account_id",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "interface_id",
+      "concept": "flow_interface",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "dvc",
+      "concept": "flow_interface",
+      "note": "TA CIM alias for device.",
+      "alias_of": "interface_id",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "src_ip",
+      "concept": "flow_src_ip",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "src",
+      "concept": "flow_src_ip",
+      "note": "TA CIM alias.",
+      "alias_of": "src_ip",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "dest_ip",
+      "concept": "flow_dest_ip",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "dest",
+      "concept": "flow_dest_ip",
+      "note": "TA CIM alias.",
+      "alias_of": "dest_ip",
+      "provenance": {
+        "kind": "alias"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "src_port",
+      "concept": "flow_src_port",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "dest_port",
+      "concept": "flow_dest_port",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "protocol_code",
+      "concept": "flow_protocol_code",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "protocol",
+      "concept": "flow_protocol_label",
+      "note": "TA lookup aws_network_traffic_protocol_code_lookup_760.csv keyed on protocol_code.",
+      "provenance": {
+        "kind": "lookup"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "transport",
+      "concept": "flow_transport",
+      "note": "Same TA lookup as protocol; this is the CIM transport column.",
+      "provenance": {
+        "kind": "lookup"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "protocol_full_name",
+      "concept": "flow_protocol_full_name",
+      "note": "Same TA lookup as protocol.",
+      "provenance": {
+        "kind": "lookup"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "packets",
+      "concept": "flow_packets",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "bytes",
+      "concept": "flow_bytes",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "start_time",
+      "concept": "flow_start",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "end_time",
+      "concept": "flow_end",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "duration",
+      "concept": "flow_duration",
+      "note": "EVAL-duration = end_time - start_time.",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "vpcflow_action",
+      "concept": "flow_action",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "action",
+      "concept": "flow_action",
+      "note": "TA lookup aws_vpcflow_action_lookup_741.csv keyed on vpcflow_action (ACCEPT to allowed, REJECT to blocked).",
+      "provenance": {
+        "kind": "lookup"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "log_status",
+      "concept": "flow_log_status",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "app",
+      "concept": "flow_product_label",
+      "note": "EVAL-app = \"AWS VPC Flow Logs\" (constant).",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "vendor_product",
+      "concept": "flow_product_label",
+      "note": "EVAL-vendor_product = \"AWS VPC Flow Logs\" (constant).",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "protocol_version",
+      "concept": "flow_ip_version_guess",
+      "note": "EVAL-protocol_version regex-matches dest_ip's shape; not an AWS-published field.",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "vpc_id",
+      "concept": "flow_vpc_id",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "subnet_id",
+      "concept": "flow_subnet_id",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "instance_id",
+      "concept": "flow_instance_id",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "tcp_flags",
+      "concept": "flow_tcp_flags",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "type",
+      "concept": "flow_ip_type",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "pkt_srcaddr",
+      "concept": "flow_pkt_src_ip",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "pkt_dstaddr",
+      "concept": "flow_pkt_dest_ip",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "region",
+      "concept": "flow_region",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "az_id",
+      "concept": "flow_az_id",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "sublocation_type",
+      "concept": "flow_sublocation_type",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "sublocation_id",
+      "concept": "flow_sublocation_id",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "pkt_src_aws_service",
+      "concept": "flow_pkt_src_service",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "pkt_dst_aws_service",
+      "concept": "flow_pkt_dst_service",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "flow_direction",
+      "concept": "flow_direction",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "aws:cloudwatchlogs:vpcflow",
+      "column": "traffic_path",
+      "concept": "flow_traffic_path",
+      "note": "Named capture group in report-vpcflowlogs-custom (Splunk_TA_aws/default/transforms.conf), read directly; no event carrying this column is in this dev index.",
+      "basis": "validated",
+      "provenance": {
+        "kind": "extracted"
+      }
+    }
+  ],
+  "hazards": {
+    "acct_four_columns": {
+      "level": "caution",
+      "text": "account_id, aws_account_id, vendor_account and user_id are four columns carrying the same value: the AWS account that owns the source network interface (FIELDALIAS-aws-account-id, FIELDALIAS-user_id and FIELDALIAS-vendor_account all alias account_id in Splunk_TA_aws/default/props.conf). user_id in particular looks identity-shaped and is not a person or IAM identity."
+    },
+    "protocol_tcp_quirk": {
+      "level": "caution",
+      "text": "For protocol_code 6 (TCP) only, the TA's own protocol-code lookup names the protocol column ip and the transport column tcp; every other one of the 256 mapped codes has protocol equal to transport (confirmed: aws_network_traffic_protocol_code_lookup_760.csv has exactly one row, code 6, where the two columns differ). A search for protocol=tcp returns zero rows for real TCP traffic; use transport=tcp or protocol_code=6 instead."
+    },
+    "dash_to_unknown": {
+      "level": "caution",
+      "text": "props.conf rewrites AWS's own placeholder for an inapplicable or not-yet-computed value (a bare -) to the literal string unknown on bytes, packets, src_port, dest_port, src_ip, dest_ip and vpcflow_action (EVAL-bytes, EVAL-packets, EVAL-src_port, EVAL-dest_port, EVAL-src_ip, EVAL-dest_ip, EVAL-vpcflow_action in Splunk_TA_aws/default/props.conf). A NODATA or SKIPDATA record carries the string unknown, not AWS's own -, on every one of those columns; sum(bytes) or a numeric comparison against them will error or silently drop those rows instead of reading them as zero or null."
+    },
+    "time_basis": {
+      "level": "danger",
+      "text": "TIME_PREFIX skips the first ten space-delimited tokens and TIME_FORMAT=%s reads the eleventh. For the default 14-field record that eleventh token is start_time, confirmed exactly on live data: _time minus start_time is 0 for all 60,611 events in this dev index (all of them default-format). The custom 30-field record (report-vpcflowlogs-custom) places start_time in the same eleventh position by the regex's own field order, read directly but not confirmed against a live custom-format event. Either way _time is the aggregation window's first-packet time, not its last-packet time (end_time) and not when CloudWatch Logs or Splunk received the record. The same props stanza also defines a third, alphabetically-ordered extraction (report-vpcflowlogs-select-all) whose eleventh token is log_status, not start_time; a flow log delivered in that field order will not get a correct _time from this TIME_FORMAT."
+    },
+    "aggregation_window": {
+      "level": "caution",
+      "text": "start_time and end_time bound one aggregation interval (up to 10 minutes by default, or up to 1 minute when the network interface is on a Nitro-based instance), not a full connection's lifetime. duration (end_time minus start_time, a TA EVAL) is that window's own span. A long-lived connection is logged as one flow log record per aggregation interval it spans, not one record covering its whole life; packets and bytes on any one record are only that window's counts."
+    },
+    "custom_format_undobserved": {
+      "level": "caution",
+      "text": "vpc_id, subnet_id, instance_id, tcp_flags, type, pkt_srcaddr, pkt_dstaddr, region, az_id, sublocation_type, sublocation_id, pkt_src_aws_service, pkt_dst_aws_service, flow_direction and traffic_path are extracted by this container's own report-vpcflowlogs-custom regex (confirmed by reading Splunk_TA_aws/default/transforms.conf) but no event carrying them is in this dev index or in this pack's samples. Every value entry under these fields is documented from AWS's own field-reference page, not observed."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

@@ -1,0 +1,2482 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "okta-inventory",
+  "name": "Okta users, groups and app assignments",
+  "pack_version": "0.2.0",
+  "description": "Okta identity inventory: one feed each for the org's users, group memberships, application assignments, applications and groups, as Splunk_TA_okta_identity_cloud indexes them. Snapshot tables, not an event log: each row is the current state of one user, membership, assignment, app or group.",
+  "source": "Okta Management API User, Group and AppUser schemas (okta-management-openapi-spec); Splunk_TA_okta_identity_cloud field extraction and lookup enrichment, observed in a seeded dev index. Application and Group schemas (okta-management-openapi-spec) for the app and group inventory containers.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "okta_inventory",
+    "label": "Okta identity inventory",
+    "description": "Okta's own record of who exists, which groups they belong to and which apps they are assigned, one row per user, membership or assignment rather than one row per event.",
+    "tags": [
+      "identity",
+      "okta",
+      "inventory"
+    ]
+  },
+  "concepts": {
+    "user_id": {
+      "label": "Okta user id",
+      "type": "user_id",
+      "description": "Okta's own unique key for the user; stable across profile and login changes.",
+      "hazards": [
+        "ids_look_alike"
+      ]
+    },
+    "user_login": {
+      "label": "Login",
+      "type": "user_name",
+      "description": "The user's unique sign-in identifier, almost always formatted as an email address.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "user_email": {
+      "label": "Primary email",
+      "type": "user_name",
+      "description": "The user's primary email address.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "user_second_email": {
+      "label": "Secondary email",
+      "type": "user_name",
+      "description": "A backup email address used for account recovery, separate from the primary email."
+    },
+    "user_first_name": {
+      "label": "First name",
+      "type": "text",
+      "description": "The user's given name."
+    },
+    "user_last_name": {
+      "label": "Last name",
+      "type": "text",
+      "description": "The user's family name."
+    },
+    "user_display_name": {
+      "label": "Display name",
+      "type": "text",
+      "description": "A human-readable label for the user. Observed as the first and last name joined with a space; this is the TA's own computed value, not a literal Okta API field."
+    },
+    "user_mobile_phone": {
+      "label": "Mobile phone",
+      "type": "text",
+      "description": "The user's mobile phone number."
+    },
+    "user_primary_phone": {
+      "label": "Primary phone",
+      "type": "text",
+      "description": "The user's primary phone number, for example a home number."
+    },
+    "user_street_address": {
+      "label": "Street address",
+      "type": "text",
+      "description": "The street address component of the user's address."
+    },
+    "user_city": {
+      "label": "City",
+      "type": "text",
+      "description": "The city or locality component of the user's address."
+    },
+    "user_state": {
+      "label": "State or region",
+      "type": "text",
+      "description": "The state or region component of the user's address."
+    },
+    "user_country_code": {
+      "label": "Country code",
+      "type": "text",
+      "description": "The two-letter country code (ISO 3166-1 alpha-2) of the user's address."
+    },
+    "user_zip_code": {
+      "label": "Zip or postal code",
+      "type": "text",
+      "description": "The zip or postal code component of the user's address."
+    },
+    "user_status": {
+      "label": "User status",
+      "type": "enum",
+      "description": "The Okta account's current lifecycle status."
+    },
+    "user_type_id": {
+      "label": "User type id",
+      "type": "identifier",
+      "description": "The id of the schema (User Type) that shapes this user's profile."
+    },
+    "credential_provider_type": {
+      "label": "Credential provider type",
+      "type": "enum",
+      "description": "Which kind of identity provider validates the user's password credential."
+    },
+    "credential_provider_name": {
+      "label": "Credential provider name",
+      "type": "text",
+      "description": "The name of the authentication provider, for example the literal OKTA for Okta-managed passwords."
+    },
+    "user_created_time": {
+      "label": "Account created",
+      "type": "event_time",
+      "description": "When the Okta user account was created."
+    },
+    "user_activated_time": {
+      "label": "Account activated",
+      "type": "event_time",
+      "description": "When the user's status last transitioned to ACTIVE."
+    },
+    "user_status_changed_time": {
+      "label": "Account status changed",
+      "type": "event_time",
+      "description": "When the user's status last changed."
+    },
+    "user_last_login_time": {
+      "label": "Last login",
+      "type": "event_time",
+      "description": "The timestamp of the user's last login."
+    },
+    "user_last_updated_time": {
+      "label": "Account last updated",
+      "type": "event_time",
+      "description": "When the user record was last updated."
+    },
+    "user_password_changed_time": {
+      "label": "Password last changed",
+      "type": "event_time",
+      "description": "When the user's password was last changed."
+    },
+    "group_id": {
+      "label": "Group id",
+      "type": "identifier",
+      "description": "Okta's unique id for the group.",
+      "hazards": [
+        "ids_look_alike"
+      ]
+    },
+    "group_name": {
+      "label": "Group name",
+      "type": "text",
+      "description": "The group's display name, or (on OktaIM2:user) the set of group names the user belongs to."
+    },
+    "group_description": {
+      "label": "Group description",
+      "type": "text",
+      "description": "The group's description text."
+    },
+    "group_type": {
+      "label": "Group type",
+      "type": "enum",
+      "description": "How the group's profile and memberships are managed."
+    },
+    "group_membership_updated_time": {
+      "label": "Group membership last updated",
+      "type": "event_time",
+      "description": "When the group's memberships were last changed."
+    },
+    "app_id": {
+      "label": "App id",
+      "type": "app_id",
+      "description": "Okta's unique id for the application instance.",
+      "hazards": [
+        "ids_look_alike"
+      ]
+    },
+    "app_name": {
+      "label": "App key name",
+      "type": "text",
+      "description": "The app's internal key name; for catalog apps this is the unique key for the app definition."
+    },
+    "app_label": {
+      "label": "App label",
+      "type": "text",
+      "description": "The app's user-defined display label."
+    },
+    "app_user_external_id": {
+      "label": "App user external id",
+      "type": "identifier",
+      "description": "The id of this person in the target app itself, set once provisioning confirms or creates them there. Not an Okta id, even though it can look like one.",
+      "hazards": [
+        "ids_look_alike"
+      ]
+    },
+    "app_user_created_time": {
+      "label": "App assignment created",
+      "type": "event_time",
+      "description": "When this user's assignment to the app was created."
+    },
+    "app_user_last_updated_time": {
+      "label": "App assignment last updated",
+      "type": "event_time",
+      "description": "When this user's app assignment record was last updated."
+    },
+    "app_user_status_changed_time": {
+      "label": "App assignment status changed",
+      "type": "event_time",
+      "description": "When this user's app assignment status last changed."
+    },
+    "app_user_scope": {
+      "label": "App assignment scope",
+      "type": "enum",
+      "description": "Whether the app assignment is direct or came from group membership."
+    },
+    "app_user_status": {
+      "label": "App assignment status",
+      "type": "enum",
+      "description": "The application user's own provisioning status, separate from the Okta account status."
+    },
+    "app_credential_username": {
+      "label": "App credential username",
+      "type": "user_name",
+      "description": "The username this person signs in with inside the target app, which can differ from their Okta login.",
+      "hazards": [
+        "names_not_stable"
+      ]
+    },
+    "assignment_sync_outcome": {
+      "label": "Assignment sync outcome",
+      "type": "outcome",
+      "description": "A generic success or failure flag on the app assignment row. Observed as a fixed literal, not documented by the Okta API; do not confuse with the Okta AppUserStatus value, which lands on the result column on this container.",
+      "hazards": [
+        "cim_artifact"
+      ]
+    },
+    "change_action": {
+      "label": "Change action tag",
+      "type": "text",
+      "description": "A generic change-tracking action label the TA adds to app assignment rows. Observed fixed at one literal in this deployment; not an Okta API field.",
+      "hazards": [
+        "cim_artifact"
+      ]
+    },
+    "change_type_tag": {
+      "label": "Change type tag",
+      "type": "text",
+      "description": "A generic change-tracking category label. Observed as a value that does not describe an app assignment; likely an uncustomized default, not something to filter on.",
+      "hazards": [
+        "cim_artifact"
+      ]
+    },
+    "change_object_category": {
+      "label": "Changed object category",
+      "type": "text",
+      "description": "What kind of object the generic change tag says changed.",
+      "hazards": [
+        "cim_artifact"
+      ]
+    },
+    "change_object_attrs": {
+      "label": "Changed object attribute",
+      "type": "text",
+      "description": "Which attribute the generic change tag says changed.",
+      "hazards": [
+        "cim_artifact"
+      ]
+    },
+    "cim_host_artifact": {
+      "label": "CIM host field",
+      "type": "text",
+      "description": "A generic device or destination host field. In this deployment it carries the sample-seeding source name, not a real Okta or tenant value; left without an example for that reason.",
+      "hazards": [
+        "cim_artifact"
+      ]
+    },
+    "vendor_product": {
+      "label": "Vendor product",
+      "type": "text",
+      "description": "A fixed literal naming the vendor product, for CIM tagging."
+    },
+    "accessible_apps": {
+      "label": "Accessible apps",
+      "type": "text",
+      "description": "A multivalue list naming the apps this user can access. Not populated in the seeded sample; meaning inferred from the field name and the parallel group_name/memberof_groups fields."
+    },
+    "app_status": {
+      "label": "App status",
+      "type": "enum",
+      "description": "The application instance's own lifecycle status, separate from any user's assignment status."
+    },
+    "app_sign_on_mode": {
+      "label": "Sign-on mode",
+      "type": "enum",
+      "description": "How Okta authenticates users into this app: a bookmark, SWA form-fill, SAML, OIDC, WS-Federation, and so on."
+    },
+    "app_created_time": {
+      "label": "App created",
+      "type": "event_time",
+      "description": "When the application object was created."
+    },
+    "app_last_updated_time": {
+      "label": "App last updated",
+      "type": "event_time",
+      "description": "When the application object was last updated.",
+      "hazards": [
+        "app_time_is_last_change"
+      ]
+    },
+    "app_orn": {
+      "label": "App resource name (ORN)",
+      "type": "identifier",
+      "description": "The Okta resource name for this app instance, a colon-delimited path naming the org, the resource type and the app id."
+    },
+    "app_features": {
+      "label": "Enabled features",
+      "type": "text",
+      "description": "A multivalue list of provisioning and SSO features this app instance has enabled, drawn from a large fixed catalog (GROUP_PUSH, IMPORT_NEW_USERS, SSO and so on)."
+    },
+    "app_universal_logout_status": {
+      "label": "Universal Logout status",
+      "type": "enum",
+      "description": "Whether this app instance supports and has enabled Universal Logout, Okta's cross-app sign-out feature."
+    },
+    "app_credential_scheme": {
+      "label": "Credential vaulting scheme",
+      "type": "enum",
+      "description": "How Okta vaults the shared credential for a BASIC_AUTH, BROWSER_PLUGIN or SECURE_PASSWORD_STORE app; absent for other sign-on modes."
+    },
+    "app_credential_signing_kid": {
+      "label": "Signing key id",
+      "type": "identifier",
+      "description": "The key identifier used for signing assertions on this app's federated sign-on."
+    },
+    "app_username_template": {
+      "label": "Username mapping expression",
+      "type": "text",
+      "description": "The Okta Expression Language expression used to generate the username Okta pushes into this app when assigning a user."
+    },
+    "app_username_template_type": {
+      "label": "Username mapping type",
+      "type": "enum",
+      "description": "Whether the username mapping expression is Okta's built-in default, a custom expression, or unset."
+    },
+    "app_accessibility_self_service": {
+      "label": "Self-service assignable",
+      "type": "flag",
+      "description": "Whether users can self-assign this app."
+    },
+    "app_accessibility_error_redirect_url": {
+      "label": "Error redirect URL",
+      "type": "text",
+      "description": "A custom error page URL for the app."
+    },
+    "app_accessibility_login_redirect_url": {
+      "label": "Login redirect URL",
+      "type": "text",
+      "description": "A custom login page URL for the app; deprecated on Identity Engine orgs in favor of IdP routing rules."
+    },
+    "app_visibility_auto_launch": {
+      "label": "Auto-launch",
+      "type": "flag",
+      "description": "Whether Okta automatically signs the user into this app when they sign into Okta."
+    },
+    "app_visibility_auto_submit_toolbar": {
+      "label": "Auto-submit on landing",
+      "type": "flag",
+      "description": "Whether Okta automatically signs the user in when they land on the app's sign-in page."
+    },
+    "app_visibility_hide": {
+      "label": "Hidden on end-user surface",
+      "type": "flag",
+      "description": "Whether the app tile is hidden on a specific end-user surface (Okta Mobile on iOS or Android, or the web End-User Dashboard); which surface depends on the column bound."
+    },
+    "app_visibility_link_enabled": {
+      "label": "Dashboard link enabled",
+      "type": "flag",
+      "description": "Whether a named link or icon (admin, login or workflow_login) appears on the End-User Dashboard for this app."
+    },
+    "app_em_opt_in_status": {
+      "label": "Entitlement management opt-in status",
+      "type": "enum",
+      "description": "The app's opt-in state for Okta's entitlement management feature."
+    },
+    "app_implicit_assignment": {
+      "label": "Implicit assignment enabled",
+      "type": "flag",
+      "description": "Whether Okta automatically assigns users to this app based on their role or group membership, rather than an explicit assignment."
+    },
+    "app_manual_provisioning": {
+      "label": "Manual provisioning",
+      "type": "flag",
+      "description": "Whether this app instance is configured for manual (not automated) user provisioning; the name and false/true shape are observed, the property is not declared on the base Application or ApplicationSettings schemas this pack read."
+    },
+    "app_notes_admin": {
+      "label": "Admin note",
+      "type": "text",
+      "description": "A free-text app message visible to admins."
+    },
+    "app_notes_enduser": {
+      "label": "End-user note",
+      "type": "text",
+      "description": "A free-text message visible to the user on the End-User Dashboard."
+    },
+    "app_vpn_help_url": {
+      "label": "VPN help URL",
+      "type": "text",
+      "description": "An optional URL to a help page assisting end users in connecting to the required VPN before using this app."
+    },
+    "app_vpn_message": {
+      "label": "VPN requirement message",
+      "type": "text",
+      "description": "A message shown to users when a VPN connection is required for this app."
+    },
+    "app_vpn_network_connection": {
+      "label": "VPN notification condition",
+      "type": "enum",
+      "description": "When Okta shows the VPN connection notice for this app, based on the client's network."
+    },
+    "app_login_setting": {
+      "label": "Sign-on launch setting",
+      "type": "text",
+      "description": "A sign-on launch value for this app (a form field name, a launch or redirect URL, a service domain); which one and what it means depends on the app's own sign-on mode, each documented on its own Settings.app schema rather than one shared schema."
+    },
+    "app_saml_attribute_statements": {
+      "label": "SAML attribute statements",
+      "type": "text",
+      "description": "Custom attribute statements Okta adds to this app's SAML assertion."
+    },
+    "app_saml_relay_state": {
+      "label": "SAML relay state",
+      "type": "text",
+      "description": "Identifies a specific app resource to send the user to in an IdP-initiated sign-on."
+    },
+    "app_saml_casb_override": {
+      "label": "SAML CASB override",
+      "type": "text",
+      "description": "Overrides a SAML assertion attribute (audience, destination, recipient or ACS URL) for a CASB reverse-proxy configuration in front of this app; empty unless a CASB fronts it."
+    },
+    "api_link_href": {
+      "label": "API link",
+      "type": "text",
+      "description": "A discoverable API URL Okta returns alongside this record, pointing at a related endpoint (the record itself, its groups or users, its logo, a lifecycle action); the org's own API host, not app or group data."
+    },
+    "api_link_meta": {
+      "label": "API link label",
+      "type": "text",
+      "description": "A name, media type or allowed-method hint describing one of the API links above (for example a logo size, a MIME type, or an HTTP verb the link allows)."
+    },
+    "group_created_time": {
+      "label": "Group created",
+      "type": "event_time",
+      "description": "When the group was created."
+    },
+    "group_last_updated_time": {
+      "label": "Group profile last updated",
+      "type": "event_time",
+      "description": "When the group's profile was last updated; separate from when its memberships last changed."
+    },
+    "group_object_class": {
+      "label": "Group object class",
+      "type": "text",
+      "description": "Determines which profile shape the group carries: an Okta-native group profile or an Active Directory one."
+    },
+    "group_members_list": {
+      "label": "Group members",
+      "type": "text",
+      "description": "A list naming the group's member users; meaning inferred from the field name and the parallel accessible_apps field, not populated in the seeded data."
+    },
+    "ad_windows_group_type": {
+      "label": "Windows group category",
+      "type": "text",
+      "description": "The Active Directory group category (for example Security or Distribution) of an AD-imported group. Not the same field as the group's own Okta type.",
+      "hazards": [
+        "windows_group_type_look_alike"
+      ]
+    },
+    "ad_group_scope": {
+      "label": "Windows group scope",
+      "type": "enum",
+      "description": "The Active Directory scope of an AD-imported group (for example Global).",
+      "hazards": [
+        "ad_group_profile_undocumented"
+      ]
+    },
+    "ad_object_sid": {
+      "label": "Windows security identifier (SID)",
+      "type": "identifier",
+      "description": "The Windows security identifier of an AD-imported group.",
+      "hazards": [
+        "ad_group_profile_undocumented",
+        "ad_group_id_systems"
+      ]
+    },
+    "ad_distinguished_name": {
+      "label": "Distinguished name",
+      "type": "text",
+      "description": "The Windows distinguished name of an AD-imported group."
+    },
+    "ad_sam_account_name": {
+      "label": "SAM account name",
+      "type": "text",
+      "description": "The pre-Windows-2000 name of an AD-imported group."
+    },
+    "ad_windows_domain_qualified_name": {
+      "label": "Domain-qualified name",
+      "type": "text",
+      "description": "The fully qualified domain\\name form of an AD-imported group's name."
+    },
+    "ad_external_id": {
+      "label": "AD external id",
+      "type": "identifier",
+      "description": "The base64-encoded objectGUID of an AD-imported group; the AD source's own id for the group, not an Okta id.",
+      "hazards": [
+        "ad_group_id_systems"
+      ]
+    }
+  },
+  "containers": {
+    "OktaIM2:user": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "One record per Okta user object: the account's own profile and lifecycle state, indexed by Splunk_TA_okta_identity_cloud from the Users API.",
+      "note": "profile, type and credentials are nested objects flattened to dotted field names by INDEXED_EXTRACTIONS = json. group_name, memberof_groups, app_name and app_label are search-time lookup enrichment, not raw fields."
+    },
+    "OktaIM2:groupUser": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "One record per group membership: which user belongs to which group, from the Group API's list member users operation.",
+      "note": "The raw event carries only groupid, groupName, userid, userName and lastMembershipUpdated; every profile field (email, name, address, status, lifecycle timestamps) is search-time lookup enrichment joined by user id against the OktaIM2:user data.",
+      "hazards": [
+        "index_time_is_ingest_time"
+      ]
+    },
+    "OktaIM2:appUser": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "One record per application-user assignment: which user is assigned to which app, at what scope and status, from the app's list application users operation.",
+      "note": "The raw event carries appid, appName, appLabel, userid, externalId, userName, created, lastUpdated, statusChanged, scope and status. Every other observed column is search-time enrichment: member profile fields looked up by user id, and a set of generic CIM change-tracking fields (action, change_type, object, object_category, object_id, object_attrs, dvc) the TA or this deployment adds; status on this container is that generic tag's outcome flag, not the Okta AppUserStatus value, which lands on result instead.",
+      "hazards": [
+        "index_time_is_ingest_time"
+      ]
+    },
+    "OktaIM2:app": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "One record per Okta application instance: its own configuration, sign-on mode, credentials, visibility and lifecycle status, from the Application API's list applications operation.",
+      "note": "accessibility, credentials, features, links, settings, universalLogout and visibility are nested objects flattened to dotted field names by INDEXED_EXTRACTIONS = json. serial and app_id are search-time CIM identity aliases of id; description is a search-time CIM alias equal to label, not a literal Application field. settings.app.* and settings.signOn.* vary by signOnMode; this pack folds the sign-on-launch and SAML-override fields into shared concepts rather than one per app type.",
+      "hazards": [
+        "app_time_is_last_change"
+      ]
+    },
+    "OktaIM2:group": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "One record per Okta group: its profile, membership-update time and Active Directory import details where the group is AD-sourced, from the Group API's list groups operation.",
+      "note": "profile is a nested object flattened to dotted field names by INDEXED_EXTRACTIONS = json; its shape differs for an Okta-native group (name, description) and an AD-imported one (adds dn, externalId, groupScope, groupType, objectSid, samAccountName, windowsDomainQualifiedName). serial is a search-time CIM identity alias of id; description is a search-time CIM alias of profile.description. user and user_name are misleadingly named CIM aliases that carry the group's own name, not a user identity; group_name is a search-time alias of profile.name, not populated in the seeded event.",
+      "hazards": [
+        "index_time_is_ingest_time"
+      ]
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "appid",
+      "concept": "app_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "app",
+      "concept": "app_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "search-time CIM identity alias the TA adds alongside the raw field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "appName",
+      "concept": "app_name",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "app_name",
+      "concept": "app_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "search-time CIM identity alias the TA adds alongside the raw field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "appLabel",
+      "concept": "app_label",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "app_label",
+      "concept": "app_label",
+      "provenance": {
+        "kind": "alias",
+        "statement": "search-time CIM identity alias the TA adds alongside the raw field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "userid",
+      "concept": "user_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "object_id",
+      "concept": "user_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "search-time CIM identity alias the TA adds alongside the raw field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "externalId",
+      "concept": "app_user_external_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "userName",
+      "concept": "app_credential_username",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "user",
+      "concept": "app_credential_username",
+      "provenance": {
+        "kind": "alias",
+        "statement": "search-time CIM identity alias the TA adds alongside the raw field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "object",
+      "concept": "app_credential_username",
+      "provenance": {
+        "kind": "alias",
+        "statement": "search-time CIM identity alias the TA adds alongside the raw field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "created",
+      "concept": "app_user_created_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "lastUpdated",
+      "concept": "app_user_last_updated_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "statusChanged",
+      "concept": "app_user_status_changed_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "scope",
+      "concept": "app_user_scope",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "result",
+      "concept": "app_user_status",
+      "provenance": {
+        "kind": "alias",
+        "statement": "the TA aliases the AppUser status value onto the column result; the column named status on this container carries a different, generic outcome flag."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "status",
+      "concept": "assignment_sync_outcome",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "action",
+      "concept": "change_action",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "change_type",
+      "concept": "change_type_tag",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "object_category",
+      "concept": "change_object_category",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "object_attrs",
+      "concept": "change_object_attrs",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "dest",
+      "concept": "cim_host_artifact",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "dvc",
+      "concept": "cim_host_artifact",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "vendor_product",
+      "concept": "vendor_product",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "email",
+      "concept": "user_email",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "loginName",
+      "concept": "user_login",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "firstName",
+      "concept": "user_first_name",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "lastName",
+      "concept": "user_last_name",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "mobilePhone",
+      "concept": "user_mobile_phone",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "primaryPhone",
+      "concept": "user_primary_phone",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "secondEmail",
+      "concept": "user_second_email",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "streetAddress",
+      "concept": "user_street_address",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "city",
+      "concept": "user_city",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "state",
+      "concept": "user_state",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "countryCode",
+      "concept": "user_country_code",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "zipCode",
+      "concept": "user_zip_code",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "user_status",
+      "concept": "user_status",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "activated_time",
+      "concept": "user_activated_time",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "created_time",
+      "concept": "user_created_time",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "lastLogin_time",
+      "concept": "user_last_login_time",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:appUser",
+      "column": "lastUpdated_time",
+      "concept": "user_last_updated_time",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "groupid",
+      "concept": "group_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "groupName",
+      "concept": "group_name",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "group_name",
+      "concept": "group_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "a search-time normalized copy of groupName."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "group_description",
+      "concept": "group_description",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "group_type",
+      "concept": "group_type",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "lastMembershipUpdated",
+      "concept": "group_membership_updated_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "userid",
+      "concept": "user_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "userName",
+      "concept": "user_email",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "email",
+      "concept": "user_email",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "loginName",
+      "concept": "user_login",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "firstName",
+      "concept": "user_first_name",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "lastName",
+      "concept": "user_last_name",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "mobilePhone",
+      "concept": "user_mobile_phone",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "primaryPhone",
+      "concept": "user_primary_phone",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "secondEmail",
+      "concept": "user_second_email",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "streetAddress",
+      "concept": "user_street_address",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "city",
+      "concept": "user_city",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "state",
+      "concept": "user_state",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "countryCode",
+      "concept": "user_country_code",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "zipCode",
+      "concept": "user_zip_code",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "user_status",
+      "concept": "user_status",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "activated_time",
+      "concept": "user_activated_time",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "created_time",
+      "concept": "user_created_time",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "lastLogin_time",
+      "concept": "user_last_login_time",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "lastUpdated_time",
+      "concept": "user_last_updated_time",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field, not present in the raw indexed event; the TA joins this row to the referenced Okta user record."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "dest",
+      "concept": "cim_host_artifact",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:groupUser",
+      "column": "vendor_product",
+      "concept": "vendor_product",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "id",
+      "concept": "user_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "user_id",
+      "concept": "user_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "search-time CIM identity alias the TA adds alongside the raw field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "serial",
+      "concept": "user_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "search-time CIM identity alias the TA adds alongside the raw field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "profile.login",
+      "concept": "user_login",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "user",
+      "concept": "user_login",
+      "provenance": {
+        "kind": "alias",
+        "statement": "search-time CIM identity alias the TA adds alongside the raw field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "user_name",
+      "concept": "user_login",
+      "provenance": {
+        "kind": "alias",
+        "statement": "another CIM identity alias of profile.login; not populated in the seeded event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "profile.email",
+      "concept": "user_email",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "profile.secondEmail",
+      "concept": "user_second_email",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "profile.firstName",
+      "concept": "user_first_name",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "profile.lastName",
+      "concept": "user_last_name",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "description",
+      "concept": "user_display_name",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "observed as firstName and lastName joined with a space; not a literal Okta profile field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "profile.mobilePhone",
+      "concept": "user_mobile_phone",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "status",
+      "concept": "user_status",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "type.id",
+      "concept": "user_type_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "credentials.provider.type",
+      "concept": "credential_provider_type",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "credentials.provider.name",
+      "concept": "credential_provider_name",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "created",
+      "concept": "user_created_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "activated",
+      "concept": "user_activated_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "statusChanged",
+      "concept": "user_status_changed_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "lastLogin",
+      "concept": "user_last_login_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "lastUpdated",
+      "concept": "user_last_updated_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "passwordChanged",
+      "concept": "user_password_changed_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "group_name",
+      "concept": "group_name",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "multivalue enrichment naming the groups this user belongs to, joined by user id against OktaIM2:groupUser."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "memberof_groups",
+      "concept": "group_name",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "a second, differently named copy of the same group membership list."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "app_name",
+      "concept": "app_name",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "enrichment naming the apps this user is assigned, joined by user id against OktaIM2:appUser."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "app_label",
+      "concept": "app_label",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "enrichment naming the apps this user is assigned, joined by user id against OktaIM2:appUser."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "dest",
+      "concept": "cim_host_artifact",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "vendor_product",
+      "concept": "vendor_product",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:user",
+      "column": "accessible_apps",
+      "concept": "accessible_apps",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "multivalue enrichment listing the apps this user can access; empty in the seeded event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "id",
+      "concept": "app_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "app_id",
+      "concept": "app_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "search-time CIM identity alias the TA adds alongside the raw field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "serial",
+      "concept": "app_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "search-time CIM identity alias the TA adds alongside the raw field; observed equal to id."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "name",
+      "concept": "app_name",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "label",
+      "concept": "app_label",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "description",
+      "concept": "app_label",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "observed equal to label in the seeded data; a generic CIM description tag the TA computes, not a literal Application field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "status",
+      "concept": "app_status",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "signOnMode",
+      "concept": "app_sign_on_mode",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "created",
+      "concept": "app_created_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "lastUpdated",
+      "concept": "app_last_updated_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "orn",
+      "concept": "app_orn",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "features{}",
+      "concept": "app_features",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "universalLogout.status",
+      "concept": "app_universal_logout_status",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "credentials.scheme",
+      "concept": "app_credential_scheme",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "present only for BASIC_AUTH, BROWSER_PLUGIN or SECURE_PASSWORD_STORE apps; empty for the OIDC and SAML apps in the seeded data."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "credentials.signing.kid",
+      "concept": "app_credential_signing_kid",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "credentials.userNameTemplate.template",
+      "concept": "app_username_template",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "credentials.userNameTemplate.type",
+      "concept": "app_username_template_type",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "accessibility.selfService",
+      "concept": "app_accessibility_self_service",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "accessibility.errorRedirectUrl",
+      "concept": "app_accessibility_error_redirect_url",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "accessibility.loginRedirectUrl",
+      "concept": "app_accessibility_login_redirect_url",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "visibility.autoLaunch",
+      "concept": "app_visibility_auto_launch",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "visibility.autoSubmitToolbar",
+      "concept": "app_visibility_auto_submit_toolbar",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "visibility.hide.iOS",
+      "concept": "app_visibility_hide",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "the Okta Mobile (iOS/Android) surface."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "visibility.hide.web",
+      "concept": "app_visibility_hide",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "the web End-User Dashboard surface."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "visibility.appLinks.admin",
+      "concept": "app_visibility_link_enabled",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "the admin-facing link."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "visibility.appLinks.login",
+      "concept": "app_visibility_link_enabled",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "the end-user login link."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "visibility.appLinks.workflow_login",
+      "concept": "app_visibility_link_enabled",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "the workflow login link."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.emOptInStatus",
+      "concept": "app_em_opt_in_status",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.implicitAssignment",
+      "concept": "app_implicit_assignment",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.manualProvisioning",
+      "concept": "app_manual_provisioning",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.notes.admin",
+      "concept": "app_notes_admin",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.notes.enduser",
+      "concept": "app_notes_enduser",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.notifications.vpn.helpUrl",
+      "concept": "app_vpn_help_url",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.notifications.vpn.message",
+      "concept": "app_vpn_message",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.notifications.vpn.network.connection",
+      "concept": "app_vpn_network_connection",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.app.buttonField",
+      "concept": "app_login_setting",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "SWA form field: the login button selector."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.app.initiateLoginURI",
+      "concept": "app_login_setting",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "the OIDC app-initiated login URI."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.app.passwordField",
+      "concept": "app_login_setting",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "SWA form field: the password input selector."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.app.redirectURI",
+      "concept": "app_login_setting",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "the OIDC redirect URI."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.app.serviceDomain",
+      "concept": "app_login_setting",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "the app's own service domain."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.app.siteURL",
+      "concept": "app_login_setting",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "the app's own site URL."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.app.url",
+      "concept": "app_login_setting",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "the SWA form login page URL."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.app.usernameField",
+      "concept": "app_login_setting",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "SWA form field: the username input selector."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.signOn.attributeStatements{}",
+      "concept": "app_saml_attribute_statements",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.signOn.audienceOverride",
+      "concept": "app_saml_casb_override",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.signOn.defaultRelayState",
+      "concept": "app_saml_relay_state",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.signOn.destinationOverride",
+      "concept": "app_saml_casb_override",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.signOn.recipientOverride",
+      "concept": "app_saml_casb_override",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "settings.signOn.ssoAcsUrlOverride",
+      "concept": "app_saml_casb_override",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.accessPolicy.href",
+      "concept": "api_link_href",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.appLinks{}.href",
+      "concept": "api_link_href",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.appLinks{}.name",
+      "concept": "api_link_meta",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.appLinks{}.type",
+      "concept": "api_link_meta",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.clientCredentials{}.href",
+      "concept": "api_link_href",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.clientCredentials{}.name",
+      "concept": "api_link_meta",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.deactivate.href",
+      "concept": "api_link_href",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.groups.href",
+      "concept": "api_link_href",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.logo{}.href",
+      "concept": "api_link_href",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.logo{}.name",
+      "concept": "api_link_meta",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.logo{}.type",
+      "concept": "api_link_meta",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.policies.href",
+      "concept": "api_link_href",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.policies.hints.allow{}",
+      "concept": "api_link_meta",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "the HTTP methods the policies link allows."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.profileEnrollment.href",
+      "concept": "api_link_href",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.uploadLogo.href",
+      "concept": "api_link_href",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.uploadLogo.hints.allow{}",
+      "concept": "api_link_meta",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "the HTTP methods the uploadLogo link allows."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "links.users.href",
+      "concept": "api_link_href",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "dest",
+      "concept": "cim_host_artifact",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:app",
+      "column": "vendor_product",
+      "concept": "vendor_product",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "id",
+      "concept": "group_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "group_id",
+      "concept": "group_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "search-time CIM identity alias the TA adds alongside the raw field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "serial",
+      "concept": "group_id",
+      "provenance": {
+        "kind": "alias",
+        "statement": "search-time CIM identity alias the TA adds alongside the raw field; observed equal to id."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "type",
+      "concept": "group_type",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "created",
+      "concept": "group_created_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "lastUpdated",
+      "concept": "group_last_updated_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "lastMembershipUpdated",
+      "concept": "group_membership_updated_time",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "objectClass{}",
+      "concept": "group_object_class",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "profile.name",
+      "concept": "group_name",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "profile.description",
+      "concept": "group_description",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "description",
+      "concept": "group_description",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "observed equal to profile.description; a generic CIM description tag the TA computes."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "profile.dn",
+      "concept": "ad_distinguished_name",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "profile.externalId",
+      "concept": "ad_external_id",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "profile.groupScope",
+      "concept": "ad_group_scope",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "profile.groupType",
+      "concept": "ad_windows_group_type",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "profile.objectSid",
+      "concept": "ad_object_sid",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "profile.samAccountName",
+      "concept": "ad_sam_account_name",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "profile.windowsDomainQualifiedName",
+      "concept": "ad_windows_domain_qualified_name",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "group_name",
+      "concept": "group_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "a search-time normalized copy of profile.name; search-time enrichment field; not populated in the seeded event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "group_members",
+      "concept": "group_members_list",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "search-time enrichment field; not populated in the seeded event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "accessible_apps",
+      "concept": "accessible_apps",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "multivalue enrichment listing the apps this group's members can access; search-time enrichment field; not populated in the seeded event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "app_name",
+      "concept": "app_name",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "enrichment naming an app this group is assigned, joined against OktaIM2:appUser; search-time enrichment field; not populated in the seeded event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "app_label",
+      "concept": "app_label",
+      "provenance": {
+        "kind": "lookup",
+        "statement": "enrichment naming an app this group is assigned, joined against OktaIM2:appUser; search-time enrichment field; not populated in the seeded event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "user",
+      "concept": "group_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "a misleadingly named CIM alias: on this container it carries the group's own display name, not a user identity."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "user_name",
+      "concept": "group_name",
+      "provenance": {
+        "kind": "alias",
+        "statement": "a misleadingly named CIM alias: on this container it carries the group's own display name, not a user identity."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "links.apps.href",
+      "concept": "api_link_href",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "links.logo{}.href",
+      "concept": "api_link_href",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "links.logo{}.name",
+      "concept": "api_link_meta",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "links.logo{}.type",
+      "concept": "api_link_meta",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "links.users.href",
+      "concept": "api_link_href",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "dest",
+      "concept": "cim_host_artifact",
+      "provenance": {
+        "kind": "calculated"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "OktaIM2:group",
+      "column": "vendor_product",
+      "concept": "vendor_product",
+      "provenance": {
+        "kind": "calculated"
+      }
+    }
+  ],
+  "hazards": {
+    "ids_look_alike": {
+      "text": "Okta id prefixes look alike but name different resources: 00u is a user, 00g is a group, 0oa is an app. An externalId is the linked app's own id for the person, not an Okta id, even when it is shaped like one."
+    },
+    "names_not_stable": {
+      "text": "A login or username is usually an email address; it survives a display name change but not a login or email change, and a username inside a target app can differ from the person's Okta login."
+    },
+    "index_time_is_ingest_time": {
+      "text": "On this container Splunk's own _time is when the event was indexed, not any timestamp in the record; filter and sort on the timestamp fields, not on time range."
+    },
+    "cim_artifact": {
+      "text": "This field is a generic CIM tag the TA or this deployment adds, not a value the Okta API documents; treat its meaning as observed, not vendor-confirmed."
+    },
+    "app_time_is_last_change": {
+      "text": "On OktaIM2:app, props.conf sets TIME_PREFIX = lastUpdated, so _time is when the app object's configuration last changed, not when this row was captured; use it to sort by recency of change, not to bound a capture window."
+    },
+    "ad_group_profile_undocumented": {
+      "text": "profile.groupType, profile.groupScope and profile.objectSid appear in Okta's own list-groups example payload (management-minimal.yaml) but are not declared properties of the current OktaActiveDirectoryGroupProfile schema; treat them as observed, not vendor-confirmed."
+    },
+    "windows_group_type_look_alike": {
+      "text": "profile.groupType (a Windows/AD group category such as Security or Distribution) is not the same field as the top-level type (Okta's own OKTA_GROUP, APP_GROUP or BUILT_IN classification); the similar name invites confusing the two."
+    },
+    "group_user_field_is_group_name": {
+      "text": "The columns named user and user_name on OktaIM2:group carry the group's own display name, not a user identity; a CIM alias artifact, not an Okta API field."
+    },
+    "ad_group_id_systems": {
+      "text": "profile.objectSid (a Windows SID) and profile.externalId (a base64-encoded AD objectGUID) are further identifiers for the same Windows group, in different formats again; neither is an Okta id despite sitting on an Okta group record."
+    }
+  },
+  "edges": [],
+  "templates": []
+}

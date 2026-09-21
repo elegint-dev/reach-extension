@@ -1,0 +1,933 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "google-gcp-inventory",
+  "name": "Google Cloud asset inventory: compute instances",
+  "pack_version": "0.1.0",
+  "description": "Google Cloud Compute Engine VM instances as Cloud Asset Inventory exports them (sourcetype google:gcp:compute:instance): one snapshot record per instance, its machine type, network attachment, disks and scheduling policy, as the Splunk Add-on for Google Cloud Platform indexes it.",
+  "source": "Cloud Asset Inventory Asset resource reference; Compute Engine API v1 discovery document (Instance, AttachedDisk, NetworkInterface, Scheduling schemas); Splunk_TA_google-cloudplatform props.conf and transforms.conf, read live from a running instance",
+  "commands": [],
+  "macros": [],
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h",
+      "hint": "On _time, which is export or ingest time, not the instance's own creationTimestamp or lastStartTimestamp."
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "gcp_compute_inventory",
+    "label": "GCP compute instance inventory",
+    "description": "A Cloud Asset Inventory snapshot of one Compute Engine VM instance: identity, machine type, network interfaces, attached disks, scheduling policy and lifecycle status at export time.",
+    "tags": [
+      "gcp",
+      "cloud",
+      "inventory",
+      "compute"
+    ],
+    "discriminator": "asset_type"
+  },
+  "concepts": {
+    "resource_name": {
+      "label": "Resource name",
+      "type": "resource_id",
+      "description": "The Cloud Asset Inventory full resource name of the instance: //compute.googleapis.com/projects/<project>/zones/<zone>/instances/<instance>.",
+      "role": "resource_id",
+      "tags": [
+        "identifier"
+      ]
+    },
+    "instance_short_name": {
+      "label": "Instance name",
+      "type": "identifier",
+      "description": "The Compute Engine instance's own short name, as the client set it when the instance was created."
+    },
+    "instance_self_link": {
+      "label": "Instance self link",
+      "type": "identifier",
+      "description": "The server-defined URL for the instance resource itself."
+    },
+    "asset_type": {
+      "label": "Asset type",
+      "type": "record_type",
+      "description": "The Cloud Asset Inventory asset type; the discriminator for this feed. compute.googleapis.com/Instance names a Compute Engine VM asset."
+    },
+    "machine_type": {
+      "label": "Machine type",
+      "type": "identifier",
+      "description": "The machine type resource used for this instance, for example n1-standard-1, taken from the full or partial machineType URL."
+    },
+    "internal_ip": {
+      "label": "Internal IP",
+      "type": "source_ip",
+      "description": "The instance's primary internal IPv4 address on its network interface.",
+      "role": "ip",
+      "tags": [
+        "network"
+      ],
+      "hazards": [
+        "nat_vpn"
+      ]
+    },
+    "instance_address": {
+      "label": "Instance address (combined)",
+      "type": "source_ip",
+      "description": "A multivalue field combining the instance's internal address with its external (natIP) address when one is assigned. Empty for an instance with no external access config, as in this sample.",
+      "notes": "Read from the TA's own EVAL, not a vendor page: EVAL-ip = mvappend(if(network_ip==\"null\",null(), network_ip), if(nat_ip==\"null\",null(), nat_ip)).",
+      "role": "ip",
+      "tags": [
+        "network"
+      ]
+    },
+    "network_interface_name": {
+      "label": "Network interface name",
+      "type": "identifier",
+      "description": "The server-generated name of the network interface, for example nic0."
+    },
+    "fingerprint": {
+      "label": "Optimistic-locking fingerprint",
+      "type": "identifier",
+      "description": "A hash of the object's contents used for optimistic locking on update, not a stable identifier.",
+      "hazards": [
+        "fingerprint_not_id"
+      ]
+    },
+    "vpc_network": {
+      "label": "VPC network",
+      "type": "resource_id",
+      "description": "The URL of the VPC network resource the network interface attaches to."
+    },
+    "subnetwork": {
+      "label": "Subnetwork",
+      "type": "resource_id",
+      "description": "The URL of the Subnetwork resource the network interface uses."
+    },
+    "alias_ip_range_cidr": {
+      "label": "Alias IP range CIDR",
+      "type": "identifier",
+      "description": "The IP CIDR range covered by an alias IP range on the network interface."
+    },
+    "alias_ip_range_name": {
+      "label": "Alias IP range subnetwork range name",
+      "type": "identifier",
+      "description": "The subnetwork secondary range name the alias IP range allocates from."
+    },
+    "zone": {
+      "label": "Zone",
+      "type": "region",
+      "description": "The zone the instance resides in, for example us-east1-c. Cloud Asset Inventory's resource.location and the Compute API's zone URL both name it.",
+      "hazards": [
+        "zone_not_region"
+      ]
+    },
+    "resource_parent": {
+      "label": "Resource parent",
+      "type": "resource_id",
+      "description": "The full name of the immediate parent resource in the Cloud Asset Inventory hierarchy, typically the owning project."
+    },
+    "resource_ancestors": {
+      "label": "Resource ancestors",
+      "type": "resource_id",
+      "description": "The full ancestry path of the asset in the resource hierarchy, project up through any folders to the organization."
+    },
+    "account_id": {
+      "label": "Account id (broken)",
+      "type": "account_id",
+      "description": "Intended as the owning account or customer id. The TA aliases it from a field named customerId, which does not appear anywhere in a Cloud Asset Inventory compute instance record, so it is always empty for this sourcetype.",
+      "notes": "Read from the TA's own FIELDALIAS, not a vendor page: FIELDALIAS-splunk_gcp_compute_instance_vendor_account = \"customerId\" as vendor_account.",
+      "hazards": [
+        "broken_alias"
+      ]
+    },
+    "instance_label": {
+      "label": "Instance label",
+      "type": "text",
+      "description": "A label key applied to the instance. Labels are a free-form tenant-defined key/value map documented as a map type, not a fixed field list; which keys exist depends on the tenant and the instance.",
+      "notes": "The specific literal (goog-gke-node in this sample, a GKE node pool marker) is observed, not a fixed vendor value.",
+      "hazards": [
+        "label_key_as_field"
+      ]
+    },
+    "boot_disk_source": {
+      "label": "Disk source",
+      "type": "resource_id",
+      "description": "The URL of the persistent disk resource an attached disk was created from. The TA's image_id field name is misleading: it carries this disk source URL, not an image id."
+    },
+    "disk_auto_delete": {
+      "label": "Disk auto-delete",
+      "type": "flag",
+      "description": "Whether the disk is deleted automatically when the instance that uses it is deleted."
+    },
+    "disk_boot": {
+      "label": "Disk is boot disk",
+      "type": "flag",
+      "description": "Whether this is the instance's boot disk; the VM uses its first partition as the root filesystem."
+    },
+    "disk_device_name": {
+      "label": "Disk device name",
+      "type": "identifier",
+      "description": "The device name reflected into /dev/disk/by-id/ on the guest OS for this attached disk."
+    },
+    "disk_size_gb": {
+      "label": "Disk size (GB)",
+      "type": "count",
+      "description": "The size of the attached disk in base-2 gigabytes. The API returns this as a numeric string.",
+      "hazards": [
+        "int_as_string"
+      ]
+    },
+    "disk_guest_os_feature": {
+      "label": "Guest OS feature",
+      "type": "enum",
+      "description": "A guest OS capability the disk's image supports, for example UEFI boot or a multiqueue virtio-scsi controller."
+    },
+    "disk_index": {
+      "label": "Disk index",
+      "type": "count",
+      "description": "A zero-based index for this attached disk; index 0 is reserved for the boot disk."
+    },
+    "disk_interface": {
+      "label": "Disk interface",
+      "type": "enum",
+      "description": "The disk interface used to attach this disk to the instance, SCSI or NVME."
+    },
+    "disk_licenses": {
+      "label": "Disk licenses",
+      "type": "identifier",
+      "description": "URLs of any publicly visible licenses that apply to the attached disk's image."
+    },
+    "disk_mode": {
+      "label": "Disk mode",
+      "type": "enum",
+      "description": "The mode the disk is attached in, read-write or read-only."
+    },
+    "disk_type": {
+      "label": "Disk type",
+      "type": "enum",
+      "description": "Whether the attached disk is a persistent disk or a local scratch disk."
+    },
+    "instance_id": {
+      "label": "Instance id",
+      "type": "identifier",
+      "description": "The server-defined unique numeric identifier for this instance resource.",
+      "hazards": [
+        "id_lookalikes",
+        "int_as_string"
+      ]
+    },
+    "can_ip_forward": {
+      "label": "Can IP forward",
+      "type": "flag",
+      "description": "Whether the instance may send and receive packets whose source or destination does not match its own address; required to use the instance to forward routes."
+    },
+    "cpu_platform": {
+      "label": "CPU platform",
+      "type": "text",
+      "description": "The CPU platform the instance runs on, for example Intel Haswell."
+    },
+    "creation_time": {
+      "label": "Creation time",
+      "type": "event_time",
+      "description": "When the instance was created, RFC3339 text with the zone's own UTC offset, not the export or ingest time.",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "snapshot_not_event"
+      ]
+    },
+    "deletion_protection": {
+      "label": "Deletion protection",
+      "type": "flag",
+      "description": "Whether the instance is protected against deletion."
+    },
+    "last_start_time": {
+      "label": "Last start time",
+      "type": "event_time",
+      "description": "The last time the instance was started, RFC3339 text with the zone's own UTC offset.",
+      "tags": [
+        "time"
+      ],
+      "hazards": [
+        "snapshot_not_event"
+      ]
+    },
+    "scheduling_automatic_restart": {
+      "label": "Automatic restart",
+      "type": "flag",
+      "description": "Whether Compute Engine automatically restarts the instance if it is terminated by Compute Engine rather than by the user."
+    },
+    "scheduling_on_host_maintenance": {
+      "label": "On-host maintenance behavior",
+      "type": "enum",
+      "description": "How the instance behaves during a host maintenance event: migrate to another host, or terminate."
+    },
+    "scheduling_preemptible": {
+      "label": "Preemptible",
+      "type": "flag",
+      "description": "Whether the instance is preemptible: it can be reclaimed by Compute Engine at any time at no charge."
+    },
+    "service_accounts": {
+      "label": "Service accounts",
+      "type": "identifier",
+      "description": "The service accounts, with their scopes, authorized for this instance. Empty in this sample; no example is given because none is observed."
+    },
+    "start_restricted": {
+      "label": "Start restricted",
+      "type": "flag",
+      "description": "Whether the instance is restricted from starting, for example after a billing suspension."
+    },
+    "status": {
+      "label": "Status",
+      "type": "enum",
+      "description": "The instance's current lifecycle status."
+    },
+    "cai_discovery_document_uri": {
+      "label": "Discovery document URI",
+      "type": "identifier",
+      "description": "The URL of the discovery document that carries the resource's JSON schema."
+    },
+    "cai_discovery_name": {
+      "label": "Discovery schema name",
+      "type": "identifier",
+      "description": "The JSON schema name listed in the discovery document for this resource, Instance for a Compute Engine VM."
+    },
+    "cai_resource_version": {
+      "label": "Resource API version",
+      "type": "version",
+      "description": "The API version the resource data was captured at, for example v1."
+    }
+  },
+  "containers": {
+    "google:gcp:compute:instance": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Cloud Asset Inventory's JSON export for a compute.googleapis.com/Instance asset, as the Splunk Add-on for Google Cloud Platform (Splunk_TA_google-cloudplatform) indexes a Cloud Storage bucket export: the Asset object's own dotted paths, plus the TA's own EXTRACT, EVAL and FIELDALIAS fields.",
+      "note": "disks{}, networkInterfaces{} and their nested paths are multivalue; ancestors{} is a plain multivalue list. One event observed in the dev index; the TA also supports a pull mode with the same field shape."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "name",
+      "concept": "resource_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed",
+        "statement": "The Cloud Asset Inventory export's top-level name field."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "instance_name",
+      "concept": "resource_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "REPORT regex pulls the projects/.../instances/... path out of the raw name field, dropping the //compute.googleapis.com/ prefix."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "nt_host",
+      "concept": "resource_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-splunk_gcp_compute_instance_nt_host: instance_name as nt_host."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.name",
+      "concept": "instance_short_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.selfLink",
+      "concept": "instance_self_link",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "asset_type",
+      "concept": "asset_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "instance_type",
+      "concept": "machine_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "EXTRACT regex pulls the machineTypes/<value> segment out of the machineType URL."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.machineType",
+      "concept": "machine_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "network_ip",
+      "concept": "internal_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "EXTRACT regex pulls networkInterfaces[0].networkIP out of the raw event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.networkInterfaces{}.networkIP",
+      "concept": "internal_ip",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "ip",
+      "concept": "instance_address",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "calculated",
+        "statement": "EVAL-ip: mvappend(if(network_ip==\"null\",null(), network_ip), if(nat_ip==\"null\",null(), nat_ip))."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "network_interface_id",
+      "concept": "network_interface_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "EXTRACT regex pulls networkInterfaces[0].name out of the raw event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.networkInterfaces{}.name",
+      "concept": "network_interface_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.fingerprint",
+      "concept": "fingerprint",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.labelFingerprint",
+      "concept": "fingerprint",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.networkInterfaces{}.fingerprint",
+      "concept": "fingerprint",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "vpc_id",
+      "concept": "vpc_network",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "EXTRACT regex pulls networkInterfaces[0].network out of the raw event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.networkInterfaces{}.network",
+      "concept": "vpc_network",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "subnet_id",
+      "concept": "subnetwork",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "EXTRACT regex pulls networkInterfaces[0].subnetwork out of the raw event."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.networkInterfaces{}.subnetwork",
+      "concept": "subnetwork",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.networkInterfaces{}.aliasIpRanges{}.ipCidrRange",
+      "concept": "alias_ip_range_cidr",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.networkInterfaces{}.aliasIpRanges{}.subnetworkRangeName",
+      "concept": "alias_ip_range_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.location",
+      "concept": "zone",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.zone",
+      "concept": "zone",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "vendor_region",
+      "concept": "zone",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "EXTRACT regex pulls the zones/<value> segment out of the zone URL. Despite the field name, the value is a zone (us-east1-c), not a region (us-east1)."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.parent",
+      "concept": "resource_parent",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "ancestors{}",
+      "concept": "resource_ancestors",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "vendor_account",
+      "concept": "account_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "alias",
+        "statement": "FIELDALIAS-splunk_gcp_compute_instance_vendor_account: \"customerId\" as vendor_account. No customerId key exists in a Cloud Asset Inventory compute instance record, so this field is always empty here."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "category",
+      "concept": "instance_label",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "EXTRACT regex captures the first key under resource.data.labels as category."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.labels.goog-gke-node",
+      "concept": "instance_label",
+      "note": "The field name is the label's own key; it changes with whatever labels the tenant applies.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "image_id",
+      "concept": "boot_disk_source",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "EXTRACT regex captures the first disk's source URL as image_id, despite the field name."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.disks{}.source",
+      "concept": "boot_disk_source",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.disks{}.autoDelete",
+      "concept": "disk_auto_delete",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.disks{}.boot",
+      "concept": "disk_boot",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.disks{}.deviceName",
+      "concept": "disk_device_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.disks{}.diskSizeGb",
+      "concept": "disk_size_gb",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.disks{}.guestOsFeatures{}.type",
+      "concept": "disk_guest_os_feature",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.disks{}.index",
+      "concept": "disk_index",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.disks{}.interface",
+      "concept": "disk_interface",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.disks{}.licenses{}",
+      "concept": "disk_licenses",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.disks{}.mode",
+      "concept": "disk_mode",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.disks{}.type",
+      "concept": "disk_type",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.id",
+      "concept": "instance_id",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.canIpForward",
+      "concept": "can_ip_forward",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.cpuPlatform",
+      "concept": "cpu_platform",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.creationTimestamp",
+      "concept": "creation_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.deletionProtection",
+      "concept": "deletion_protection",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.lastStartTimestamp",
+      "concept": "last_start_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.scheduling.automaticRestart",
+      "concept": "scheduling_automatic_restart",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.scheduling.onHostMaintenance",
+      "concept": "scheduling_on_host_maintenance",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.scheduling.preemptible",
+      "concept": "scheduling_preemptible",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.serviceAccounts{}",
+      "concept": "service_accounts",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.startRestricted",
+      "concept": "start_restricted",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.data.status",
+      "concept": "status",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.discovery_document_uri",
+      "concept": "cai_discovery_document_uri",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.discovery_name",
+      "concept": "cai_discovery_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:compute:instance",
+      "column": "resource.version",
+      "concept": "cai_resource_version",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "indexed"
+      }
+    }
+  ],
+  "hazards": {
+    "snapshot_not_event": {
+      "text": "This is an inventory snapshot, not an event stream. _time is export or ingest time and has no fixed relation to creationTimestamp or lastStartTimestamp, which also carry their own non-UTC offset."
+    },
+    "id_lookalikes": {
+      "text": "resource.data.id (the instance), the project number in resource.parent or ancestors{}, and the organization number in ancestors{} are all bare decimal strings of similar shape but name different things."
+    },
+    "fingerprint_not_id": {
+      "text": "fingerprint, labelFingerprint and a network interface's own fingerprint are optimistic-locking hashes, not identifiers; each changes on every write to the object it guards."
+    },
+    "int_as_string": {
+      "text": "resource.data.id and disks{}.diskSizeGb are numeric-looking JSON strings, not numbers; a numeric comparison in SPL needs an explicit cast."
+    },
+    "mv_sibling_misalign": {
+      "text": "disks{}.* and networkInterfaces{}.* are separate multivalue fields; their values do not pair by position without mvzip or mvexpand."
+    },
+    "label_key_as_field": {
+      "text": "resource.data.labels.<key> promotes a tenant's own label key into the field name; which fields exist, and what they mean, varies by tenant and instance."
+    },
+    "broken_alias": {
+      "text": "vendor_account is aliased from a field named customerId, which does not appear in a Cloud Asset Inventory compute instance record; the field is always empty for this sourcetype."
+    },
+    "zone_not_region": {
+      "text": "vendor_region is extracted from the zone URL and holds a zone (us-east1-c), not a region (us-east1), despite the field name."
+    }
+  },
+  "edges": [],
+  "templates": [],
+  "queries": [],
+  "workflows": []
+}

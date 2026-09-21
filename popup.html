@@ -1,0 +1,168 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body {
+      width: 300px;
+      margin: 0;
+      padding: 14px 16px 16px;
+      font: 13px/1.45 "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+      background: #ffffff;
+      color: #323130;
+    }
+    h1 {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0 0 8px;
+    }
+    p {
+      color: #605e5c;
+      line-height: 1.45;
+      margin: 0 0 12px;
+    }
+    #origin {
+      font-family: "Cascadia Code", "Cascadia Mono", Consolas, Menlo, ui-monospace, monospace;
+      font-size: 12px;
+      color: #323130;
+      word-break: break-all;
+    }
+    button {
+      width: 100%;
+      min-height: 32px;
+      padding: 5px 16px;
+      border-radius: 2px;
+      border: 1px solid #8a8886;
+      background: #ffffff;
+      color: #323130;
+      cursor: pointer;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button:hover {
+      background: #f3f2f1;
+    }
+    button.enabled {
+      background: #dff6dd;
+      border-color: #107c10;
+      color: #107c10;
+    }
+    button:disabled {
+      background: #f3f2f1;
+      border-color: #f3f2f1;
+      color: #a19f9d;
+      cursor: default;
+    }
+    #status {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #605e5c;
+    }
+    #enableHint {
+      margin-top: 6px;
+      font-size: 11px;
+      line-height: 1.4;
+      color: #605e5c;
+      overflow-wrap: anywhere;
+    }
+    a {
+      color: #0078d4;
+      text-decoration: none;
+    }
+    a:hover {
+      color: #106ebe;
+      text-decoration: underline;
+    }
+    /* #actions holds the enable button and the catalogue link; on a page
+       Reach cannot recognize as Splunk or the Azure portal, popup.js swaps
+       which one leads (see classify() / updateLayout()), so a store
+       reviewer without a SIEM sees a working action first, not a button
+       that does nothing for them. */
+    #actions {
+      display: flex;
+      flex-direction: column;
+    }
+    #appLink {
+      display: block;
+      margin-top: 6px;
+      font-size: 12px;
+    }
+    #appLink.r-primary-action {
+      order: -1;
+      margin-top: 0;
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 32px;
+      padding: 5px 16px;
+      border-radius: 2px;
+      border: 1px solid #0078d4;
+      background: #0078d4;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+    }
+    #appLink.r-primary-action:hover {
+      background: #106ebe;
+      border-color: #106ebe;
+    }
+    #enableBlock.r-secondary {
+      margin-top: 12px;
+    }
+    #enableBlock.r-secondary button#toggle {
+      width: auto;
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: #0078d4;
+      font-size: 12px;
+      font-weight: 400;
+      text-align: left;
+    }
+    #enableBlock.r-secondary button#toggle:hover {
+      background: none;
+      text-decoration: underline;
+    }
+    #enableBlock.r-secondary button#toggle:disabled {
+      background: none;
+      border: 0;
+      color: #a19f9d;
+    }
+    #panelLink { display: block; margin-top: 12px; font-size: 12px; }
+    #settingsLink { display: block; margin-top: 6px; font-size: 12px; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1b1a19; color: #f3f2f1; }
+      p, #status, #enableHint { color: #c8c6c4; }
+      #origin { color: #f3f2f1; }
+      button { background: #1b1a19; color: #f3f2f1; }
+      button:hover { background: #292827; }
+      button.enabled { background: #1f3a1c; border-color: #92c353; color: #92c353; }
+      button:disabled { background: #292827; border-color: #292827; color: #797775; }
+      a { color: #2899f5; }
+      a:hover { color: #3aa0f3; }
+      #appLink.r-primary-action { background: #2899f5; border-color: #2899f5; color: #1b1a19; }
+      #appLink.r-primary-action:hover { background: #3aa0f3; border-color: #3aa0f3; }
+      #enableBlock.r-secondary button#toggle { color: #2899f5; }
+      #enableBlock.r-secondary button#toggle:disabled { color: #797775; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Reach</h1>
+  <p>Catalogue lookups run locally and automatically. Enabling here lets Reach add its section to the field and value menus of <span id="origin">this site</span>: Splunk Web's own popups, or the Logs blade's value menu and column headers in the Azure portal. Nothing runs without your own click.</p>
+  <div id="actions">
+    <div id="enableBlock">
+      <button id="toggle" disabled>Checking…</button>
+      <div id="status"></div>
+      <p id="enableHint" hidden></p>
+    </div>
+    <a href="#" id="appLink">Open the catalogue in a tab →</a>
+  </div>
+  <a href="#" id="panelLink">Open Reach in the side panel →</a>
+  <a href="#" id="settingsLink">Settings →</a>
+  <script src="content-config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

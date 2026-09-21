@@ -1,0 +1,787 @@
+{
+  "format": "reach-pack",
+  "version": 2,
+  "id": "google-gcp-security",
+  "name": "Google Security Command Center findings",
+  "pack_version": "0.1.0",
+  "description": "Security Command Center findings delivered to Splunk as Pub/Sub notification messages: one event per finding update, wrapping the finding, the Google Cloud resource it is about and the notification config that sent it.",
+  "source": "Security Command Center v1 API protos (Finding, Resource, NotificationMessage); Splunk Add-on for Google Cloud Platform source types reference; two captured Pub/Sub notifications.",
+  "params": {
+    "earliest": {
+      "label": "since",
+      "placeholder": "-24h"
+    },
+    "latest": {
+      "label": "until",
+      "placeholder": "now"
+    },
+    "value": {
+      "label": "value",
+      "placeholder": "the value you are holding"
+    }
+  },
+  "feed": {
+    "id": "google_gcp_security_alerts",
+    "label": "Google Security Command Center findings",
+    "description": "Security Command Center finding notifications, delivered one per Pub/Sub message: the finding, the resource it is about, and the notification config that sent it.",
+    "tags": [
+      "gcp",
+      "cloud",
+      "security",
+      "alerts"
+    ],
+    "discriminator": "finding_category"
+  },
+  "concepts": {
+    "envelope_publish_time": {
+      "label": "Pub/Sub publish time",
+      "type": "event_time",
+      "description": "The Pub/Sub message's own publish timestamp, epoch seconds with a fractional part; the sourcetype's time_field per the sample capture.",
+      "hazards": [
+        "clock_mismatch"
+      ]
+    },
+    "gcp_project_id_ta": {
+      "label": "GCP project id (TA field)",
+      "type": "account_id",
+      "description": "A project id the add-on scopes the event to. Named in the observed column set for this sourcetype; not a literal top-level key in either read fixture, so its extraction rule was not confirmed.",
+      "hazards": [
+        "project_id_lookalikes"
+      ]
+    },
+    "finding_name": {
+      "label": "Finding name",
+      "type": "identifier",
+      "description": "The finding's own relative resource name: organizations or folders or projects, then sources, then findings, each with an id."
+    },
+    "finding_parent": {
+      "label": "Finding source",
+      "type": "identifier",
+      "description": "The relative resource name of the Security Command Center source (the detector or integration) that wrote the finding."
+    },
+    "finding_resource_name": {
+      "label": "Finding resource name",
+      "type": "resource_id",
+      "description": "The full resource name of the Google Cloud (or other) resource the finding is about; a customer- or partner-defined string when the resource is not on Google Cloud.",
+      "hazards": [
+        "resource_name_mismatch"
+      ]
+    },
+    "finding_state": {
+      "label": "Finding state",
+      "type": "enum",
+      "description": "Whether the security issue the finding describes is still present (ACTIVE) or has been addressed (INACTIVE)."
+    },
+    "finding_category": {
+      "label": "Finding category",
+      "type": "record_type",
+      "description": "The detector-assigned classification of the finding; the taxonomy group within findings from a given source. Not a fixed enum: literal spelling and casing vary by detector."
+    },
+    "finding_external_uri": {
+      "label": "Finding external URI",
+      "type": "text",
+      "description": "A URI, when available, to a page outside Security Command Center with more information about the finding; guaranteed empty or a well-formed URL."
+    },
+    "finding_event_time": {
+      "label": "Finding event time",
+      "type": "event_time",
+      "description": "When the detector believes the condition the finding describes first occurred, or was last updated; the accuracy is the detector's.",
+      "hazards": [
+        "clock_mismatch"
+      ]
+    },
+    "finding_create_time": {
+      "label": "Finding create time",
+      "type": "event_time",
+      "description": "The time at which the finding was created in Security Command Center.",
+      "hazards": [
+        "clock_mismatch"
+      ]
+    },
+    "finding_security_marks_name": {
+      "label": "Security marks resource name",
+      "type": "identifier",
+      "description": "The resource name of the finding's user-managed security marks; observed as the finding's own name with /securityMarks appended."
+    },
+    "finding_sp_explanation": {
+      "label": "Explanation (source property)",
+      "type": "text",
+      "description": "Free text: why the detector raised this finding. sourceProperties keys are source-defined (finding.proto: managed by the source that writes the finding); this key belongs to the Security Health Analytics storage-bucket detector seen in the read fixtures.",
+      "hazards": [
+        "source_properties_open"
+      ]
+    },
+    "finding_sp_recommendation": {
+      "label": "Recommendation (source property)",
+      "type": "text",
+      "description": "Free text: the fix the detector suggests. sourceProperties keys are source-defined (finding.proto: managed by the source that writes the finding); this key belongs to the Security Health Analytics storage-bucket detector seen in the read fixtures.",
+      "hazards": [
+        "source_properties_open"
+      ]
+    },
+    "finding_sp_exception_instructions": {
+      "label": "Exception instructions (source property)",
+      "type": "text",
+      "description": "Free text: how to mark the finding as an accepted exception. sourceProperties keys are source-defined (finding.proto: managed by the source that writes the finding); this key belongs to the Security Health Analytics storage-bucket detector seen in the read fixtures.",
+      "hazards": [
+        "source_properties_open"
+      ]
+    },
+    "finding_sp_has_admin_roles": {
+      "label": "Has admin roles (source property)",
+      "type": "flag",
+      "description": "Whether the exposed principal (e.g. allUsers) also holds an admin IAM role on the resource. sourceProperties keys are source-defined (finding.proto: managed by the source that writes the finding); this key belongs to the Security Health Analytics storage-bucket detector seen in the read fixtures.",
+      "hazards": [
+        "source_properties_open"
+      ]
+    },
+    "finding_sp_has_edit_roles": {
+      "label": "Has edit roles (source property)",
+      "type": "flag",
+      "description": "Whether the exposed principal also holds an editor IAM role on the resource. sourceProperties keys are source-defined (finding.proto: managed by the source that writes the finding); this key belongs to the Security Health Analytics storage-bucket detector seen in the read fixtures.",
+      "hazards": [
+        "source_properties_open"
+      ]
+    },
+    "finding_sp_project_id": {
+      "label": "Project id (source property)",
+      "type": "account_id",
+      "description": "The GCP project id string the detector recorded for the finding. sourceProperties keys are source-defined (finding.proto: managed by the source that writes the finding); this key belongs to the Security Health Analytics storage-bucket detector seen in the read fixtures.",
+      "hazards": [
+        "source_properties_open"
+      ]
+    },
+    "finding_sp_reactivation_count": {
+      "label": "Reactivation count (source property)",
+      "type": "count",
+      "description": "How many times this finding has gone INACTIVE and back to ACTIVE. sourceProperties keys are source-defined (finding.proto: managed by the source that writes the finding); this key belongs to the Security Health Analytics storage-bucket detector seen in the read fixtures.",
+      "hazards": [
+        "source_properties_open"
+      ]
+    },
+    "finding_sp_resource_path": {
+      "label": "Resource path (source property)",
+      "type": "text",
+      "description": "A multivalue ancestor chain for the resource (project, then folders, then organization), most specific first. sourceProperties keys are source-defined (finding.proto: managed by the source that writes the finding); this key belongs to the Security Health Analytics storage-bucket detector seen in the read fixtures.",
+      "hazards": [
+        "source_properties_open"
+      ]
+    },
+    "finding_sp_scanner_name": {
+      "label": "Scanner name (source property)",
+      "type": "identifier",
+      "description": "The Security Health Analytics scanner that produced the finding, e.g. STORAGE_SCANNER. sourceProperties keys are source-defined (finding.proto: managed by the source that writes the finding); this key belongs to the Security Health Analytics storage-bucket detector seen in the read fixtures.",
+      "hazards": [
+        "source_properties_open"
+      ]
+    },
+    "finding_sp_severity_level": {
+      "label": "Severity level (source property)",
+      "type": "enum",
+      "description": "The detector's own severity label, title case (e.g. High); not the Finding API's severity enum. sourceProperties keys are source-defined (finding.proto: managed by the source that writes the finding); this key belongs to the Security Health Analytics storage-bucket detector seen in the read fixtures.",
+      "hazards": [
+        "source_properties_open",
+        "severity_lookalikes"
+      ]
+    },
+    "notification_config_name": {
+      "label": "Notification config name",
+      "type": "identifier",
+      "description": "The resource name of the notification config that generated this notification."
+    },
+    "resource_name": {
+      "label": "Resource name",
+      "type": "resource_id",
+      "description": "The full resource name of the Google Cloud resource tied to this notification.",
+      "hazards": [
+        "resource_name_mismatch"
+      ]
+    },
+    "resource_parent": {
+      "label": "Resource parent",
+      "type": "identifier",
+      "description": "The full resource name of the resource's parent."
+    },
+    "resource_parent_display_name": {
+      "label": "Resource parent display name",
+      "type": "text",
+      "description": "The human-readable name of the resource's parent."
+    },
+    "resource_project": {
+      "label": "Resource's project",
+      "type": "resource_id",
+      "description": "The full resource name of the project the resource belongs to.",
+      "hazards": [
+        "project_id_lookalikes"
+      ]
+    },
+    "resource_project_display_name": {
+      "label": "Resource project id",
+      "type": "account_id",
+      "description": "Named project_display_name in the proto, but its own field comment calls it the project id; read the value, not the field name.",
+      "hazards": [
+        "project_id_lookalikes"
+      ]
+    },
+    "alert_app": {
+      "label": "Alert app",
+      "type": "identifier",
+      "description": "Named in the observed column set for this sourcetype. The add-on's own Source types page lists no CIM data model for this sourcetype, so the field's search-time definition and typical value are unconfirmed.",
+      "hazards": [
+        "cim_unconfirmed"
+      ]
+    },
+    "alert_body": {
+      "label": "Alert body",
+      "type": "text",
+      "description": "Named in the observed column set for this sourcetype. The add-on's own Source types page lists no CIM data model for this sourcetype, so the field's search-time definition and typical value are unconfirmed.",
+      "hazards": [
+        "cim_unconfirmed"
+      ]
+    },
+    "alert_description": {
+      "label": "Alert description",
+      "type": "text",
+      "description": "Named in the observed column set for this sourcetype. The add-on's own Source types page lists no CIM data model for this sourcetype, so the field's search-time definition and typical value are unconfirmed.",
+      "hazards": [
+        "cim_unconfirmed"
+      ]
+    },
+    "alert_dest": {
+      "label": "Alert destination",
+      "type": "resource_id",
+      "description": "Named in the observed column set for this sourcetype. The add-on's own Source types page lists no CIM data model for this sourcetype, so the field's search-time definition and typical value are unconfirmed.",
+      "hazards": [
+        "cim_unconfirmed"
+      ]
+    },
+    "alert_dest_type": {
+      "label": "Alert destination type",
+      "type": "enum",
+      "description": "Named in the observed column set for this sourcetype. The add-on's own Source types page lists no CIM data model for this sourcetype, so the field's search-time definition and typical value are unconfirmed.",
+      "hazards": [
+        "cim_unconfirmed"
+      ]
+    },
+    "alert_id": {
+      "label": "Alert id",
+      "type": "event_id",
+      "description": "Named in the observed column set for this sourcetype. The add-on's own Source types page lists no CIM data model for this sourcetype, so the field's search-time definition and typical value are unconfirmed.",
+      "hazards": [
+        "cim_unconfirmed"
+      ]
+    },
+    "alert_severity": {
+      "label": "Alert severity",
+      "type": "enum",
+      "description": "Named in the observed column set for this sourcetype. The add-on's own Source types page lists no CIM data model for this sourcetype, so the field's search-time definition and typical value are unconfirmed.",
+      "hazards": [
+        "cim_unconfirmed",
+        "severity_lookalikes"
+      ]
+    },
+    "alert_signature": {
+      "label": "Alert signature",
+      "type": "text",
+      "description": "Named in the observed column set for this sourcetype. The add-on's own Source types page lists no CIM data model for this sourcetype, so the field's search-time definition and typical value are unconfirmed.",
+      "hazards": [
+        "cim_unconfirmed"
+      ]
+    },
+    "alert_signature_id": {
+      "label": "Alert signature id",
+      "type": "identifier",
+      "description": "Named in the observed column set for this sourcetype. The add-on's own Source types page lists no CIM data model for this sourcetype, so the field's search-time definition and typical value are unconfirmed.",
+      "hazards": [
+        "cim_unconfirmed"
+      ]
+    },
+    "alert_src_type": {
+      "label": "Alert source type",
+      "type": "enum",
+      "description": "Named in the observed column set for this sourcetype. The add-on's own Source types page lists no CIM data model for this sourcetype, so the field's search-time definition and typical value are unconfirmed.",
+      "hazards": [
+        "cim_unconfirmed"
+      ]
+    },
+    "alert_subject": {
+      "label": "Alert subject",
+      "type": "text",
+      "description": "Named in the observed column set for this sourcetype. The add-on's own Source types page lists no CIM data model for this sourcetype, so the field's search-time definition and typical value are unconfirmed.",
+      "hazards": [
+        "cim_unconfirmed"
+      ]
+    },
+    "alert_type": {
+      "label": "Alert type",
+      "type": "enum",
+      "description": "Named in the observed column set for this sourcetype. The add-on's own Source types page lists no CIM data model for this sourcetype, so the field's search-time definition and typical value are unconfirmed.",
+      "hazards": [
+        "cim_unconfirmed"
+      ]
+    },
+    "alert_vendor_account": {
+      "label": "Alert vendor account",
+      "type": "account_id",
+      "description": "Named in the observed column set for this sourcetype. The add-on's own Source types page lists no CIM data model for this sourcetype, so the field's search-time definition and typical value are unconfirmed.",
+      "hazards": [
+        "cim_unconfirmed"
+      ]
+    }
+  },
+  "containers": {
+    "google:gcp:security:alerts": {
+      "platform": "splunk",
+      "kind": "vendor",
+      "description": "Splunk Add-on for Google Cloud Platform's sourcetype for Security Command Center finding notifications pulled over Pub/Sub; one JSON object per message with publish_time, data (the NotificationMessage) and, when present, attributes.",
+      "tags": [
+        "gcp",
+        "cloud",
+        "security",
+        "alerts"
+      ],
+      "note": "The add-on's Source types reference (https://splunk.github.io/splunk-add-on-for-google-cloud-platform/Sourcetypes/, read 2026-09-19) lists this sourcetype's CIM data models as None. Nested fields are dotted (data.finding.category); sourceProperties keys are detector-defined and vary by finding source."
+    }
+  },
+  "bindings": [
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "publish_time",
+      "concept": "envelope_publish_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Present as the top-level publish_time key in both read fixtures, set by the modular input's Pub/Sub pull wrapper."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "a_project_id",
+      "concept": "gcp_project_id_ta",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column name only, from the observed-column extraction; no example value was available in either read fixture."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.name",
+      "concept": "finding_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.parent",
+      "concept": "finding_parent",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.resourceName",
+      "concept": "finding_resource_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.state",
+      "concept": "finding_state",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.category",
+      "concept": "finding_category",
+      "note": "Discriminator for this sourcetype.",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.externalUri",
+      "concept": "finding_external_uri",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.eventTime",
+      "concept": "finding_event_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.createTime",
+      "concept": "finding_create_time",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.securityMarks.name",
+      "concept": "finding_security_marks_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "The finding.proto securityMarks field documents the container (user-specified marks from the SecurityMarks resource) but not this .name sub-path; observed to equal finding.name + \"/securityMarks\" in the read fixture."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.sourceProperties.Explanation",
+      "concept": "finding_sp_explanation",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.sourceProperties.Recommendation",
+      "concept": "finding_sp_recommendation",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.sourceProperties.ExceptionInstructions",
+      "concept": "finding_sp_exception_instructions",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.sourceProperties.HasAdminRoles",
+      "concept": "finding_sp_has_admin_roles",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.sourceProperties.HasEditRoles",
+      "concept": "finding_sp_has_edit_roles",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.sourceProperties.ProjectId",
+      "concept": "finding_sp_project_id",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.sourceProperties.ReactivationCount",
+      "concept": "finding_sp_reactivation_count",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.sourceProperties.ResourcePath{}",
+      "concept": "finding_sp_resource_path",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.sourceProperties.ScannerName",
+      "concept": "finding_sp_scanner_name",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.finding.sourceProperties.SeverityLevel",
+      "concept": "finding_sp_severity_level",
+      "basis": "asserted",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.notificationConfigName",
+      "concept": "notification_config_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.resource.name",
+      "concept": "resource_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.resource.parent",
+      "concept": "resource_parent",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.resource.parentDisplayName",
+      "concept": "resource_parent_display_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.resource.project",
+      "concept": "resource_project",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "data.resource.projectDisplayName",
+      "concept": "resource_project_display_name",
+      "basis": "confirmed",
+      "provenance": {
+        "kind": "extracted"
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "app",
+      "concept": "alert_app",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column name only, from the observed-column extraction; the search-time definition (alias, EVAL or lookup) that produces it was not readable from the dev Splunk instance (the sourcetype carries zero indexed events there) and is not named by the add-on's own Source types page."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "body",
+      "concept": "alert_body",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column name only, from the observed-column extraction; the search-time definition (alias, EVAL or lookup) that produces it was not readable from the dev Splunk instance (the sourcetype carries zero indexed events there) and is not named by the add-on's own Source types page."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "description",
+      "concept": "alert_description",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column name only, from the observed-column extraction; the search-time definition (alias, EVAL or lookup) that produces it was not readable from the dev Splunk instance (the sourcetype carries zero indexed events there) and is not named by the add-on's own Source types page."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "dest",
+      "concept": "alert_dest",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column name only, from the observed-column extraction; the search-time definition (alias, EVAL or lookup) that produces it was not readable from the dev Splunk instance (the sourcetype carries zero indexed events there) and is not named by the add-on's own Source types page."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "dest_type",
+      "concept": "alert_dest_type",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column name only, from the observed-column extraction; the search-time definition (alias, EVAL or lookup) that produces it was not readable from the dev Splunk instance (the sourcetype carries zero indexed events there) and is not named by the add-on's own Source types page."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "id",
+      "concept": "alert_id",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column name only, from the observed-column extraction; the search-time definition (alias, EVAL or lookup) that produces it was not readable from the dev Splunk instance (the sourcetype carries zero indexed events there) and is not named by the add-on's own Source types page."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "severity",
+      "concept": "alert_severity",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column name only, from the observed-column extraction; the search-time definition (alias, EVAL or lookup) that produces it was not readable from the dev Splunk instance (the sourcetype carries zero indexed events there) and is not named by the add-on's own Source types page."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "signature",
+      "concept": "alert_signature",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column name only, from the observed-column extraction; the search-time definition (alias, EVAL or lookup) that produces it was not readable from the dev Splunk instance (the sourcetype carries zero indexed events there) and is not named by the add-on's own Source types page."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "signature_id",
+      "concept": "alert_signature_id",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column name only, from the observed-column extraction; the search-time definition (alias, EVAL or lookup) that produces it was not readable from the dev Splunk instance (the sourcetype carries zero indexed events there) and is not named by the add-on's own Source types page."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "src_type",
+      "concept": "alert_src_type",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column name only, from the observed-column extraction; the search-time definition (alias, EVAL or lookup) that produces it was not readable from the dev Splunk instance (the sourcetype carries zero indexed events there) and is not named by the add-on's own Source types page."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "subject",
+      "concept": "alert_subject",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column name only, from the observed-column extraction; the search-time definition (alias, EVAL or lookup) that produces it was not readable from the dev Splunk instance (the sourcetype carries zero indexed events there) and is not named by the add-on's own Source types page."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "type",
+      "concept": "alert_type",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column name only, from the observed-column extraction; the search-time definition (alias, EVAL or lookup) that produces it was not readable from the dev Splunk instance (the sourcetype carries zero indexed events there) and is not named by the add-on's own Source types page."
+      }
+    },
+    {
+      "platform": "splunk",
+      "container": "google:gcp:security:alerts",
+      "column": "vendor_account",
+      "concept": "alert_vendor_account",
+      "basis": "proposed",
+      "provenance": {
+        "kind": "extracted",
+        "statement": "Column name only, from the observed-column extraction; the search-time definition (alias, EVAL or lookup) that produces it was not readable from the dev Splunk instance (the sourcetype carries zero indexed events there) and is not named by the add-on's own Source types page."
+      }
+    }
+  ],
+  "hazards": {
+    "clock_mismatch": {
+      "text": "Three timestamps ride on one event (the Pub/Sub publish_time, finding.eventTime, finding.createTime) and were observed to disagree by days in the one full fixture read. Pick the clock the question needs; do not assume a fixed lag between them."
+    },
+    "project_id_lookalikes": {
+      "text": "Up to four fields can carry a GCP project identifier (a_project_id, sourceProperties.ProjectId, resource.project, resource.projectDisplayName) at different levels and in different shapes (full resource name vs bare id). Only sourceProperties.ProjectId and resource.projectDisplayName were confirmed equal, and only in one fixture."
+    },
+    "resource_name_mismatch": {
+      "text": "finding.resourceName and resource.name are not the same key read twice: in the read fixture finding.resourceName names the bucket the finding is about while resource.name names the project. Do not treat them as interchangeable."
+    },
+    "severity_lookalikes": {
+      "text": "Three severity-shaped fields exist and are not the same thing: sourceProperties.SeverityLevel (detector-written, title case, e.g. High), a top-level severity column named only in the observed-column extraction, and the Finding API's own severity enum (CRITICAL, HIGH, MEDIUM, LOW), which appears in neither read fixture."
+    },
+    "source_properties_open": {
+      "text": "sourceProperties is a source-defined map; the Finding proto documents only the container, not its keys. The keys read here (Explanation, Recommendation, ScannerName, ...) belong to a Security Health Analytics storage finding; a finding from another detector carries different keys."
+    },
+    "cim_unconfirmed": {
+      "text": "The add-on's own Source types page lists this sourcetype's CIM data models as None. The alert-shaped columns (app, dest, dest_type, description, id, severity, signature, signature_id, src_type, subject, type, vendor_account, body) are in the observed column set but their search-time definition was not readable: treat their meaning as unconfirmed, not as a documented CIM Alerts binding."
+    }
+  },
+  "edges": [],
+  "templates": []
+}
