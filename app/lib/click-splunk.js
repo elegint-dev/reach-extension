@@ -23,6 +23,7 @@ import { h } from "../components/h.js";
 import * as store from "./store.js";
 import { KEYS } from "./storage-keys.js";
 import { placeClick, packEdgeRows, pivotNames, basisText } from "./click-section.js";
+import { eventParams } from "./facts.js";
 
 // Splunk's default fields are indexed: the one efficiency class known
 // without discovery's provenance, and the one that lets TERM() onto the ladder.
@@ -74,7 +75,9 @@ export function aliasMap(text) {
 
 // The generated SPL stays collapsed even once the edge is open: reading
 // it and copying it are equally likely next moves, so both sit on the bar.
-function splBlock(lib, splText, hazards, onCopy = null) {
+// `missing`: the still-unbound names; Copy is disabled and titled with
+// them rather than putting a $name$ placeholder in the clipboard.
+function splBlock(lib, splText, hazards, onCopy = null, missing = []) {
   const { runtime } = lib;
   const pre = h("pre", { class: "reach-spl", hidden: true }, splText);
   const notes = h(
@@ -96,19 +99,23 @@ function splBlock(lib, splText, hazards, onCopy = null) {
     },
     "Expand SPL",
   );
+  const blocked = missing.length ? `Not copied: ${missing.join(", ")} ${missing.length === 1 ? "is" : "are"} unbound.` : "";
   const copyBtn = h(
     "button",
     {
       type: "button",
       class: "reach-mini",
+      title: blocked || null,
       onClick: (e) => {
         e.stopPropagation();
+        if (blocked) return;
         runtime.copyText(splText, e.currentTarget, "copied ✓");
         if (onCopy) onCopy(splText);
       },
     },
     "Copy SPL",
   );
+  copyBtn.disabled = Boolean(blocked);
   return h(
     "div",
     { class: "reach-spl-wrap" },
@@ -187,17 +194,18 @@ export function runControl(lib, generate, params, meta = {}, edge = null) {
     try {
       result = generate(currentParams);
     } catch (err) {
-      if (err && (err.name === "SplError" || err.name === "PivotError")) {
-        box.appendChild(h("div", { class: "reach-row__body reach-row__body--warn" }, err.message));
-        return;
-      }
-      throw err;
+      // Any generator failure (a pack error, or a bug neither PivotError
+      // nor SplError names) renders here; Preview never throws past its
+      // own row, and the rest of the popup stays mounted.
+      box.appendChild(h("div", { class: "reach-row__body reach-row__body--warn" }, (err && err.message) || String(err)));
+      return;
     }
 
-    box.appendChild(splBlock(lib, result.spl, result.hazards, (text) => noteSearch(text, "copy")));
+    const missing = result.missing || [];
+    box.appendChild(splBlock(lib, result.spl, result.hazards, (text) => noteSearch(text, "copy"), missing));
 
-    if (result.missing && result.missing.length) {
-      for (const el of lib.ui.missingParamInputs({ missing: result.missing, meta, platform: "splunk", onChange: (name, v) => { currentParams = { ...currentParams, [name]: v }; }, onPreview: renderState })) box.appendChild(el);
+    if (missing.length) {
+      for (const el of lib.ui.missingParamInputs({ missing, meta, platform: "splunk", onChange: (name, v) => { currentParams = { ...currentParams, [name]: v }; }, onPreview: renderState })) box.appendChild(el);
       return;
     }
 
@@ -239,39 +247,42 @@ export function runControl(lib, generate, params, meta = {}, edge = null) {
     runBtn.disabled = true;
     runBtn.replaceChildren(h("span", { class: "reach-spinner" }), "Running…");
     status.textContent = "";
-    const app = await appNamespace();
+    let app = null;
     let sid = null;
     let cancelled = false;
     const popupGone = () => !document.body.contains(container);
-
-    let rowsBox = container.querySelector(".reach-results");
-    if (!rowsBox) {
-      rowsBox = h("div", { class: "reach-results" });
-      container.appendChild(rowsBox);
-    }
-    // "search this ↗" for any value in a result: the same index and
-    // sourcetype the pivot ran on, narrowed to field="value". Result
-    // columns are often aliases (os_pid is RawProcessId), so the column
-    // is mapped back to the field it came from; a column that is neither
-    // an alias nor a real field on the sourcetype gets no link.
-    const scope = `index=${currentParams.index ? spl.quote(String(currentParams.index)).replace(/^"([A-Za-z0-9_\-]+)"$/, "$1") : "`cs_index`"} sourcetype=${result.sourcetype}`;
-    const aliases = aliasMap(capturedSpl);
-    const known = new Set(lib.catalogue.fieldsOn(result.sourcetype));
-    const fieldFor = (col) => {
-      const a = aliases[col];
-      // The alias regex over-captures across a string concatenation
-      // ("eventName." before the quote stops it): only an alias that is
-      // itself a real field on this sourcetype is trusted.
-      if (a && !a.startsWith("_") && known.has(a)) return a; // os_pid → RawProcessId
-      return known.has(col) ? col : null; // TargetProcessId (renamed from _pid) is a real field itself
-    };
-    const pivotUrl = (col, value) => {
-      const f = fieldFor(col);
-      return f ? searchPageUrl(lib, `search ${scope} ${f}=${spl.quote(String(value))}`) : null;
-    };
-
+    // appNamespace() and dispatch both cross the relay to the background
+    // worker; a rejection there (the extension reloading, the tab
+    // closing) renders as this row's status, same as a search error, and
+    // never escapes the click handler as an unhandled rejection.
     const noted = noteEdge(capturedSpl);
     try {
+      app = await appNamespace();
+      let rowsBox = container.querySelector(".reach-results");
+      if (!rowsBox) {
+        rowsBox = h("div", { class: "reach-results" });
+        container.appendChild(rowsBox);
+      }
+      // "search this ↗" for any value in a result: the same index and
+      // sourcetype the pivot ran on, narrowed to field="value". Result
+      // columns are often aliases (os_pid is RawProcessId), so the column
+      // is mapped back to the field it came from; a column that is neither
+      // an alias nor a real field on the sourcetype gets no link.
+      const scope = `index=${currentParams.index ? spl.quote(String(currentParams.index)).replace(/^"([A-Za-z0-9_\-]+)"$/, "$1") : "`cs_index`"} sourcetype=${result.sourcetype}`;
+      const aliases = aliasMap(capturedSpl);
+      const known = new Set(lib.catalogue.fieldsOn(result.sourcetype));
+      const fieldFor = (col) => {
+        const a = aliases[col];
+        // The alias regex over-captures across a string concatenation
+        // ("eventName." before the quote stops it): only an alias that is
+        // itself a real field on this sourcetype is trusted.
+        if (a && !a.startsWith("_") && known.has(a)) return a; // os_pid → RawProcessId
+        return known.has(col) ? col : null; // TargetProcessId (renamed from _pid) is a real field itself
+      };
+      const pivotUrl = (col, value) => {
+        const f = fieldFor(col);
+        return f ? searchPageUrl(lib, `search ${scope} ${f}=${spl.quote(String(value))}`) : null;
+      };
       sid = await live.dispatch(capturedSpl, { app });
       noteSearch(capturedSpl, "run", { ran: true, sid });
       status.textContent = `Running against your Splunk (sid ${sid})…`;
@@ -331,7 +342,9 @@ function fdrEdgeRow(m) {
   const pivot = pivotForEdgeRow(row, fieldRec.name);
   const params = {
     value,
-    aid: ctx.read("aid") || undefined,
+    // The event's own window and host, from its own fields and _time;
+    // baseParamsForRow's own params (field/event for a trace) still win.
+    ...eventParams({ time: ctx.event && ctx.event.time, read: ctx.read }),
     ...(m.scope ? { index: m.scope } : {}),
     ...baseParamsForRow(row, fieldRec.name, eventName),
   };

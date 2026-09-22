@@ -71,6 +71,20 @@ test("a Sigma rule seeds from Sigma with one step per listed false positive and 
   assert.ok(rb.steps.some((s) => s.kind === "pivot" && s.entity.field === "user"));
 });
 
+test("a Sigma rule's seeded_from carries the rule's own author, per the Detection Rule License's attribution requirement", async () => {
+  const row = rows.splunk.sigma_rule_id;
+  const rb = await runbooks.seedFor(runbooks.ruleKeyFor(row, "splunk"), { row, platform: "splunk" });
+  assert.equal(rb.seeded_from.source, "sigma");
+  assert.equal(rb.seeded_from.author, "Austin Songer @austinsonger");
+});
+
+test("an ESCU-seeded runbook carries no Sigma author (the bundle is not Sigma)", async () => {
+  const row = rows.splunk.notable_search_name;
+  const rb = await runbooks.seedFor(runbooks.ruleKeyFor(row, "splunk"), { row, platform: "splunk" });
+  assert.equal(rb.seeded_from.source, "escu");
+  assert.equal(rb.seeded_from.author, null);
+});
+
 test("a page opened on an escu:id key whose GUID is a Sigma rule's still finds it: the other id-keyed bundles are tried", async () => {
   const rb = await runbooks.seedFor("escu:id:025c9fe7-db72-49f9-af0d-31341dd7dd57", { row: {}, platform: "splunk" });
   assert.equal(rb.seeded_from.source, "sigma");

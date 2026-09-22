@@ -189,22 +189,33 @@
     return true;
   }
 
-  // Sticky across sessions, mode settings, not per-search choices.
+  // Sticky across sessions, mode settings, not per-search choices. Routed
+  // through app/lib/store.js's literal keys (the same backend the module
+  // list and the popups mirror through), not a raw chrome.storage.local
+  // call: a classic content script reaches it the way value-popup.js and
+  // discovery-agent.js reach any app/lib module, a dynamic import off
+  // chrome.runtime.getURL. settingsReady resolves once the sticky read has
+  // landed; the History button's click handler awaits it before the panel's
+  // first paint, so a fast click right after the page loads can never
+  // construct the panel off the false/"exact" defaults.
   let autoRun = false;
   let timeMode = "exact";
-  chrome.storage.local.get([AUTORUN_KEY, TIMEMODE_KEY]).then((r) => {
+  const settingsReady = (async () => {
+    const store = await import(chrome.runtime.getURL("app/lib/store.js"));
+    const r = await store.getLiteral([AUTORUN_KEY, TIMEMODE_KEY]);
     autoRun = Boolean(r[AUTORUN_KEY]);
     if (r[TIMEMODE_KEY] && TIME_MODES[r[TIMEMODE_KEY]]) timeMode = r[TIMEMODE_KEY];
     if (panel) panel.updateAutoRunUI();
-  });
+    return store;
+  })();
   function setAutoRun(v) {
     autoRun = v;
-    chrome.storage.local.set({ [AUTORUN_KEY]: v }).catch(() => {});
+    settingsReady.then((store) => store.setLiteral({ [AUTORUN_KEY]: v })).catch(() => {});
     if (panel) panel.updateAutoRunUI();
   }
   function setTimeMode(v) {
     timeMode = v;
-    chrome.storage.local.set({ [TIMEMODE_KEY]: v }).catch(() => {});
+    settingsReady.then((store) => store.setLiteral({ [TIMEMODE_KEY]: v })).catch(() => {});
     if (panel) panel.updateAutoRunUI();
   }
 
@@ -548,9 +559,10 @@
       btn.title = "Your recent searches on this Splunk instance";
       btn.setAttribute("aria-haspopup", "true");
       btn.setAttribute("aria-label", "Search history");
-      btn.addEventListener("click", (e) => {
+      btn.addEventListener("click", async (e) => {
         if (!e.isTrusted) return;
         ensureStyle();
+        await settingsReady; // the panel's first paint never runs off the autoRun/timeMode defaults
         if (!panel) panel = new HistoryPanel();
         panel.toggle(btn);
       });

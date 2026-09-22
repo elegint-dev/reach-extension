@@ -1,0 +1,174 @@
+{
+  "cloud": "sample",
+  "events": {
+    "AidMaster": {
+      "variants": [
+        {
+          "base_id": "aidmaster",
+          "description": "Sensor identity and platform metadata, emitted once per sensor check-in.",
+          "fields": {
+            "ComputerName": {
+              "description": "The hostname reported by the sensor.",
+              "optional": true,
+              "type": "string",
+              "version_added": 1
+            },
+            "Platform": {
+              "description": "Encoded platform the event was collected on.",
+              "optional": false,
+              "type": "integer",
+              "version_added": 1
+            },
+            "aid": {
+              "description": "Agent ID: the sensor's unique identifier.",
+              "optional": false,
+              "type": "string",
+              "version_added": 1
+            },
+            "cid": {
+              "description": "Customer ID that owns the sensor.",
+              "optional": false,
+              "type": "string",
+              "version_added": 1
+            }
+          },
+          "platform": "win",
+          "version": 1
+        }
+      ]
+    },
+    "LzmaFileWritten": {
+      "variants": [
+        {
+          "base_id": "lzmafilewritten",
+          "description": "LZMA-compressed file write, macOS.",
+          "fields": {
+            "ComputerName": {
+              "description": "The hostname reported by the sensor.",
+              "optional": true,
+              "type": "string",
+              "version_added": 1
+            },
+            "ContextTimeStamp": {
+              "description": "Timestamp the event's context was captured.",
+              "optional": false,
+              "type": "timestamp",
+              "version_added": 1
+            }
+          },
+          "platform": "mac",
+          "version": 1
+        },
+        {
+          "base_id": "lzmafilewritten-win",
+          "description": "LZMA-compressed file write, Windows.",
+          "fields": {
+            "CommandLine": {
+              "description": "",
+              "optional": true,
+              "type": "string",
+              "version_added": 2
+            },
+            "ContextTimeStamp": {
+              "description": "Timestamp the event's context was captured.",
+              "optional": false,
+              "type": "timestamp",
+              "version_added": 2
+            }
+          },
+          "platform": "win",
+          "version": 2
+        }
+      ]
+    }
+  },
+  "fields": {
+    "CommandLine": {
+      "description": "",
+      "events": [
+        {
+          "name": "LzmaFileWritten",
+          "platforms": [
+            "win"
+          ]
+        }
+      ],
+      "type": "string"
+    },
+    "ComputerName": {
+      "description": "The hostname reported by the sensor.",
+      "events": [
+        {
+          "name": "AidMaster",
+          "platforms": [
+            "win"
+          ]
+        },
+        {
+          "name": "LzmaFileWritten",
+          "platforms": [
+            "mac"
+          ]
+        }
+      ],
+      "type": "string"
+    },
+    "ContextTimeStamp": {
+      "description": "Timestamp the event's context was captured.",
+      "events": [
+        {
+          "name": "LzmaFileWritten",
+          "platforms": [
+            "mac",
+            "win"
+          ]
+        }
+      ],
+      "type": "timestamp"
+    },
+    "Platform": {
+      "description": "Encoded platform the event was collected on.",
+      "events": [
+        {
+          "name": "AidMaster",
+          "platforms": [
+            "win"
+          ]
+        }
+      ],
+      "type": "integer",
+      "values": {
+        "0": "Windows",
+        "1": "Mac",
+        "2": "Linux"
+      }
+    },
+    "aid": {
+      "description": "Agent ID: the sensor's unique identifier.",
+      "events": [
+        {
+          "name": "AidMaster",
+          "platforms": [
+            "win"
+          ]
+        }
+      ],
+      "type": "string"
+    },
+    "cid": {
+      "description": "Customer ID that owns the sensor.",
+      "events": [
+        {
+          "name": "AidMaster",
+          "platforms": [
+            "win"
+          ]
+        }
+      ],
+      "type": "string"
+    }
+  },
+  "pulled_at": "2026-09-22T03:28:59Z",
+  "source": "falcon-fdr-schema",
+  "version": 1
+}

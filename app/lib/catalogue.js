@@ -9,6 +9,14 @@
 //   discovered  what the user's own Splunk reported: inventory, profiles,
 //               provenance. Facts, not meanings; never overrides either above.
 //
+// A fourth, narrower layer: falcon-dictionary.js, the analyst's own FDR
+// schema pull imported as a local file. It only ever answers for a Falcon
+// container (falconDictionary.isFalconContainer): a field's type, its
+// value decode (below pack, never above a bundled decode table, decodeOn),
+// and, only where the pull carried one, a field's description (below the
+// user's note and the pack's, above nothing, since the real pull's field
+// descriptions are almost always empty).
+//
 // Keys are (sourcetype, field). The pack layer is read through packs.js
 // and pack-fields.js; the user layer lives in store.js under the keys
 // below and the discovered layer in layer.js, one key per environment.
@@ -93,7 +101,8 @@
 //     props: { indexed_extractions, kv_mode } | null,   discovered layer, the sourcetype's own
 //                                    props stanza; efficiency.js's classOf() fallback
 //     cim: { data_models, from } | { targets } | null,   a generic pack's CIM mapping
-//     scope: "sourcetype" | "unscoped" | "user" | "discovered" }
+//     falcon: { type, description?, values?, events: [name] } | null,   falcon-dictionary.js, a Falcon container only
+//     scope: "sourcetype" | "unscoped" | "user" | "discovered" | "falcon" }
 //
 // No DOM. Safe to import from a content script.
 
@@ -104,6 +113,7 @@ import * as layer from "./layer.js";
 import * as concepts from "./concepts.js";
 import * as learned from "./learned.js";
 import * as values from "./values.js";
+import * as falconDictionary from "./falcon-dictionary.js";
 import { PLATFORM } from "./platform.js";
 
 export const USER_KEY = "catalogue.user";
@@ -282,6 +292,8 @@ export async function load({ fields = "bound" } = {}) {
   if (adoptBoundNotes(user) || dirty) await save();
   await layer.load();
   discovered = await layer.readAll();
+  await falconDictionary.load();
+  falconDictionary.subscribe(() => notify());
   store.subscribe((key, value) => {
     if (key === USER_KEY) {
       user = normaliseUser(value);
@@ -386,8 +398,19 @@ function discoveredProps(sourcetype) {
   return st && st.props ? st.props : null;
 }
 
-// Decode table for a field on a sourcetype: the pack's, else the one
-// discovery read from the user's own lookup.
+// A Falcon container's field, from the imported FDR schema layer: type,
+// events and, when the pull carried one, a description (falcon-dictionary.js).
+function falconField(sourcetype, name) {
+  if (!sourcetype || !falconDictionary.isFalconContainer(sourcetype)) return null;
+  return falconDictionary.fieldOn(name);
+}
+
+// Decode table for a field on a sourcetype: the pack's, else the imported
+// Falcon layer's values table on a Falcon container, else the one
+// discovery read from the user's own lookup. The layer never overrides a
+// bundled decode: this function is asked for one only once the caller's
+// own bundled table (the FDR ledger's rec.decode, or a pack's) came up
+// empty (field.js's Values section, decodeOn's own callers).
 export function decodeOn(sourcetype, name) {
   const packHit = sourcetype ? packFields.fieldOn(sourcetype, name) : null;
   if (packHit) {
@@ -396,6 +419,8 @@ export function decodeOn(sourcetype, name) {
   }
   const pd = sourcetype ? packs.decode(sourcetype, name) : null;
   if (pd) return { ...pd, source: "pack" };
+  const fd = falconField(sourcetype, name);
+  if (fd && fd.values) return { values: fd.values, lookup: "your imported Falcon dictionary", source: "falcon" };
   const d = discoveredDecode(sourcetype, name);
   return d ? { ...d, source: "discovered" } : null;
 }
@@ -584,7 +609,8 @@ export function fieldOn(sourcetype, name) {
   const ann = sourcetype ? userAnnotation(sourcetype, name) : null;
   const disc = sourcetype ? discoveredField(sourcetype, name) : null;
   const decode = sourcetype ? decodeOn(sourcetype, name) : null;
-  if (!pack && !pf && !ann && !disc && !decode) return null;
+  const falcon = falconField(sourcetype, name);
+  if (!pack && !pf && !ann && !disc && !decode && !falcon) return null;
 
   // A concept's prose (a v2 pack, written once for every platform) beats
   // the sidecar's enriched meaning for the same field; the sidecar's
@@ -599,7 +625,9 @@ export function fieldOn(sourcetype, name) {
         ? { description: packMeaning.description, notes: packMeaning.hunting_notes || null, source: "pack", confidence: packMeaning.confidence || null, basis: packMeaning.source || null, packId: packFields.packOf(name) }
         : pf && pf.description
           ? { description: pf.description, notes: pf.notes || null, source: "pack", basis: "curated", packId: pf.packId }
-          : { description: null, notes: (ann && ann.notes) || null, source: null };
+          : falcon && falcon.description
+            ? { description: falcon.description, notes: null, source: "falcon" }
+            : { description: null, notes: (ann && ann.notes) || null, source: null };
   // A note alone (Notes filled, Description left to the pack): the pack's
   // description stands and the note rides under it as yours, on the pack's
   // own column too, the way a description of yours does.
@@ -628,7 +656,7 @@ export function fieldOn(sourcetype, name) {
     : null;
   const binding = pf && pf.binding ? { platform: pf.binding.platform, container: pf.binding.container, column: pf.binding.column, note: pf.binding.note, alias_of: pf.binding.alias_of, basis: pf.binding.basis, packId: pf.binding.packId || null, provenance: pf.bindingProvenance || null } : null;
 
-  const scope = packHit ? packHit.scope : pf ? "sourcetype" : ann ? "user" : "discovered";
+  const scope = packHit ? packHit.scope : pf ? "sourcetype" : ann ? "user" : disc ? "discovered" : falcon ? "falcon" : "discovered";
   return {
     sourcetype,
     name,
@@ -640,6 +668,7 @@ export function fieldOn(sourcetype, name) {
     packField: pf,
     packId: pf ? pf.packId : pack ? packFields.packOf(name) : null,
     user: ann,
+    falcon,
     profile: (disc && disc.profile) || null,
     provenance: (disc && disc.provenance) || null,
     declared: (disc && disc.declared) || null,

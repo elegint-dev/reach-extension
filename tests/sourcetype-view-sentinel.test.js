@@ -34,6 +34,7 @@ test("the Sentinel table page draws Columns (N) beside Bind columns, the scope l
     const title = el.children[0];
     assert.ok(title.classList.contains("r-title"));
     assert.match(dom.text(title.querySelector(".r-scope")), /^\d+ columns · record type EventSimpleName · \d+ described/);
+    assert.doesNotMatch(dom.text(title.querySelector(".r-scope")), /Macros:/, "KQL has no macros: the scope line never gains one on Sentinel");
     assert.deepEqual(title.querySelector(".r-actions").children.map(dom.text), ["Describe", "Discover", "Bind columns", "Baseline: what my fleet runs"], "ReachCrowdStrike_CL is the sample table the fleet baseline query reads");
     const h2s = el.querySelectorAll("h2").map(dom.text);
     for (const t of h2s) assert.ok(resolve(t), `"${t}" is not in the heading registry`);

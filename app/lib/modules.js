@@ -1,7 +1,11 @@
 // The module registry: what Reach is cut into, and which pieces are on.
-// Off means gone: the route is not mounted and its nav link not drawn,
-// the popup band is not rendered, the enrichment source never offers, the
-// module's storage keys are removed and its host permissions revoked.
+// Off means gone from the page: the route is not mounted and its nav link
+// not drawn, the popup band is not rendered, the enrichment source never
+// offers, and the module's host permissions are revoked. Off does not
+// empty the module's storage: only the keys its registry entry marks
+// `secret` (a credential or a grant) go with it. Everything else a module
+// has kept stays until Clear on its row or Clear all Reach data removes
+// it (removeKeys, wipe.js).
 //
 //   MODULES                        one frozen list, the order the settings surface draws
 //   HEAD, SECTIONS                 title-block ids and titled-section ids, each drawn where BANDS says
@@ -15,13 +19,15 @@
 //   bands(platform)                BANDS filtered to modules that are on
 //   sources(platform)              enrichment source ids that may offer
 //   sourceOwner(id) / routeOwner(id) / bandOwner(id)   the module entry, or null
-//   keysOf(id)                     { chrome, store, storePrefix, local, session, field }
+//   keysOf(id)                     { chrome, store, storePrefix, local, session, field, secret }
 //   await hostsOf(id)              host patterns the module needs right now (static, or from its settings)
-//   await setEnabled(id, on)       on: request hosts (needs a click), then write; off: write, revoke hosts, clear keys
+//   await setEnabled(id, on)       on: request hosts (needs a click), then write; off: write, revoke hosts,
+//                                  remove the keys keysOf(id).secret names (a credential or a grant)
+//   await removeSecrets(id)        the keys Off itself removes; a subset of removeKeys
+//   await removeKeys(id)           every key family the module owns, regardless of secret; Clear's and wipe.js's
 //   setting(id, key)               a module setting's value as of the last hydrate or write, sync
 //   await readSettings(id) / writeSetting(id, key, value)   a module setting, chrome.storage.local (localStorage when served)
 //   subscribe(fn)                  fn() after the enabled set or a setting changes, from any context
-//   useClearer(fn)                 wipe.js registers the per-module key removal setEnabled(off) calls
 //   anchor(id)                     the settings surface anchor for a module, "module-<id>"
 //
 // The enabled set is one store document, "modules" (chrome.storage.local
@@ -77,7 +83,7 @@ export const MODULES = Object.freeze([
     platforms: BOTH,
     routes: ["catalogue", "sourcetype", "field", "value", { id: "event", platforms: SPLUNK }, "packs", "search"],
     bands: ["value", "meaning", "everywhere"],
-    keys: { store: ["catalogue.user"] },
+    keys: { store: ["catalogue.user", "catalogue.falcon"] },
   }),
   entry({
     id: "pivots",
@@ -185,7 +191,7 @@ export const MODULES = Object.freeze([
     platforms: BOTH,
     sources: ["virustotal"],
     settings: [{ key: "vtApiKey", kind: "secret", label: "API key", hint: "64 hex characters from virustotal.com/gui/my-apikey. Stored only in this browser." }],
-    keys: { chrome: ["vtApiKey"] },
+    keys: { chrome: ["vtApiKey"], secret: ["vtApiKey"] },
     hosts: ["https://www.virustotal.com/*"],
     sends: "ip, domain or hash to virustotal.com with your key, on click",
   }),
@@ -224,7 +230,7 @@ export const MODULES = Object.freeze([
       { key: "reach.enrich.selfhosted.token", kind: "secret", label: "Token / API key" },
       { key: "reach.enrich.selfhosted.writes", kind: "toggle", default: false, label: "Allow writes to MISP (record a sighting, propose an attribute)", hint: WRITES_HINT },
     ],
-    keys: { chrome: ["reach.enrich.selfhosted.provider", "reach.enrich.selfhosted.origin", "reach.enrich.selfhosted.token", "reach.enrich.selfhosted.writes"] },
+    keys: { chrome: ["reach.enrich.selfhosted.provider", "reach.enrich.selfhosted.origin", "reach.enrich.selfhosted.token", "reach.enrich.selfhosted.writes"], secret: ["reach.enrich.selfhosted.origin", "reach.enrich.selfhosted.token"] },
     hosts: (s) => [patternFor(s["reach.enrich.selfhosted.origin"] || "")].filter(Boolean),
     sends: "the value to the origin you typed, with the token, on click; with writes on, a sighting or a proposed attribute to your MISP, on click",
   }),
@@ -428,7 +434,39 @@ export function sources(platform = PLATFORM) {
 
 export function keysOf(id) {
   const k = (byId.get(id) || {}).keys || {};
-  return { chrome: k.chrome || [], store: k.store || [], storePrefix: k.storePrefix || [], local: k.local || [], session: k.session || [], field: k.field || [] };
+  return { chrome: k.chrome || [], store: k.store || [], storePrefix: k.storePrefix || [], local: k.local || [], session: k.session || [], field: k.field || [], secret: k.secret || [] };
+}
+
+// A live count of the module's registry-declared keys actually present in
+// storage right now, not the registry's own name total (keysOf(id) lists
+// what a module may hold, not what it holds). A storePrefix key already
+// counted through an explicit store key is not counted twice. Field keys
+// live in another module's document (wipe.js's FIELD_CLEARERS); this stays
+// with the stores modules.js already reads.
+export async function keysStoredOf(id) {
+  const k = keysOf(id);
+  let n = 0;
+  if (k.store.length) n += Object.keys(await store.getMany(k.store)).length;
+  for (const prefix of k.storePrefix) {
+    const found = await store.keys(prefix);
+    n += found.filter((key) => !k.store.includes(key)).length;
+  }
+  if (k.chrome.length) n += Object.keys(await store.getLiteral(k.chrome)).length;
+  for (const key of k.local) {
+    try {
+      if (localStorage.getItem(key) !== null) n++;
+    } catch {
+      /* storage unavailable */
+    }
+  }
+  for (const key of k.session) {
+    try {
+      if (sessionStorage.getItem(key) !== null) n++;
+    } catch {
+      /* storage unavailable */
+    }
+  }
+  return n;
 }
 
 export function settingsOf(id) {
@@ -491,14 +529,11 @@ export async function revokeHosts(id, hosts = null) {
   return ok ? list : [];
 }
 
-// Remove every key the module owns. The field-level clear (coverage's
-// bindings inside catalogue.user) is wipe.js's, registered through
-// useClearer(); without one the field entries stay.
-let clearer = null;
-export function useClearer(fn) {
-  clearer = typeof fn === "function" ? fn : null;
-}
-
+// Remove every key the module owns, regardless of secret. Clear on a row
+// and Clear all Reach data (wipe.js) call this; Off does not. The
+// field-level clear (coverage's bindings inside catalogue.user) is
+// wipe.js's own clearModule, which calls this first and then its own
+// field clearers.
 export async function removeKeys(id) {
   const k = keysOf(id);
   const removed = [];
@@ -524,6 +559,45 @@ export async function removeKeys(id) {
     }
   }
   for (const key of k.session) {
+    try {
+      sessionStorage.removeItem(key);
+      removed.push(key);
+    } catch {
+      /* storage unavailable */
+    }
+  }
+  return removed;
+}
+
+// Off's own removal: only the keys the module's registry entry marks
+// `secret` (a credential or a grant), never the rest of what it keeps.
+export async function removeSecrets(id) {
+  const k = keysOf(id);
+  if (!k.secret.length) return [];
+  const secret = new Set(k.secret);
+  const removed = [];
+  for (const key of k.store) {
+    if (!secret.has(key)) continue;
+    await store.remove(key);
+    removed.push(`reach.${key}`);
+  }
+  const chromeSecrets = k.chrome.filter((key) => secret.has(key));
+  if (chromeSecrets.length) {
+    await store.removeLiteral(chromeSecrets);
+    removed.push(...chromeSecrets);
+  }
+  for (const s of settingsOf(id)) if (secret.has(s.key)) settingValues = { ...settingValues, [s.key]: s.default === undefined ? "" : s.default };
+  for (const key of k.local) {
+    if (!secret.has(key)) continue;
+    try {
+      localStorage.removeItem(key);
+      removed.push(key);
+    } catch {
+      /* storage unavailable */
+    }
+  }
+  for (const key of k.session) {
+    if (!secret.has(key)) continue;
     try {
       sessionStorage.removeItem(key);
       removed.push(key);
@@ -562,8 +636,8 @@ export async function setEnabled(id, want) {
   chosen = { ...chosen, [id]: false };
   await writeChosen();
   const revoked = await revokeHosts(id, hosts);
-  const removed = clearer ? await clearer(id) : await removeKeys(id);
+  const removed = await removeSecrets(id);
   return { ok: true, hostsRevoked: revoked, removed };
 }
 
-export default { MODULES, HEAD, SECTIONS, BANDS, KEY, get, anchor, hydrate, reset, on, enabled, routes, routeStatus, routeOwner, sourceOwner, bandOwner, bands, sources, keysOf, settingsOf, setting, readSettings, readSetting, writeSetting, hostsOf, permitted, requestHosts, revokeHosts, removeKeys, useClearer, setEnabled, subscribe };
+export default { MODULES, HEAD, SECTIONS, BANDS, KEY, get, anchor, hydrate, reset, on, enabled, routes, routeStatus, routeOwner, sourceOwner, bandOwner, bands, sources, keysOf, keysStoredOf, settingsOf, setting, readSettings, readSetting, writeSetting, hostsOf, permitted, requestHosts, revokeHosts, removeKeys, removeSecrets, setEnabled, subscribe };

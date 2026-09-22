@@ -39,6 +39,7 @@ function sourceChip(source, view) {
     if (basis === "curated" || basis === "decode_table" || basis === "ta") return chip({ kind: "trust", value: "confirmed", text: `pack · ${basis.replace("_", " ")}` });
     return chip({ kind: "trust", value: "asserted", text: "pack" });
   }
+  if (source === "falcon") return chip({ kind: "trust", value: "asserted", text: "your imported Falcon dictionary" });
   return null;
 }
 

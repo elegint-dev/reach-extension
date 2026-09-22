@@ -22,6 +22,7 @@
 
 import * as packs from "./packs.js";
 import * as pivot from "./pivot.js";
+import { isBound } from "./pivot.js";
 import { edgeHazards } from "./reachability.js";
 import { SplError } from "./spl.js";
 
@@ -55,14 +56,6 @@ const EDGE_QUERY = Object.freeze({
 
 // The kinds whose search leans on ContextProcessId attribution.
 const ASSERTED_KINDS = new Set(["trace", "process_events"]);
-
-const PLACEHOLDER_RE = /^\$[A-Za-z_][A-Za-z0-9_]*\$$/;
-
-function isBound(v) {
-  if (v === undefined || v === null) return false;
-  const s = String(v).trim();
-  return s !== "" && !PLACEHOLDER_RE.test(s);
-}
 
 // Which of the query's containers the search runs on: the one the caller
 // names, else the external sourcetype for a detection summary event

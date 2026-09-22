@@ -25,7 +25,10 @@ test("storage.local: get by key, list, defaults or everything; set fires one cha
 });
 
 test("deferChanges delivers onChanged on a later task, not inside set()", async () => {
-  const { chrome } = fakeChrome({ deferChanges: true });
+  // instant: true isolates deferChanges' own task boundary from the
+  // fake's default macrotask on set() itself, which is not this test's
+  // subject.
+  const { chrome } = fakeChrome({ deferChanges: true, instant: true });
   let seen = 0;
   chrome.storage.onChanged.addListener(() => (seen += 1));
   await chrome.storage.local.set({ k: 1 });

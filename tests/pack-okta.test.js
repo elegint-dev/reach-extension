@@ -71,3 +71,11 @@ test("index.json lists okta.json without dropping any existing pack", async () =
     assert.ok(index.packs.includes(p), p);
   }
 });
+
+test("neither okta sidecar claims a licence the source repository never granted", async () => {
+  const inventory = JSON.parse(await readFile(new URL("../app/packs/okta-inventory.values.json", import.meta.url)));
+  for (const doc of [sidecar, inventory]) {
+    assert.notEqual(doc.licence.name, "Apache-2.0", "okta-management-openapi-spec ships no LICENSE file; the README badge is not a grant");
+    assert.match(doc.licence.name, /no reuse licence stated/);
+  }
+});

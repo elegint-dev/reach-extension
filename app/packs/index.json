@@ -40,7 +40,7 @@
   {
    "pack": "aws-cloudtrail",
    "file": "aws-cloudtrail.values.json",
-   "bytes": 36272,
+   "bytes": 36417,
    "containers": [
     "AWSCloudTrail",
     "aws:cloudtrail"
@@ -49,7 +49,7 @@
   {
    "pack": "okta",
    "file": "okta.values.json",
-   "bytes": 6900,
+   "bytes": 7115,
    "containers": [
     "OktaIM2:log",
     "Okta_CL"
@@ -71,7 +71,7 @@
   {
    "pack": "crowdstrike-events",
    "file": "crowdstrike-events.values.json",
-   "bytes": 22430,
+   "bytes": 22523,
    "containers": [
     "crowdstrike:events",
     "crowdstrike:events:external",
@@ -82,7 +82,7 @@
   {
    "pack": "ms-defender",
    "file": "ms-defender.values.json",
-   "bytes": 38915,
+   "bytes": 39026,
    "containers": [
     "m365:defender:incident:advanced_hunting",
     "ms365:defender:incident",
@@ -96,7 +96,7 @@
   {
    "pack": "okta-inventory",
    "file": "okta-inventory.values.json",
-   "bytes": 23145,
+   "bytes": 24485,
    "containers": [
     "OktaIM2:app",
     "OktaIM2:appUser",
@@ -133,7 +133,7 @@
   {
    "pack": "gws-reports",
    "file": "gws-reports.values.json",
-   "bytes": 9252,
+   "bytes": 9380,
    "containers": [
     "gws:reports:access_transparency",
     "gws:reports:calendar",
@@ -153,7 +153,7 @@
   {
    "pack": "gws-alerts",
    "file": "gws-alerts.values.json",
-   "bytes": 10205,
+   "bytes": 10707,
    "containers": [
     "gws:alerts"
    ]
@@ -161,7 +161,7 @@
   {
    "pack": "google-gcp-audit",
    "file": "google-gcp-audit.values.json",
-   "bytes": 12992,
+   "bytes": 13301,
    "containers": [
     "google:gcp:pubsub:audit:admin_activity",
     "google:gcp:pubsub:audit:data_access",
@@ -185,7 +185,7 @@
   {
    "pack": "aws-cloudtrail-lake",
    "file": "aws-cloudtrail-lake.values.json",
-   "bytes": 11429,
+   "bytes": 11579,
    "containers": [
     "aws:cloudtrail:lake"
    ]
@@ -193,7 +193,7 @@
   {
    "pack": "ocsf-aws",
    "file": "ocsf-aws.values.json",
-   "bytes": 39358,
+   "bytes": 39625,
    "containers": [
     "ocsf:aws:cloudtrail",
     "ocsf:aws:eks:audit",
@@ -206,7 +206,7 @@
   {
    "pack": "aws-security-findings",
    "file": "aws-security-findings.values.json",
-   "bytes": 40936,
+   "bytes": 40959,
    "containers": [
     "aws:accessanalyzer:finding",
     "aws:cloudwatch:guardduty",
@@ -218,7 +218,7 @@
   {
    "pack": "mscs-security",
    "file": "mscs-security.values.json",
-   "bytes": 14125,
+   "bytes": 14302,
    "containers": [
     "mscs:azure:security:alert",
     "mscs:azure:security:recommendation"
@@ -227,7 +227,7 @@
   {
    "pack": "google-gcp-security",
    "file": "google-gcp-security.values.json",
-   "bytes": 9356,
+   "bytes": 9637,
    "containers": [
     "google:gcp:security:alerts"
    ]
@@ -235,7 +235,7 @@
   {
    "pack": "aws-config",
    "file": "aws-config.values.json",
-   "bytes": 11138,
+   "bytes": 11199,
    "containers": [
     "aws:config",
     "aws:config:notification",
@@ -253,7 +253,7 @@
   {
    "pack": "cisco-ftd",
    "file": "cisco-ftd.values.json",
-   "bytes": 12287,
+   "bytes": 12312,
    "containers": [
     "cisco:ftd"
    ]
@@ -317,7 +317,7 @@
   {
    "pack": "aws-metadata",
    "file": "aws-metadata.values.json",
-   "bytes": 10752,
+   "bytes": 10987,
    "containers": [
     "aws:metadata"
    ]
@@ -325,7 +325,7 @@
   {
    "pack": "google-gcp-inventory",
    "file": "google-gcp-inventory.values.json",
-   "bytes": 10953,
+   "bytes": 11466,
    "containers": [
     "google:gcp:compute:instance"
    ]
@@ -333,7 +333,7 @@
   {
    "pack": "mscs-resource",
    "file": "mscs-resource.values.json",
-   "bytes": 19283,
+   "bytes": 19804,
    "containers": [
     "mscs:resource:disk",
     "mscs:resource:image",
@@ -364,7 +364,7 @@
   {
    "pack": "aws-vpcflow",
    "file": "aws-vpcflow.values.json",
-   "bytes": 11284,
+   "bytes": 11367,
    "containers": [
     "aws:cloudwatchlogs:vpcflow"
    ]
@@ -372,7 +372,7 @@
   {
    "pack": "cisco-asa",
    "file": "cisco-asa.values.json",
-   "bytes": 21150,
+   "bytes": 21241,
    "containers": [
     "cisco:asa"
    ]
@@ -380,7 +380,7 @@
   {
    "pack": "aws-asl",
    "file": "aws-asl.values.json",
-   "bytes": 14963,
+   "bytes": 15346,
    "containers": [
     "aws:asl"
    ]
@@ -390,7 +390,7 @@
   {
    "pack": "crowdstrike-falcon",
    "file": "crowdstrike-falcon.fields.json",
-   "bytes": 3112139,
+   "bytes": 3115568,
    "containers": [
     "crowdstrike:appinfo",
     "crowdstrike:events:external",

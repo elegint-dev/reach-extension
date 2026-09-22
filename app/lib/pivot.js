@@ -82,13 +82,19 @@ export class PivotError extends Error {
   }
 }
 
-const PLACEHOLDER_RE = /^\$[A-Za-z_][A-Za-z0-9_]*(?::time|:qtime|:list|:field|:prefixes)?\$$/;
+// The one placeholder shape and the one bound-ness test: every emitter
+// that fills a pack template (SPL, KQL, the FDR bundle's own kinds in
+// fdr-queries.js) shares this, so "is this $name$ still open" never
+// drifts into a second regex.
+export const PLACEHOLDER_RE = /^\$[A-Za-z_][A-Za-z0-9_]*(?::time|:qtime|:list|:field|:prefixes)?\$$/;
 const SAFE_INDEX_RE = /^[A-Za-z0-9_\-*]+$/;
 const SAFE_SOURCETYPE_RE = /^[A-Za-z0-9_:\-.*]+$/;
 const IDENT_RE = /^[A-Za-z_][A-Za-z0-9_.]*$/;
 const MACRO_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
-function isBound(v) {
+// A real value, not empty and not a leftover $name$ token: the one test
+// every caller shares, so "still a placeholder" is decided once.
+export function isBound(v) {
   if (v === undefined || v === null) return false;
   if (Array.isArray(v)) return v.some(isBound); // blank entries are skipped at render
   const s = String(v).trim();
@@ -356,4 +362,4 @@ export function validatePack(pack) {
   return errors;
 }
 
-export default { generate, validatePack, templateOf, PivotError };
+export default { generate, validatePack, templateOf, PivotError, PLACEHOLDER_RE, isBound };

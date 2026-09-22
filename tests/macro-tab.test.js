@@ -4,10 +4,14 @@
 // drawer and field.js build DOM (h.js needs `document`), which this suite
 // has no harness for; that part is the served harness at 380 (panel-validator.md).
 import "./_splunk.js";
+import "./_bundle.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import * as catalogue from "../app/lib/catalogue.js";
 import { macroStateText, macrosBlocking, copyBlockReason } from "../app/components/drawer.js";
 import { macroDefineHint, macroInfo } from "../app/views/field.js";
+
+await catalogue.load();
 
 test("a macro never checked (no discovery run yet) reads as not-checked, not as missing", () => {
   const m = { name: "cs_index", defined: undefined };
@@ -47,10 +51,11 @@ test("macroDefineHint: cs_index's hint carries the resolved scope index, or a pl
   assert.match(macroDefineHint("cs_index", ""), /index=<your index>/);
 });
 
-test("macroDefineHint: a TA macro other than cs_index is named, but Reach does not invent its definition", () => {
+test("macroDefineHint: a macro other than cs_index is named with its own arg count, credited to Reach and never the CrowdStrike Add-on", () => {
   const hint = macroDefineHint("cs_trace_process", "crowdstrike_fdr");
-  assert.match(hint, /cs_trace_process/);
-  assert.match(hint, /no definition to suggest/);
+  assert.match(hint, /cs_trace_process\(3\)/);
+  assert.match(hint, /from Reach/);
+  assert.doesNotMatch(hint, /Add-on|CrowdStrike Falcon Add-on/);
 });
 
 test("macroInfo: no discovered environment leaves every needed macro unchecked, never missing", () => {

@@ -219,16 +219,22 @@ appLink.addEventListener("click", async (e) => {
 // The side panel is the same app, one per window, beside whatever tab is
 // active. Its page cannot carry a query string, so the platform goes in
 // through the memory platform.js reads next (rememberPlatform): this popup
-// and the panel are the same extension origin, so one localStorage. Chrome
-// opens a panel only inside a user gesture, so sidePanel.open() is called
-// synchronously in the click, off the tab read when the popup opened;
-// nothing awaited first. platform.js is loaded when the popup opens so the
-// click has it in hand.
+// and the panel are the same extension origin, so one localStorage.
+// platform.js is loaded when the popup opens, so the click usually has it
+// in hand already (platformLib, checked first, costs nothing); a click
+// fast enough to land before that import resolves awaits platformLibReady
+// instead of skipping rememberPlatform() outright, which used to open the
+// panel on whatever platform was last remembered rather than this tab's.
+// Chrome's user-gesture window for sidePanel.open() survives an await here
+// (checked live: a trusted click still opens the panel after a real
+// dynamic import and after an added delay of several seconds), so the open
+// itself stays behind the same click, just after the platform is known.
 let platformLib = null;
-import(chrome.runtime.getURL("app/lib/platform.js")).then((m) => {
+const platformLibReady = import(chrome.runtime.getURL("app/lib/platform.js")).then((m) => {
   platformLib = m;
-}).catch(() => {});
-document.getElementById("panelLink").addEventListener("click", (e) => {
+  return m;
+}).catch(() => null);
+document.getElementById("panelLink").addEventListener("click", async (e) => {
   e.preventDefault();
   if (!currentTab || !Number.isInteger(currentTab.windowId)) {
     status.textContent = "No window to open the panel in; reopen this popup on a page.";
@@ -236,7 +242,8 @@ document.getElementById("panelLink").addEventListener("click", (e) => {
   }
   const pattern = currentTab.url ? originPatternFor(currentTab.url) : null;
   const platform = pattern && isSentinelOrigin(pattern.slice(0, -2)) ? "sentinel" : "splunk";
-  if (platformLib) platformLib.rememberPlatform(platform);
+  const lib = platformLib || (await platformLibReady);
+  if (lib) lib.rememberPlatform(platform);
   chrome.sidePanel
     .open({ windowId: currentTab.windowId })
     .then(() => window.close())

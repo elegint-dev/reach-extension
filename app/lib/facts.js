@@ -62,6 +62,30 @@ export function carried(name, value) {
   return expand({ [key]: String(value), value: String(value) });
 }
 
+// The window and the host a pivot can read straight off the clicked
+// event, before a view or the drawer add their own: earliest/latest
+// bracketing the event's own _time (not wall-clock now, which would miss
+// any event that is not from today) and aid off the row itself. `time` is
+// the event's own timestamp (click-context.js ctx.event.time, or the
+// value page's lastEvent.provenance().event.time); `read(name)` is the
+// row's other fields (ctx.read, or lastEvent.recall()). Never binds index
+// or any other scope fact: scope.bind() is the one place that happens.
+// One binder for every path that assembles a pack pivot from a click
+// (the popup, the value page, the field page), on both platforms.
+export function eventParams({ time, read } = {}) {
+  const out = {};
+  if (time) {
+    const t = new Date(time);
+    if (!Number.isNaN(t.getTime())) {
+      out.earliest = new Date(t.getTime() - 24 * 3600 * 1000).toISOString();
+      out.latest = new Date(t.getTime() + 5 * 60 * 1000).toISOString();
+    }
+  }
+  const aid = read ? read("aid") || read("Aid") : null;
+  if (aid) out.aid = aid;
+  return out;
+}
+
 export function shadows(pins, held) {
   const out = [];
   for (const [key, value] of Object.entries(pins || {})) {

@@ -10,9 +10,11 @@
 //   missingParamMeta(name, meta, platform) → { label, placeholder, hint? }
 //       the pack's words for the parameter, else the platform's, else the bare name
 //   missingParamInputs({ missing, meta, platform, onChange, onPreview }) → [Element]
-//       one labelled input per parameter a pivot still needs, then a Preview
-//       button: onChange(name, value) on every keystroke, onPreview() on the
-//       button. The caller regenerates locally; nothing here runs or records
+//       a line naming the still-unbound parameters, one labelled input per
+//       one, then a Preview button: onChange(name, value) on every
+//       keystroke, onPreview() on the button, disabled until every input
+//       carries something. The caller regenerates locally; nothing here
+//       runs or records
 //   fieldHash(name, params)           the app's field route for a click, value and scope carried
 //   offerToPanel(selection) → Promise<boolean>
 //       the click, offered to the window's side panel; true when one took it
@@ -211,12 +213,22 @@ export function missingParamMeta(name, meta = {}, platform = PLATFORM) {
 
 export function missingParamInputs({ missing = [], meta = {}, platform = PLATFORM, onChange, onPreview } = {}) {
   const out = [];
+  const labels = missing.map((name) => missingParamMeta(name, meta, platform).label);
+  out.push(h("div", { class: "reach-row__body reach-row__body--muted" }, `needs ${labels.join(", ")}`));
+  const inputs = [];
+  const previewBtn = h("button", { class: "reach-run-btn", type: "button", onClick: () => onPreview() }, "Preview");
+  // Preview stays disabled (it would only re-show the same placeholders)
+  // until every listed name has something typed in; a keystroke never
+  // rebuilds these inputs, so checking them directly is enough.
+  const sync = () => { previewBtn.disabled = inputs.some((i) => !i.value.trim()); };
   for (const name of missing) {
     const m = missingParamMeta(name, meta, platform);
-    const input = h("input", { class: "reach-input", type: "text", placeholder: m.placeholder, title: m.hint || "", "aria-label": m.label, onInput: (e) => onChange(name, e.target.value) });
+    const input = h("input", { class: "reach-input", type: "text", placeholder: m.placeholder, title: m.hint || "", "aria-label": m.label, onInput: (e) => { onChange(name, e.target.value); sync(); } });
+    inputs.push(input);
     out.push(h("div", { class: "reach-row__body" }, `${m.label}: `, input));
   }
-  out.push(h("button", { class: "reach-run-btn", type: "button", onClick: () => onPreview() }, "Preview"));
+  sync();
+  out.push(previewBtn);
   return out;
 }
 // The field route's hash, carrying whatever facts the click actually had.

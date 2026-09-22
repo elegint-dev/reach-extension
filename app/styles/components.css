@@ -1621,7 +1621,26 @@
   min-width: 0;
 }
 
-/* ---- the module list (moduleList.js): the settings fold and options.html */
+/* ---- the module list (moduleList.js): the settings fold and options.html.
+ * Four groups (settings-contract.md §2): Core (a fixed marker, never a
+ * toggle), Modules (an On/Off pill), Environment and Data (non-module). */
+
+.r-modules-page {
+  display: grid;
+  gap: var(--sp-5);
+  min-width: 0;
+}
+
+.r-modules__group {
+  display: grid;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.r-modules__group > h2 {
+  margin: 0;
+  font-size: var(--fs-2);
+}
 
 .r-modules {
   display: grid;
@@ -1638,41 +1657,65 @@
   border-radius: var(--radius-2);
 }
 
-.r-module--off {
-  color: var(--fg-2);
-}
-
 .r-module__head {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--sp-2);
   min-width: 0;
 }
 
-.r-module__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  min-height: 24px;
-  cursor: pointer;
-}
-
 .r-module__label {
   font-weight: 600;
   color: var(--fg-0);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1 1 auto;
 }
 
-.r-module--off .r-module__label {
-  color: var(--fg-1);
-}
-
-.r-module__tier {
+/* The Core marker and the Modules pill: never the label's flex, never wraps. */
+.r-module__fixed,
+.r-module__pill {
+  flex: 0 0 auto;
   font-size: var(--fs-1);
+}
+
+.r-module__fixed {
   color: var(--fg-2);
   border: 1px solid var(--line);
   border-radius: var(--radius-2);
   padding: 0 var(--sp-2);
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+.r-module__pill {
+  font: inherit;
+  font-size: var(--fs-1);
+  font-weight: 600;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2);
+  padding: 0 var(--sp-2);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-1);
+  color: var(--fg-0);
+  cursor: pointer;
+}
+
+.r-module__pill[aria-checked="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.r-module__why {
+  margin: 0;
+  font-size: var(--fs-1);
+  color: var(--fg-2);
 }
 
 .r-module__about,
@@ -1683,14 +1726,44 @@
   overflow-wrap: anywhere;
 }
 
-.r-module__body {
-  display: grid;
-  gap: var(--sp-2);
+.r-module__fold {
   min-width: 0;
 }
 
-.r-module__body[hidden] {
+.r-module__fold > summary {
+  cursor: pointer;
+  color: var(--link);
+  font-size: var(--fs-1);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Native <details>, spaced by margin, never a border (fold-body.test.js's
+ * "margin" kind): scoped to this row's own fold so the shared
+ * .r-fold__body class (foldBody.js: the paste fold, the Holding rail)
+ * never picks up this spacing. */
+.r-module__fold > .r-fold__body {
+  display: grid;
+  gap: var(--sp-2);
+  min-width: 0;
+  margin-top: var(--sp-2);
+}
+
+.r-module__permission[hidden] {
   display: none;
+}
+
+.r-module__permission .r-btn,
+.r-module__keys .r-btn,
+.r-module__actions .r-btn {
+  min-height: 44px;
+}
+
+.r-settings__env {
+  display: grid;
+  gap: var(--sp-3);
+  min-width: 0;
 }
 
 .r-module__keyrow {
@@ -1739,12 +1812,6 @@
   min-width: 0;
 }
 
-.r-holding__head {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
 .r-holding__title {
   display: flex;
   align-items: center;
@@ -1790,6 +1857,13 @@
 .r-holding__label {
   font-size: var(--fs-1);
   color: var(--fg-2);
+}
+
+.r-holding__labelrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
 }
 
 .r-holding__clear {
@@ -1904,12 +1978,6 @@
 
 .r-holding__addbtn:hover {
   border-color: var(--accent);
-}
-
-.r-holding__headacts {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
 }
 
 .r-holding__addtoggle {
@@ -3070,6 +3138,15 @@ textarea.r-input { resize: vertical; min-height: 56px; }
 .r-cov__status:empty, .r-cov__gaps:empty { display: none; }
 .r-view--coverage h2 { margin-top: var(--sp-5); }
 
+/* ---- the shared fold-body rule (components/foldBody.js) ----------------- */
+/* An open collapsible draws as one block: header, body, then the closing
+ * line; the line never sits between header and body. Give the element that
+ * follows a fold's header the .r-fold__body class (or build it with
+ * foldBody()) and key the closing line to the fold's own open state, below.
+ * Two shapes share it: a native <details> (.r-paste[open] >, an ancestor
+ * attribute, below) and a class-toggled section (.r-holding.is-open, the
+ * narrow-width rule near .r-holding__body). */
+
 /* ---- the paste's fold (stacked surfaces; layout in base.css) ------------ */
 /* One line above the ledger: "Query" and the selected pivot's title, the
  * drawer beneath it once open. app.js opens it when a row fills the drawer
@@ -3108,7 +3185,10 @@ textarea.r-input { resize: vertical; min-height: 56px; }
   border-bottom-right-radius: 0;
 }
 
-.r-paste[open] > .r-drawer {
+/* The shared fold-body rule (foldBody.js): open, the block is header then
+ * body then one closing line, drawn by the body's own remaining border, so
+ * no line ever sits between the summary and .r-drawer. */
+.r-paste[open] > .r-fold__body {
   border-top: 0;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
@@ -3931,11 +4011,16 @@ a.r-trail__chip:hover {
   .r-holding__body {
     display: none;
     padding: var(--sp-3) var(--gutter);
-    border-top: 1px solid var(--line);
   }
 
   .r-holding.is-open .r-holding__body {
     display: grid;
+  }
+
+  /* The shared fold-body rule (foldBody.js): open, the block is header
+   * then body then this one closing line, never a line between the two. */
+  .r-holding.is-open .r-fold__body {
+    border-bottom: 1px solid var(--line);
   }
 
   .r-paste {

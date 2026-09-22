@@ -236,6 +236,31 @@ function relay(msg, sender, sendResponse) {
     sendResponse({ ok: true, panel: panels.has(tab.windowId) });
     return false;
   }
+  // index.html opened as a top-level tab (it_3cb327f3): the window's open
+  // panel, if any, is told to close itself (it keeps the final say: it
+  // stays open with something typed and unsaved), and the side panel is
+  // turned off for this one tab so it does not reopen there on its own.
+  // The tab that gets this is the app's own page; it never needs a panel
+  // beside itself, and the option dies with the tab. A popup has no port
+  // in `panels` and never sees this message.
+  if (msg.type === "reach:app:opened") {
+    if (!fromTopLevelExtensionPage(sender)) return false;
+    const winId = Number.isInteger(msg.windowId) ? msg.windowId : sender.tab && sender.tab.windowId;
+    if (Number.isInteger(winId)) {
+      const port = panels.get(winId);
+      if (port) {
+        try {
+          port.postMessage({ type: "reach:panel:close" });
+        } catch {
+          panels.delete(winId);
+        }
+      }
+    }
+    if (sender.tab && Number.isInteger(sender.tab.id) && chrome.sidePanel && typeof chrome.sidePanel.setOptions === "function") {
+      chrome.sidePanel.setOptions({ tabId: sender.tab.id, enabled: false }).catch(() => {});
+    }
+    return false;
+  }
   if (msg.type === "reach:discover:tabs") {
     if (!fromTopLevelExtensionPage(sender)) {
       sendResponse({ ok: false, error: NOT_OWN_PAGE });

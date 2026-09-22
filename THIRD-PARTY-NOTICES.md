@@ -134,11 +134,13 @@ Obligation: None beyond attribution; the add-on's text is not reproduced.
 
 Source: https://github.com/elastic/integrations, `packages/crowdstrike/data_stream/fdr/fields/fields.yml` and the pipeline test fixtures under `_dev/test/pipeline/`
 
-Used in: `app/packs/crowdstrike-falcon.fields.json` (field names and types, and the per-event field union)
+Used in: `app/packs/crowdstrike-falcon.fields.json` (field names and types, and the per-event field union; two field descriptions, `CompositeId` and `Type`, quoted verbatim from `fields.yml` under `meaning.cite`, each at most twenty words)
 
-License: Elastic License 2.0 (https://github.com/elastic/integrations/blob/main/LICENSE.txt)
+Read: 2026-09-21
 
-Obligation: Only field names, types and event membership are taken, as facts about the FDR schema; no descriptive text from the package is reproduced.
+License: Elastic License 2.0 (https://github.com/elastic/integrations/blob/main/LICENSE.txt); the `crowdstrike` package carries no overriding LICENSE.txt of its own, so the repository root license applies. Elastic License 2.0 permits use and redistribution of the licensed work provided the license notice is retained; it does not open-source the text, so a quote here stays inside the twenty-word cap and carries its own cite.
+
+Obligation: Field names, types and event membership are taken as facts about the FDR schema; the file carries a `description:` line for 13 of its 1,302 fields, and only the two that name an observed field on the Falcon pack's containers are quoted, each with a `cite` (`url`, `title`, `read_on`) on the field record. Every other field the fields.yml lacks a description for stays inferred.
 
 ## AWS documentation (pack data dictionaries)
 
@@ -184,9 +186,9 @@ Used in: `app/packs/okta.values.json`, `app/packs/okta-inventory.values.json`
 
 Read: 2026-09-18 to 2026-09-19
 
-License: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0.html), Okta, Inc.
+License: unresolved. The okta-management-openapi-spec repository carries no LICENSE file (GitHub's licence detector returns null); its README displays an Apache-2.0 badge only, which is not a licence grant. The developer.okta.com Event Types catalog page is separately copyrighted ("Copyright (c) 2026 Okta. All rights reserved."), not Apache-2.0. Treated as "no reuse licence stated" pending a licence Okta actually publishes. Read (this correction): 2026-09-21.
 
-Obligation: Include a copy of the license and notice of any modifications. Entries paraphrase the schema descriptions.
+Obligation: no open licence to carry a copy of. Entries paraphrase field names and enum values as facts about the product; no vendor sentence-level text is reproduced (per the pack-provenance audit).
 
 ## GitHub REST API documentation
 

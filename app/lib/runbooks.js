@@ -421,7 +421,7 @@ export async function seedFor(ruleKey, { row = {}, platform = PLATFORM } = {}) {
     id: rk.key || (rk.keys && rk.keys[0] ? keyString(rk.keys[0]) : ""),
     title,
     rule: { platform: rk.platform || platform, keys: rk.keys || [], name: rk.name || title },
-    seeded_from: hit ? { source, id: record.id || null, url: hit.url, label: `seeded from ${hit.label}`, ref: hit.ref, truncated: Boolean(hit.meta && hit.meta.description_truncated) } : null,
+    seeded_from: hit ? { source, id: record.id || null, url: hit.url, label: `seeded from ${hit.label}`, ref: hit.ref, author: (source === "sigma" && record.author) || null, truncated: Boolean(hit.meta && hit.meta.description_truncated) } : null,
     description,
     false_positives: falsePositives,
     techniques,

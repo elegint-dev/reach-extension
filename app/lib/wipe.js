@@ -1,9 +1,11 @@
-// wipe: "Clear all Reach data" (Settings) and the per-module clear a
-// module's toggle runs. Every key this extension writes belongs to one
-// module in the registry (app/lib/modules.js keys), in every store it
-// writes to; clearModule(id) removes that module's, run() removes every
-// module's, then unregisters every content script and, if asked, revokes
-// the optional host permissions that let them run.
+// wipe: "Clear all Reach data" (Settings) and a row's own Clear button.
+// Every key this extension writes belongs to one module in the registry
+// (app/lib/modules.js keys), in every store it writes to; clearModule(id)
+// removes that module's, run() removes every module's, then unregisters
+// every content script and, if asked, revokes the optional host
+// permissions that let them run. Switching a module off (modules.js
+// setEnabled) does not go through here: it removes only that module's
+// secret-marked keys (modules.removeSecrets), not this file's full clear.
 //
 //   await wipe.clearModule(id)
 //     → [key, ...]                the keys removed, prefixed as stored
@@ -72,10 +74,6 @@ export async function clearModule(id) {
   }
   return removed;
 }
-
-// setEnabled(id, false) clears through this file, so the field-level
-// clears run there too.
-modules.useClearer(clearModule);
 
 async function unregisterScripts() {
   if (typeof chrome === "undefined" || !chrome.scripting || typeof chrome.scripting.getRegisteredContentScripts !== "function") return 0;

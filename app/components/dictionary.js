@@ -133,7 +133,7 @@ function draw(view, sourcetype, skipHazard) {
         "p",
         { class: "r-dict__ref r-secondary" },
         provenanceChip(dict.provenance),
-        dict.cite ? [" ", h("span", { class: "r-muted" }, "Reference "), citeLink(dict.cite), h("span", { class: "r-muted" }, `, read ${dict.cite.read_on}`)] : null,
+        dict.cite ? [" ", h("span", { class: "r-muted" }, "Reference "), citeLink(dict.cite)] : null,
       ),
     );
   }
@@ -182,7 +182,7 @@ export function referenceLine({ sourcetype, packId, catalogue }) {
     const lic = values.licence(packId);
     el.replaceChildren();
     if (!ref && !lic) return false;
-    if (ref) el.append(h("span", { class: "r-muted" }, "Reference "), citeLink(ref), h("span", { class: "r-muted" }, `, read ${ref.read_on}`));
+    if (ref) el.append(h("span", { class: "r-muted" }, "Reference "), citeLink(ref));
     if (lic) el.append(h("span", { class: "r-muted" }, `${ref ? " · " : ""}${lic.holder ? `${lic.holder} documentation, ` : ""}${lic.name}${lic.note ? `; ${lic.note}` : ""}`));
     return true;
   };

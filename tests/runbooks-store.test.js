@@ -27,6 +27,17 @@ beforeEach(async () => {
   await rb.load();
 });
 
+test("a Sigma rule's author survives fromSeed and a store round trip, per the Detection Rule License's attribution requirement", async () => {
+  const sigmaRow = rows.splunk.sigma_rule_id;
+  const sigmaKey = runbooks.ruleKeyFor(sigmaRow, "splunk");
+  const seed = await runbooks.seedFor(sigmaKey, { row: sigmaRow, platform: "splunk" });
+  assert.equal(seed.seeded_from.author, "Austin Songer @austinsonger");
+  const doc = rb.fromSeed(seed);
+  assert.equal(doc.seeded_from.author, "Austin Songer @austinsonger", "fromSeed carries the author");
+  const stored = await rb.seed(seed);
+  assert.equal(stored.seeded_from.author, "Austin Songer @austinsonger", "a round trip through the store keeps the author");
+});
+
 test("fromSeed keeps the pack edge and the row field per parameter, never the row's value", async () => {
   const seed = await seedFor();
   const doc = rb.fromSeed(seed);

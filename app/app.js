@@ -18,6 +18,7 @@ import * as onboarding from "./lib/onboarding.js";
 import * as sweep from "./lib/discovery-sweep.js";
 import * as navstack from "./lib/navstack.js";
 import * as modules from "./lib/modules.js";
+import { hasUnsavedInput } from "./lib/panel-close.js";
 import { TERMS, PLATFORM, isSentinel, rememberPlatform } from "./lib/platform.js";
 import { onSurface, isStacked } from "./lib/surface.js";
 import { copy } from "./lib/copy.js";
@@ -331,7 +332,10 @@ function followPanel() {
   const rt = globalThis.chrome && chrome.runtime;
   if (!rt || !rt.connect || !chrome.tabs || !chrome.tabs.getCurrent || !chrome.windows) return;
   chrome.tabs.getCurrent().then((tab) => {
-    if (tab) return; // a tab page: the catalogue, not the panel
+    if (tab) {
+      announceTopLevelOpen(tab); // a tab page: the catalogue, not the panel
+      return;
+    }
     return chrome.windows.getCurrent().then((win) => {
       if (!win || !Number.isInteger(win.id)) return;
       document.documentElement.dataset.surface = "panel";
@@ -346,6 +350,7 @@ function followPanel() {
         const connectedAt = Date.now();
         port.onMessage.addListener((msg) => {
           if (msg && msg.type === "reach:selection" && msg.selection) showSelection(msg.selection, { replay: msg.replay === true });
+          if (msg && msg.type === "reach:panel:close") closePanelIfClean();
         });
         port.onDisconnect.addListener(() => {
           // The worker went to sleep, or was reloaded: come back. A port
@@ -362,6 +367,36 @@ function followPanel() {
       connect();
     });
   }).catch(() => {});
+}
+
+// index.html opened as a top-level tab tells the background once, so an
+// open panel in the same window can make way for it (it_3cb327f3). A
+// framed copy (boot.js's REACH_FRAMED, or a window.top mismatch it might
+// have missed) is not this page's own open and never sends it: a hostile
+// embedder must not be able to force-close the user's panel.
+function announceTopLevelOpen(tab) {
+  if (window.top !== window || window.REACH_FRAMED) return;
+  const rt = globalThis.chrome && chrome.runtime;
+  if (!rt || !rt.sendMessage || !Number.isInteger(tab.windowId)) return;
+  try {
+    rt.sendMessage({ type: "reach:app:opened", windowId: tab.windowId });
+  } catch {
+    /* no listener, or the runtime is gone */
+  }
+}
+
+// The panel closes itself only with nothing typed and unsaved: an open
+// Note or Describe editor, a typed Hold reason, a drawer parameter, the
+// Holding rail's Add form (panel-close.js reads the same DOM those forms
+// render into). Chrome ignores window.close() on some builds' side panel
+// document; nothing else is done about that here.
+function closePanelIfClean() {
+  if (hasUnsavedInput(document)) return;
+  try {
+    window.close();
+  } catch {
+    /* ignored */
+  }
 }
 
 function showSelection(sel, { replay = false } = {}) {

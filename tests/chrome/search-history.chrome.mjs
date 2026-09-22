@@ -180,3 +180,29 @@ test("the section keeps the page inside its width at 320 and 380 with a long que
     }
   }
 });
+
+// it_88b661de part 2/5: search-history.js's sticky Auto-run/time-mode read
+// is routed through a dynamic import of app/lib/store.js
+// (chrome.runtime.getURL("app/lib/store.js")), gated so the History
+// panel's first paint always waits for it. The node test for that gate
+// (tests/search-history-async-settings.test.js) stands in for the
+// content-script world; it cannot prove the import actually resolves
+// against the real built extension on a real page. This does: a stored
+// Auto-run value is already reflected the moment the panel opens for the
+// very first time.
+test("the History panel's first paint already reflects a stored Auto-run value, proving the real dynamic import of app/lib/store.js resolves on a real page", async (t) => {
+  await h.setStorage({ historyAutoRun: true });
+  const page = await h.splunkPage();
+  try {
+    await shot(t, page, async () => {
+      const btn = page.locator("#reach-history-btn");
+      await btn.waitFor({ timeout: 5000 });
+      await btn.click();
+      const autoRunBtn = page.locator(".reach-history-panel .reach-history-panel__iconbtn", { hasText: "Auto-run" });
+      await autoRunBtn.waitFor({ timeout: 5000 });
+      assert.equal(await autoRunBtn.evaluate((el) => el.classList.contains("is-on")), true, "already on at the panel's first paint, not flipped on a tick later");
+    });
+  } finally {
+    await page.close();
+  }
+});

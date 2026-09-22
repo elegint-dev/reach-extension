@@ -116,10 +116,13 @@ Enable and disable Reach per site from the popup; disabling removes
 that site's permission, and `chrome://extensions` can revoke any
 permission too. Every module except the core ones has a switch in
 Settings (the side panel's Settings fold and the options page show the
-same list); switching a module off removes the data it keeps and
-revokes its host permission. "Forget" under VirusTotal deletes your
-key; "Forget" under the self-hosted relay deletes the origin, provider
-and token and revokes that origin's permission. "Clear all Reach data"
+same list); switching a module off stops it, revokes its host
+permission, and removes only a credential or a grant it holds (the
+VirusTotal key, the self-hosted origin and token); everything else it
+kept stays until you press Clear on that row. "Forget" under VirusTotal
+deletes your key; "Forget" under the self-hosted relay deletes the
+origin, provider and token and revokes that origin's permission.
+"Clear all Reach data"
 in Settings deletes everything listed above in one step, except the
 History control's two preferences and the last Sentinel workspace seen,
 which uninstalling removes, and can also revoke Splunk and Sentinel page

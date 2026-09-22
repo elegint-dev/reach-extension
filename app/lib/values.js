@@ -619,9 +619,11 @@ export function provenanceWords(p) {
   return PROVENANCE_WORDS[p] || "";
 }
 
+// Words for a citation line: the source title only. read_on stays on the
+// data for provenance checks; it is not for the analyst's screen.
 export function citeWords(cite) {
   if (!cite) return "";
-  return `${cite.title}, read ${cite.read_on}`;
+  return cite.title;
 }
 
 export function _reset() {

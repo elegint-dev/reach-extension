@@ -22,6 +22,7 @@
 //   const el = holding();   el.count() → held plus pinned; el.refreshCopy()
 
 import { h, replace } from "./h.js";
+import { foldBody } from "./foldBody.js";
 import * as investigation from "../lib/investigation.js";
 import * as pinned from "../lib/pinned.js";
 import * as facts from "../lib/facts.js";
@@ -171,7 +172,10 @@ export function holding() {
   const hint = h("p", { class: "r-muted r-holding__hint" }, copy("holding.hint"));
   const heldLabel = h("p", { class: "r-holding__label" }, "Held");
   const pinLabel = h("p", { class: "r-holding__label" }, copy("holding.pinned"));
-  const heldGroup = h("div", { class: "r-holding__group" }, heldLabel, heldFacts);
+  // Add rides the Held label's row, not a row of its own: a control alone
+  // in a band reads as an empty band (components.css band rhythm).
+  const heldLabelRow = h("div", { class: "r-holding__labelrow" }, heldLabel, addToggle);
+  const heldGroup = h("div", { class: "r-holding__group" }, heldLabelRow, heldFacts);
   const pinGroup = h("div", { class: "r-holding__group" }, pinLabel, pinFacts);
   const nbLink = h("a", { class: "r-holding__notebook", href: "#/notebook" });
 
@@ -268,11 +272,13 @@ export function holding() {
     h("span", { class: "r-holding__caret", "aria-hidden": "true" }, "▸"),
   );
 
-  const body = h(
+  // The collapsed line already says "Holding N"; the opened body does not
+  // repeat it, and Add rides the Held label's row instead of a row of its
+  // own. One block when open: this header, this body, then the separator
+  // (components.css, foldBody.js), never a rule between the two.
+  const body = foldBody(
     "div",
     { class: "r-holding__body" },
-    // The collapsed line already says "Holding N"; the opened body does not repeat it.
-    h("div", { class: "r-holding__head" }, h("div", { class: "r-holding__headacts" }, addToggle)),
     heldGroup,
     pinGroup,
     nbLink,

@@ -44,6 +44,7 @@
 import { h } from "../components/h.js";
 import * as ui from "./popup-ui.js";
 import { termsFor } from "./platform.js";
+import { eventParams } from "./facts.js";
 
 export function viewFor(catalogue, container, name, fallback = null) {
   if (!container) return null;
@@ -115,7 +116,10 @@ export function packEdgeRows(m, control, { before = null, after = null, summary 
   const rows = [];
   for (const edge of edges) {
     const pmeta = lib.packs.params(edge.packId, edge.src.sourcetype); // a v2 pack's from_concept becomes this container's column
-    const params = { value };
+    // The event's own window and host, lowest precedence: `before`, the
+    // from_field loop and `after` (the pack's own placeholder default)
+    // all still win over it, and a typed drawer value wins over all of it.
+    const params = { value, ...eventParams({ time: ctx.event && ctx.event.time, read: ctx.read }) };
     if (before) before(params, pmeta); // a scope the row does not name, bound ahead of the row's own fields
     for (const [pname, pm] of Object.entries(pmeta)) {
       if (pm.from_field && params[pname] === undefined) {
@@ -125,10 +129,21 @@ export function packEdgeRows(m, control, { before = null, after = null, summary 
     }
     if (after) after(params, pmeta); // a default for what the row left unbound
     const body = h("div");
+    // A thrown control() (a bug in the pivot's own render, not a
+    // generator error control already catches) still leaves this row's
+    // disclosure open and every other row on the popup mounted.
+    const openRow = (e) => {
+      if (!e.target.open || body.childElementCount) return;
+      try {
+        body.appendChild(control(edge, params, pmeta));
+      } catch (err) {
+        body.appendChild(h("div", { class: "reach-row__body reach-row__body--warn" }, `Something failed: ${(err && err.message) || String(err)}`));
+      }
+    };
     rows.push(
       h(
         "details",
-        { class: "reach-details reach-edge", onToggle: (e) => { if (e.target.open && !body.childElementCount) body.appendChild(control(edge, params, pmeta)); } },
+        { class: "reach-details reach-edge", onToggle: openRow },
         h("summary", { class: "reach-summary" }, edge.label, " ", h("span", { class: "reach-chip", dataset: { basis: basisText(edge.basis) } }, basisText(edge.basis)), summary ? summary(edge, container) : null),
         edge.note ? h("div", { class: "reach-row__body reach-row__body--muted" }, edge.note) : null,
         body,

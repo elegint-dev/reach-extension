@@ -113,7 +113,7 @@ export function valueBlock({ field, value, container, platform = PLATFORM, catal
     root.appendChild(h("div", { class: "reach-value__body" }, h("code", null, row.value), ": ", row.meaning, " ", valueChip(row, platform)));
     if (row.note) root.appendChild(h("div", { class: "reach-value__note" }, row.note));
     if (row.quote && row.cite) root.appendChild(h("div", { class: "reach-value__note reach-value__quote" }, h("q", null, row.quote), " (the reference's words)"));
-    if (row.cite) root.appendChild(h("div", { class: "reach-value__cite" }, h("a", { href: row.cite.url, target: "_blank", rel: "noreferrer" }, row.cite.title), `, read ${row.cite.read_on}`));
+    if (row.cite) root.appendChild(h("div", { class: "reach-value__cite" }, h("a", { href: row.cite.url, target: "_blank", rel: "noreferrer" }, row.cite.title)));
     return true;
   };
   // Once the sidecar is in, the catalogue's fresh view carries the

@@ -120,6 +120,16 @@ test("Benign conditions and Escalation conditions list the conditions alone; Hol
   assert.ok(keep.querySelector(".reach-hold") && keep.querySelector(".reach-benign"), "both bodies live there");
 });
 
+test("a Sigma-seeded runbook's seed line names the rule's own author, not a generic phrase", async () => {
+  const row = rows.splunk.sigma_rule_id;
+  const { ctx } = ctxFor(runbooks.href(runbooks.ruleKeyFor(row, "splunk"), row));
+  const el = view.render(ctx);
+  await el.ready;
+  const seedLine = el.querySelectorAll("p.r-secondary").map((n) => dom.text(n)).find((t) => /^Seeded from Sigma/.test(t));
+  assert.ok(seedLine, "a seed line is drawn");
+  assert.match(seedLine, /Austin Songer @austinsonger/, "the rule's own author, per the Detection Rule License's attribution requirement");
+});
+
 test("a rule no bundle carries is walked, not seeded: the head says so and Benign conditions is empty", async () => {
   const row = rows.splunk.renamed_search;
   const { ctx } = ctxFor(runbooks.href(runbooks.ruleKeyFor(row, "splunk"), row));

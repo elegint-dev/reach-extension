@@ -97,7 +97,9 @@ test("the verdict's fleet line says no fleet baseline yet, linking to the Falcon
       catalogue,
       appUrl: (hash) => `index.html?platform=splunk${hash}`,
     });
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    // 80ms, not 30: the fleet line's read chains through the fake's
+    // macrotask-resolving storage/permissions (tests/_chrome.js).
+    await new Promise((resolve) => setTimeout(resolve, 80));
     const fleet = find(root, "reach-verdict__fleet");
     assert.ok(fleet, "a fleet line is drawn even with no baseline");
     assert.match(textOf(fleet), /^No fleet baseline yet · run it$/);
@@ -110,7 +112,7 @@ test("the verdict's fleet line says no fleet baseline yet, linking to the Falcon
 test("the verdict's fleet line says no fleet baseline yet with no link when the caller gives no appUrl", async () => {
   await draw(async () => {
     const root = verdictBlock({ field: "SHA256HashData", value: CONTACTSD.SHA256HashData, container: "crowdstrike:events:sensor", platform: "splunk", event: CONTACTSD, catalogue });
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await new Promise((resolve) => setTimeout(resolve, 80));
     const fleet = find(root, "reach-verdict__fleet");
     assert.match(textOf(fleet), /^No fleet baseline yet · run it$/);
     assert.ok(!findTag(fleet, "A"), "no appUrl, no link");
@@ -127,7 +129,7 @@ test("the verdict's fleet line reads the corpus once an environment has measured
   try {
     await draw(async () => {
       const root = verdictBlock({ field: "SHA256HashData", value: CONTACTSD.SHA256HashData, container: "crowdstrike:events:sensor", platform: "splunk", event: CONTACTSD, catalogue, appUrl: (hash) => hash });
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      await new Promise((resolve) => setTimeout(resolve, 80));
       const fleet = find(root, "reach-verdict__fleet");
       assert.match(textOf(fleet), /^Seen on 5 of your hosts, first 2026-09-01$/);
     });

@@ -28,11 +28,55 @@ import * as workflows from "../lib/workflows.js";
 import * as modules from "../lib/modules.js";
 import { oneLiner } from "../lib/values.js";
 import { referenceLine } from "../components/dictionary.js";
+import * as falconDictionary from "../lib/falcon-dictionary.js";
 import { copy } from "../lib/copy.js";
 import { copyText } from "../lib/runtime.js";
 import { when } from "../lib/when.js";
+import * as layer from "../lib/layer.js";
+import * as packs from "../lib/packs.js";
+import { PACK_ID as FDR_PACK_ID } from "../lib/fdr-queries.js";
+import * as macros from "../lib/macros.js";
 
 const FOLD_OPEN_MAX = 40;
+
+// The pack's own macro allowlist, when this sourcetype is one its queries
+// run on; else none, so the scope line stays off every sourcetype that
+// could never need it (discover-splunk.js's macrosFor, the same rule).
+function fdrMacrosFor(sourcetype) {
+  const pack = packs.pack(FDR_PACK_ID);
+  if (!pack || !Array.isArray(pack.macros) || !pack.macros.length) return [];
+  const onIt = (pack.queries || []).some((q) => (q.containers || []).includes(sourcetype));
+  return onIt ? pack.macros : [];
+}
+
+// The scope line's "Macros: N of 5 defined" item, with the same Copy
+// macros.conf the drawer's macro tab offers: `refresh()` reads whatever
+// discovery last found (configs/conf-macros) off any enabled Splunk
+// environment, and this page never runs discovery itself.
+function macrosScopeItem(sourcetype, resolvedIndex) {
+  const names = isSentinel() ? [] : fdrMacrosFor(sourcetype);
+  if (!names.length) return { node: null, refresh: async () => {} };
+  const count = h("span", null, "checking…");
+  const copyBtn = h(
+    "button",
+    { type: "button", class: "r-btn r-btn--small", onClick: (e) => copyText(macros.macrosConfText(names, { resolvedIndex }), e.currentTarget, "copied") },
+    "Copy macros.conf",
+  );
+  const node = h("span", null, "Macros: ", count, " ", copyBtn);
+  const refresh = async () => {
+    let all;
+    try {
+      all = await layer.readAll();
+    } catch {
+      all = {};
+    }
+    const withMacros = Object.keys(all).filter((k) => /^https?:\/\//.test(k) && all[k] && all[k].macros);
+    const known = withMacros.length ? all[withMacros[0]].macros : null;
+    const defined = known ? names.filter((n) => known[n] && known[n].defined === true).length : null;
+    count.textContent = defined === null ? "not checked yet" : `${defined} of ${names.length} defined`;
+  };
+  return { node, refresh };
+}
 const WINDOW_OPTIONS = ["-24h", "-7d", "-30d", "0"];
 
 // Whether this sourcetype (Splunk) or table (Sentinel) is the one the
@@ -321,6 +365,8 @@ export function render(ctx) {
       )
     : null;
 
+  const macrosItem = macrosScopeItem(name, rec.indexes && rec.indexes[0]);
+
   el.appendChild(
     titleBlock({
       kind: "sourcetype",
@@ -333,6 +379,7 @@ export function render(ctx) {
         rec.discriminator ? h("span", null, "record type ", h("code", null, rec.discriminator)) : null,
         h("span", { title: `${described.length} carry a description from a pack, a note of yours or discovery` }, `${described.length.toLocaleString("en-US")} described`),
         rec.indexes && rec.indexes.length ? h("span", null, `${TERMS.index} `, h("code", null, rec.indexes.join(", "))) : null,
+        macrosItem.node,
       ],
       actions: [describe, discover, bind, baseline],
     }),
@@ -340,13 +387,18 @@ export function render(ctx) {
 
   el.appendChild(h("section", { class: "r-section" }, headingNode("meaning"), editor, referenceLine({ sourcetype: name, packId: rec.packId, catalogue })));
 
+  let baselineCtrl = null;
   if (isBaselineTable) {
-    const ctrl = isSentinel() ? sentinelBaselineControl(name, catalogue) : splunkBaselineControl(rec, catalogue);
-    el.appendChild(h("section", { class: "r-section", id: "fleet-baseline" }, headingNode("fleet-baseline"), ctrl.el));
-    // Fetches the environment list; deferred to mount so a bare render()
-    // (a test, a served preview) draws the static summary without it.
-    el.afterMount = ctrl.refresh;
+    baselineCtrl = isSentinel() ? sentinelBaselineControl(name, catalogue) : splunkBaselineControl(rec, catalogue);
+    el.appendChild(h("section", { class: "r-section", id: "fleet-baseline" }, headingNode("fleet-baseline"), baselineCtrl.el));
   }
+  // Fetches the environment list and the macro status; deferred to mount
+  // so a bare render() (a test, a served preview) draws the static
+  // summary without either.
+  el.afterMount = async () => {
+    if (baselineCtrl) await baselineCtrl.refresh();
+    await macrosItem.refresh();
+  };
 
   const moved = deltaBlock(rec.profileDelta, name);
   if (moved) el.appendChild(moved);
@@ -372,11 +424,21 @@ export function render(ctx) {
   }
 
   const types = recordTypes(rec, events, { eventRoute: routes.has("event") });
+  const falconOnTable = falconDictionary.isFalconContainer(name);
   if (types.total) {
     const list = h(
       "ul",
       { class: "r-typelist" },
-      types.rows.map((t) => h("li", null, t.link ? eventLink(t.name) : h("code", null, t.name), t.count !== null ? h("span", { class: "r-muted r-typelist__n" }, ` ${t.count.toLocaleString()}`) : null)),
+      types.rows.map((t) => {
+        const desc = falconOnTable ? falconDictionary.eventOn(t.name) : null;
+        return h(
+          "li",
+          null,
+          t.link ? eventLink(t.name) : h("code", null, t.name),
+          t.count !== null ? h("span", { class: "r-muted r-typelist__n" }, ` ${t.count.toLocaleString()}`) : null,
+          desc && desc.description ? h("span", { class: "r-muted" }, `: ${desc.description}`) : null,
+        );
+      }),
     );
     const source = events.length && types.counted ? "The pack's record types, with discovery's counts." : events.length ? "The record types the pack knows. Each has its own field set." : "Values discovery saw, with counts.";
     el.appendChild(

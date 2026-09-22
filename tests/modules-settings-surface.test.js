@@ -1,8 +1,8 @@
 // The settings surface is one list drawn from the registry: the panel's
 // gear fold and options.html draw the same modules in the same order with
-// the same heads, a core module has no toggle, an off module's settings
-// are hidden behind its toggle, and each head carries the anchor a
-// popup's "set it up" link lands on.
+// the same heads, a core module carries a fixed marker (never a pill),
+// an optional module's pill starts at its live on/off state, and each
+// head carries the anchor a popup's "set it up" link lands on.
 import "./_splunk.js";
 import "./_bundle.js";
 import { test } from "node:test";
@@ -21,11 +21,12 @@ await modules.hydrate();
 function heads(list) {
   return dom.walk(list, (n) => n.attributes && n.attributes["data-module"]).map((n) => ({
     id: n.attributes["data-module"],
+    tier: n.attributes["data-tier"],
     anchor: n.id,
-    toggle: dom.walk(n, (c) => c.classList && c.classList.contains("r-module__switch")).length,
+    pill: dom.text(dom.walk(n, (c) => c.classList && c.classList.contains("r-module__pill"))[0] || { textContent: "" }),
+    fixed: dom.walk(n, (c) => c.classList && c.classList.contains("r-module__fixed")).length,
     label: dom.text(dom.walk(n, (c) => c.classList && c.classList.contains("r-module__label"))[0]),
     sends: dom.text(dom.walk(n, (c) => c.classList && c.classList.contains("r-module__sends"))[0]),
-    bodyHidden: (dom.walk(n, (c) => c.classList && c.classList.contains("r-module__body"))[0] || { hidden: null }).hidden,
   }));
 }
 
@@ -53,25 +54,31 @@ test("options.js scopes its list to the page's platform, and every setup link na
   assert.match(page, /optionsUrl\(PLATFORM, /);
 });
 
-test("a core module has no toggle; every other module has one; each head is the module's anchor", () => {
+test("a core module carries the fixed marker and no pill; every other module carries a pill and no fixed marker; each head is the module's anchor", () => {
   for (const m of heads(moduleList({ platform: "splunk" }))) {
     const entry = modules.get(m.id);
-    assert.equal(m.toggle, entry.tier === "core" ? 0 : 1, `${m.id}: toggle`);
+    if (entry.tier === "core") {
+      assert.equal(m.fixed, 1, `${m.id}: fixed marker`);
+      assert.equal(m.pill, "", `${m.id}: no pill`);
+    } else {
+      assert.equal(m.fixed, 0, `${m.id}: no fixed marker`);
+      assert.match(m.pill, /^(On|Off)$/, `${m.id}: pill text`);
+    }
     assert.equal(m.anchor, modules.anchor(m.id));
     assert.equal(m.label, entry.label);
     assert.match(m.sends, /^Sends: /);
   }
 });
 
-test("an off module hides its settings behind the toggle; on, they show", async () => {
-  const before = heads(moduleList({ platform: "splunk" }));
-  assert.equal(before.find((m) => m.id === "virustotal").bodyHidden, true);
-  assert.equal(before.find((m) => m.id === "benign").bodyHidden, false);
+test("a module's pill starts at its live state, and flips with modules.setEnabled", async () => {
   const restore = fakeChrome({ storage: false }).install();
   try {
+    const before = heads(moduleList({ platform: "splunk" }));
+    assert.equal(before.find((m) => m.id === "virustotal").pill, "Off");
+    assert.equal(before.find((m) => m.id === "benign").pill, "On");
     await modules.setEnabled("virustotal", true);
     const after = heads(moduleList({ platform: "splunk" }));
-    assert.equal(after.find((m) => m.id === "virustotal").bodyHidden, false);
+    assert.equal(after.find((m) => m.id === "virustotal").pill, "On");
     await modules.setEnabled("virustotal", false);
   } finally {
     restore();
@@ -86,12 +93,10 @@ test("VirusTotal, CIRCL, EPSS and the self-hosted relay sit together, after the 
   assert.deepEqual(ids.slice(ids.indexOf("virustotal"), ids.indexOf("virustotal") + 4), ["virustotal", "circl", "epss", "selfhosted"]);
 });
 
-test("every module lists on both platforms once workflows carry pack hunts on Sentinel; the all-platforms list marks none as one platform's", () => {
+test("every module lists on both platforms once workflows carry pack hunts on Sentinel", () => {
   const sentinel = heads(moduleList({ platform: "sentinel" })).map((m) => m.id);
   assert.ok(sentinel.includes("workflows"), "pack workflows mount on Sentinel");
   assert.deepEqual(sentinel, heads(moduleList({ platform: "splunk" })).map((m) => m.id));
-  const all = moduleList({ platform: null, context: "options" });
-  assert.equal(dom.walk(all, (n) => n.classList && n.classList.contains("r-module__tier") && /only$/.test(dom.text(n))).length, 0);
 });
 
 test("options.js mounts moduleList and settingsBar.js wraps it: one component, two places", async () => {

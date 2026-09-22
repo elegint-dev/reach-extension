@@ -100,6 +100,7 @@ export function render(ctx) {
   const skipFreshLabel = h("label", { class: "r-secondary r-nowrap" }, skipFresh, copy("discover.skipFresh"));
   const progress = h("p", { class: "r-secondary", "aria-live": "polite" });
   const resumeBtn = h("button", { type: "button", class: "r-btn r-btn--small", hidden: true }, "Resume");
+  const failures = h("div", { class: "r-discover__failures" });
   const results = h("div");
 
   let origins = [];
@@ -140,6 +141,120 @@ export function render(ctx) {
     return r && r.notice ? ` ${r.notice}` : "";
   }
 
+  // The three actions a row (or a failures-list Retry) can run, each read
+  // fresh off the layer so a retry does not carry a stale record from
+  // whatever render built its button. One function per action, called from
+  // the row's own button and from Retry alike: a fix here or a fix there
+  // is the same fix.
+  async function runInventory(btn) {
+    if (btn) {
+      btn.disabled = true;
+      btn.replaceChildren(spinner(), "Running inventory…");
+    }
+    status.textContent = `Running inventory on ${origin}…`;
+    try {
+      const r = await discovery.inventory(origin, { index: indexIn.value.trim() || "*", earliest: windowSel.value === "0" ? "0" : windowSel.value });
+      const n = Object.keys(r.env.sourcetypes).length;
+      status.textContent = `Inventory: ${r.rows.length} index/sourcetype pair${r.rows.length === 1 ? "" : "s"}, ${n} sourcetype${n === 1 ? "" : "s"} known on ${origin}.${noticeText(r)}`;
+      for (const m of r.messages || []) if (m.type === "ERROR" || m.type === "FATAL") status.textContent += ` Splunk said: ${m.text}`;
+    } catch (err) {
+      status.textContent = `Inventory failed: ${err.message}`;
+    }
+    if (btn === invBtn) {
+      invBtn.disabled = false;
+      invBtn.textContent = "Inventory sourcetypes";
+    }
+    drawResults();
+    renderFailures(sweep.state().errors);
+  }
+
+  async function runProfile(name, btn) {
+    if (btn) {
+      btn.disabled = true;
+      btn.replaceChildren(spinner(), "profiling…");
+    }
+    status.textContent = `Profiling ${name} on ${origin}…`;
+    try {
+      const env = await layer.read(origin);
+      const rec = (env && env.sourcetypes && env.sourcetypes[name]) || {};
+      const idx = rec.indexes && rec.indexes.length ? rec.indexes : indexIn.value.trim() || "*";
+      const r = await discovery.profile(origin, name, { index: idx, sample: 5000, earliest: windowSel.value === "0" ? "0" : windowSel.value });
+      status.replaceChildren(`Profiled ${name}: ${r.fields} fields over ${r.total} sampled events. `, h("a", { href: `#/coverage?env=${encodeURIComponent(origin)}&st=${encodeURIComponent(name)}` }, "Coverage"), noticeText(r));
+      const cat = catalogue.sourcetype(name);
+      const disc = (cat && cat.discriminator) || null;
+      if (disc) {
+        const rt = await discovery.recordTypes(origin, name, disc, { index: idx, earliest: windowSel.value === "0" ? "0" : windowSel.value });
+        status.append(noticeText(rt));
+      }
+    } catch (err) {
+      status.textContent = `Profile failed: ${err.message}`;
+    }
+    drawResults();
+    renderFailures(sweep.state().errors);
+  }
+
+  async function runProvenance(name, btn) {
+    if (btn) {
+      btn.disabled = true;
+      btn.replaceChildren(spinner(), "reading…");
+    }
+    status.textContent = `Reading props/transforms for ${name} on ${origin}…`;
+    try {
+      const env = await layer.read(origin);
+      const rec = (env && env.sourcetypes && env.sourcetypes[name]) || {};
+      const r = await discovery.provenance(origin, name, { macros: macrosFor(name) });
+      const c = r.counts;
+      status.textContent = `Provenance for ${name}: ${r.fields} fields produced by ${c.aliases} aliases, ${c.calculated} calculated fields, ${c.lookups} lookups, ${c.extractions} extractions.${noticeText(r)}`;
+      const base = status.textContent;
+      const d = await discovery.decodes(origin, name, {
+        force: Boolean(rec.decodes_at),
+        onProgress: (p) => {
+          status.textContent = `${base} Decode tables: ${p.done}/${p.total} lookups read, ${p.tables} tables so far…`;
+        },
+      });
+      status.textContent = `${base} Decode tables: ${d.tables} of ${d.candidates} single-key lookups read.${d.errors.length ? " " + d.errors.join("; ") : ""}${noticeText(d)}`;
+    } catch (err) {
+      status.textContent = `Provenance failed: ${err.message}`;
+    }
+    drawResults();
+    renderFailures(sweep.state().errors);
+  }
+
+  // A sweep error's step maps onto whichever row action covers it: profile
+  // and structure are one click on the profile button (recordTypes runs
+  // right after profile there too); provenance and decodes are one click
+  // on the structure button. Inventory has no row; it retries through the
+  // same function the page's own Inventory button uses.
+  function retryStep(err, btn) {
+    if (err.step === "inventory" || !err.sourcetype) return runInventory(btn);
+    if (err.step === "profile" || err.step === "structure") return runProfile(err.sourcetype, btn);
+    return runProvenance(err.sourcetype, btn);
+  }
+
+  // The failures list: one row per sweep error, live, under the progress
+  // line. Redrawn on every reflect so an error pushed mid-run shows before
+  // the sweep ends, and stays once it has.
+  function renderFailures(errors) {
+    failures.replaceChildren();
+    if (!errors.length) return;
+    const rows = errors.map((err) => {
+      const retryBtn = h("button", { type: "button", class: "r-btn r-btn--small" }, "Retry");
+      retryBtn.addEventListener("click", () => retryStep(err, retryBtn));
+      return h(
+        "li",
+        { class: "r-discover__failure" },
+        h("code", null, err.sourcetype || "inventory"),
+        " ",
+        h("span", { class: "r-muted" }, `(${err.step})`),
+        ": ",
+        err.error,
+        " ",
+        retryBtn,
+      );
+    });
+    failures.appendChild(h("ul", { class: "r-list r-discover__failure-list" }, ...rows));
+  }
+
   async function drawResults() {
     results.replaceChildren();
     discoveredHead.textContent = heading("discovered-sourcetypes", 0);
@@ -160,59 +275,12 @@ export function render(ctx) {
       const moved = hl && hl.delta ? deltaLine(hl.delta) : null;
       const profBtn = h(
         "button",
-        {
-          type: "button",
-          class: "r-btn r-btn--small",
-          onClick: async (e) => {
-            const btn = e.currentTarget;
-            btn.disabled = true;
-            btn.replaceChildren(spinner(), "profiling…");
-            status.textContent = `Profiling ${name} on ${origin}…`;
-            try {
-              const idx = rec.indexes && rec.indexes.length ? rec.indexes : indexIn.value.trim() || "*";
-              const r = await discovery.profile(origin, name, { index: idx, sample: 5000, earliest: windowSel.value === "0" ? "0" : windowSel.value });
-              status.replaceChildren(`Profiled ${name}: ${r.fields} fields over ${r.total} sampled events. `, h("a", { href: `#/coverage?env=${encodeURIComponent(origin)}&st=${encodeURIComponent(name)}` }, "Coverage"), noticeText(r));
-              const disc = (cat && cat.discriminator) || null;
-              if (disc) {
-                const rt = await discovery.recordTypes(origin, name, disc, { index: idx, earliest: windowSel.value === "0" ? "0" : windowSel.value });
-                status.append(noticeText(rt));
-              }
-            } catch (err) {
-              status.textContent = `Profile failed: ${err.message}`;
-            }
-            drawResults();
-          },
-        },
+        { type: "button", class: "r-btn r-btn--small", onClick: (e) => runProfile(name, e.currentTarget) },
         rec.profiled_at ? "re-profile" : "profile fields",
       );
       const provBtn = h(
         "button",
-        {
-          type: "button",
-          class: "r-btn r-btn--small",
-          onClick: async (e) => {
-            const btn = e.currentTarget;
-            btn.disabled = true;
-            btn.replaceChildren(spinner(), "reading…");
-            status.textContent = `Reading props/transforms for ${name} on ${origin}…`;
-            try {
-              const r = await discovery.provenance(origin, name, { macros: macrosFor(name) });
-              const c = r.counts;
-              status.textContent = `Provenance for ${name}: ${r.fields} fields produced by ${c.aliases} aliases, ${c.calculated} calculated fields, ${c.lookups} lookups, ${c.extractions} extractions.${noticeText(r)}`;
-              const base = status.textContent;
-              const d = await discovery.decodes(origin, name, {
-                force: Boolean(rec.decodes_at),
-                onProgress: (p) => {
-                  status.textContent = `${base} Decode tables: ${p.done}/${p.total} lookups read, ${p.tables} tables so far…`;
-                },
-              });
-              status.textContent = `${base} Decode tables: ${d.tables} of ${d.candidates} single-key lookups read.${d.errors.length ? " " + d.errors.join("; ") : ""}${noticeText(d)}`;
-            } catch (err) {
-              status.textContent = `Provenance failed: ${err.message}`;
-            }
-            drawResults();
-          },
-        },
+        { type: "button", class: "r-btn r-btn--small", onClick: (e) => runProvenance(name, e.currentTarget) },
         rec.provenance_at ? "re-read structure" : "structure + decodes",
       );
       const structure = rec.provenance_at
@@ -267,22 +335,7 @@ export function render(ctx) {
     );
   }
 
-  invBtn.addEventListener("click", async () => {
-    invBtn.disabled = true;
-    invBtn.replaceChildren(spinner(), "Running inventory…");
-    status.textContent = `Running inventory on ${origin}…`;
-    try {
-      const r = await discovery.inventory(origin, { index: indexIn.value.trim() || "*", earliest: windowSel.value === "0" ? "0" : windowSel.value });
-      const n = Object.keys(r.env.sourcetypes).length;
-      status.textContent = `Inventory: ${r.rows.length} index/sourcetype pair${r.rows.length === 1 ? "" : "s"}, ${n} sourcetype${n === 1 ? "" : "s"} known on ${origin}.${noticeText(r)}`;
-      for (const m of r.messages || []) if (m.type === "ERROR" || m.type === "FATAL") status.textContent += ` Splunk said: ${m.text}`;
-    } catch (err) {
-      status.textContent = `Inventory failed: ${err.message}`;
-    }
-    invBtn.disabled = false;
-    invBtn.textContent = "Inventory sourcetypes";
-    drawResults();
-  });
+  invBtn.addEventListener("click", () => runInventory(invBtn));
 
 
   // --- full discovery -----------------------------------------------------
@@ -307,6 +360,7 @@ export function render(ctx) {
     if (running) {
       progress.replaceChildren(spinner(), " ", sweep.progressLine(s));
       resumeBtn.hidden = true;
+      renderFailures(s.errors);
       if (s.done !== lastDone) {
         lastDone = s.done;
         drawResults();
@@ -314,20 +368,26 @@ export function render(ctx) {
       return;
     }
     if (mine && s.started_at) {
+      // The itemised errors live in the failures list below; the line here
+      // keeps only the summary progressLine already carries.
       progress.textContent = s.abort
         ? `Full discovery ${sweep.progressLine(s)}. ${s.abort}`
         : s.cancelled
           ? `Full discovery cancelled, ${sweep.progressLine(s)}.`
-          : `Full discovery finished, ${sweep.progressLine(s)}.${s.errors.length ? " " + s.errors.map((e) => `${e.sourcetype || "inventory"} (${e.step}): ${e.error}`).join("; ") : ""}`;
+          : `Full discovery finished, ${sweep.progressLine(s)}.`;
       resumeBtn.hidden = !sweep.incomplete(s);
+      renderFailures(s.errors);
       drawResults();
       return;
     }
     showStopped();
   }
 
-  // A page opened after a sweep stopped: what the store remembers.
+  // A page opened after a sweep stopped: what the store remembers. Its
+  // record carries no live retry path (this view has not run it), so the
+  // failures list is this run's only, not the persisted one's.
   async function showStopped() {
+    failures.replaceChildren();
     if (!origin) {
       progress.textContent = "";
       resumeBtn.hidden = true;
@@ -383,6 +443,7 @@ export function render(ctx) {
       h("p", { class: "r-secondary" }, "Inventory sourcetypes runs ", h("code", null, "| tstats count, min(_time), max(_time) where index=… by index, sourcetype"), ": cheap on any deployment; the index filter narrows it if you want. Full discovery runs that again, then every row's profile, structure and decodes, one sourcetype at a time: the same searches the row buttons run, listed before they start, cancellable between them."),
       status,
       h("div", { class: "r-ann__actions" }, progress, resumeBtn),
+      failures,
     ),
   );
 

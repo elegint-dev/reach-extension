@@ -36,11 +36,10 @@ export function pivotControl(lib, edge, params, meta, workspace, hold = null) {
     try {
       result = pivot.generate(edge, current, { pack });
     } catch (err) {
-      if (err && err.name === "PivotError") {
-        box.appendChild(h("div", { class: "reach-row__body reach-row__body--warn" }, err.message));
-        return;
-      }
-      throw err;
+      // Any generator failure renders here; Preview never throws past its
+      // own row, and the rest of the popup stays mounted.
+      box.appendChild(h("div", { class: "reach-row__body reach-row__body--warn" }, (err && err.message) || String(err)));
+      return;
     }
     box.appendChild(h("pre", { class: "reach-spl" }, result.spl));
     for (const hz of result.hazards || []) box.appendChild(h("div", { class: `reach-row__body reach-row__body--${hz.level}` }, hz.text));

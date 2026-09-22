@@ -285,10 +285,14 @@ test("oneLiner: first sentence, list colons cut, capped at a word boundary", () 
   assert.equal(values.oneLiner("No stop at all"), "No stop at all");
   assert.equal(values.oneLiner("Short: yes"), "Short: yes", "a colon early in a short line is not a list");
   assert.equal(values.oneLiner('TA: coalesce(errorCode, "success").'), 'TA: coalesce(errorCode, "success").', "a head too short to stand alone keeps its sentence");
-  assert.equal(values.citeWords(CITE), "Example reference, read 2026-09-18");
   assert.equal(values.citeWords(null), "");
   assert.equal(values.provenanceWords("documented"), "documented");
   assert.equal(values.provenanceWords("nope"), "");
+});
+
+test("citeWords: the source title only, read_on never reaches the words", () => {
+  assert.equal(values.citeWords(CITE), "Example reference");
+  assert.ok(!/\d{4}-\d{2}-\d{2}/.test(values.citeWords(CITE)), "no YYYY-MM-DD in the cite words");
 });
 
 test("a column you bound yourself reads the feed's dictionary and claims no provenance; an unknown container is ready with nothing", async () => {

@@ -23,6 +23,10 @@ import * as scope from "../lib/scope.js";
 import { TERMS } from "../lib/platform.js";
 import { headingNode } from "../lib/headings.js";
 
+// event: { time, read } | null, the clicked row's own timestamp and other
+// fields (click-context.js's shape, or the value page's lastEvent
+// equivalent). The field page has none, and passes nothing.
+
 function basisChip(edge) {
   const v = edge.basis === "confirmed" || edge.basis === "validated" ? edge.basis : edge.basis === "proposed" ? "suggested" : "asserted";
   return chip({ kind: "trust", value: v, text: edge.basis, title: edge.basis_ref || "" });
@@ -37,7 +41,7 @@ export function windowDefaults(meta) {
   return m && m.placeholder ? { earliest: m.placeholder } : {};
 }
 
-export function packPivots({ ctx, sourcetype, name, edges, heading = true, titled = true, setSel = null, carried = {} }) {
+export function packPivots({ ctx, sourcetype, name, edges, heading = true, titled = true, setSel = null, carried = {}, event = null }) {
   const userParams = {};
   let current = null;
 
@@ -56,7 +60,7 @@ export function packPivots({ ctx, sourcetype, name, edges, heading = true, title
     // The index is scope, resolved for the sourcetype the search runs on
     // (the edge's destination, as pivot.js renders it), never a held fact.
     const on = (edge.dst && edge.dst.sourcetype) || edge.src.sourcetype;
-    const params = scope.bind({ ...defaults, ...facts.bound(), ...carried, ...userParams }, on);
+    const params = scope.bind({ ...defaults, ...facts.bound(), ...facts.eventParams(event || {}), ...carried, ...userParams }, on);
     const subtitle = `${edge.src.field} → ${edge.dst.field} on ${edge.dst.sourcetype}`;
     fillFrom(
       ctx.drawer,

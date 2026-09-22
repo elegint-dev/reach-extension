@@ -62,7 +62,7 @@ test("the title block is the view's first child: name, chips, scope with the fie
     assert.equal(title.getAttribute("data-kind"), "sourcetype");
     assert.equal(dom.text(title.querySelector("h1")), ST);
     const scope = dom.text(title.querySelector(".r-scope"));
-    assert.match(scope, /^\d[\d,]* fields · record type event_simpleName · \d[\d,]* described$/);
+    assert.match(scope, /^\d[\d,]* fields · record type event_simpleName · \d[\d,]* described · Macros: checking… Copy macros\.conf$/);
     assert.deepEqual(title.querySelector(".r-actions").children.map(dom.text), ["Describe", "Discover", "Bind fields", "Baseline: what my fleet runs"]);
     assert.equal(title.querySelector(".r-actions"), title.children[title.children.length - 1], "the action row is the block's last row");
     const hrefs = title.querySelector(".r-actions").querySelectorAll("a").map((a) => a.getAttribute("href"));
@@ -87,6 +87,24 @@ test("the fleet baseline action and section draw only for the sourcetype it meas
     const on = render(ctx({ name: ST }));
     assert.ok(on.querySelector(".r-actions").children.map(dom.text).includes("Baseline: what my fleet runs"));
     assert.ok(on.querySelector("#fleet-baseline"), "the section is drawn, under the fleet-baseline heading");
+  } finally {
+    restore();
+  }
+});
+
+test("Macros: N of 5 defined draws only on the Falcon sourcetype, resolves after mount, and Copy macros.conf carries the pack's block", async () => {
+  const restore = dom.install();
+  try {
+    const off = render(ctx({ name: "aws:cloudwatchlogs:guardduty" }));
+    assert.doesNotMatch(dom.text(off.querySelector(".r-scope")), /Macros:/, "not on a sourcetype none of the pack's queries run on");
+
+    const el = render(ctx({ name: ST }));
+    const scope = el.querySelector(".r-scope");
+    assert.match(dom.text(scope), /Macros: checking…/, "a status placeholder until afterMount resolves it");
+    await el.afterMount();
+    assert.match(dom.text(scope), /Macros: (not checked yet|\d of 5 defined)/);
+    const copyBtn = dom.walk(scope, (n) => n.tagName === "BUTTON" && dom.text(n) === "Copy macros.conf")[0];
+    assert.ok(copyBtn);
   } finally {
     restore();
   }

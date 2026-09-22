@@ -78,8 +78,22 @@ test("the opened rail draws Holding once: the collapsed line, not a repeated hea
   const headings = dom.walk(el, (n) => dom.text(n).trim() === "Holding" || /^Holding\b/.test(dom.text(n).trim()));
   const words = headings.filter((n) => n.className && String(n.className).includes("r-holding__word"));
   assert.equal(words.length, 1, "only the collapsed line's own word draws \"Holding\"");
-  const bodyHead = el.querySelector(".r-holding__head");
-  assert.equal(dom.text(bodyHead).replace(/\s+/g, ""), "Add", "the opened body's header carries only its own controls, not a second Holding title");
+  const heldLabel = [...el.querySelectorAll(".r-holding__label")].find((n) => dom.text(n).trim() === "Held");
+  assert.equal(heldLabel.parentElement.querySelector(".r-holding__addtoggle"), el.querySelector(".r-holding__addtoggle"), "Add rides the Held label's row, not a title of its own");
+});
+
+test("the opened rail is one block: header first, body (with the notebook line) last, so the closing line always falls after it", async () => {
+  const from = { platform: "splunk", container: "crowdstrike:events:sensor", scope: "fdr" };
+  await notebook.record({ field: "SHA256HashData", value: "8ae6", from });
+  const el = holding();
+  await flush();
+  const elements = el.children.filter((c) => c.tagName !== "#TEXT");
+  assert.equal(elements[0].className, "r-holding__line", "the header is the rail's first child");
+  const body = elements[elements.length - 1];
+  assert.ok(body.classList.contains("r-holding__body"), "the body is the rail's last child, so the CSS closing line on it falls after everything, never between header and body");
+  assert.ok(body.classList.contains("r-fold__body"), "the body carries the shared fold-body class the closing line keys on");
+  const nbLink = el.querySelector(".r-holding__notebook");
+  assert.ok(body.contains(nbLink), "the notebook line is inside the body the closing line is drawn on, so the line falls after it");
 });
 
 process.on("exit", restore);

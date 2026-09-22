@@ -3,7 +3,7 @@
   "version": 2,
   "id": "crowdstrike-falcon",
   "name": "CrowdStrike Falcon sensor telemetry",
-  "pack_version": "0.2.0",
+  "pack_version": "0.3.0",
   "description": "Falcon sensor events as one feed: the process, file, user and host keys that recur across event types, written once for the Splunk FDR sourcetype and the dev sample table, with the add-on's full per-event field catalogue, its join graph and the guided workflows as the pack's fields sidecar on Splunk.",
   "source": "CrowdStrike Falcon Data Replicator field reference; Splunk Add-on for CrowdStrike FDR; curated notes written for the Reach sample table",
   "params": {
@@ -399,6 +399,309 @@
           "0x00100000": "SYNCHRONIZE"
         }
       }
+    },
+    "anti_tamper_state_flag": {
+      "label": "AntiTamperStateFlag",
+      "type": "bitmask",
+      "description": "A bitmask flag describing the current state of the sensor's anti-tamper protection, as recorded by this event. A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_AntiTamperStateFlag); bit names are not public.",
+      "role": "other"
+    },
+    "asep_flags": {
+      "label": "AsepFlags",
+      "type": "bitmask",
+      "description": "A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_AsepFlags); bit names are not public.",
+      "role": "other"
+    },
+    "assembly_flags": {
+      "label": "AssemblyFlags",
+      "type": "bitmask",
+      "description": "A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_AssemblyFlags); bit names are not public.",
+      "role": "other"
+    },
+    "config_id_platform": {
+      "label": "ConfigIDPlatform",
+      "type": "bitmask",
+      "description": "The platform component of the sensor's three-part configuration identifier (ConfigIDBase/ConfigIDBuild/ConfigIDPlatform), decodable via CrowdStrike's ConfigIDPlatform_meaning lookup, likely identifying the OS platform (Windows/Mac/Linux) the config applies to. A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_ConfigIDPlatform); bit names are not public.",
+      "role": "other"
+    },
+    "configuration_descriptor_attributes": {
+      "label": "ConfigurationDescriptorAttributes",
+      "type": "bitmask",
+      "description": "The attributes bitmask (bmAttributes) declared in the USB configuration descriptor of the device recorded by this event (e.g. self-powered, bus-powered, remote-wakeup-capable per the USB spec). A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_ConfigurationDescriptorAttributes); bit names are not public.",
+      "role": "other"
+    },
+    "connection_flags": {
+      "label": "ConnectionFlags",
+      "type": "bitmask",
+      "description": "A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_ConnectionFlags); bit names are not public.",
+      "role": "other"
+    },
+    "dc_policy_flags": {
+      "label": "DcPolicyFlags",
+      "type": "bitmask",
+      "description": "A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_DcPolicyFlags); bit names are not public.",
+      "role": "other"
+    },
+    "dc_policy_mass_storage_block_permissions": {
+      "label": "DcPolicyMassStorageBlockPermissions",
+      "type": "bitmask",
+      "description": "The block-permissions bitmask applied by CrowdStrike's Device Control (Dc) policy to the mass-storage USB device recorded by this event (e.g. blocking read/write/execute access). A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_DcPolicyMassStorageBlockPermissions); bit names are not public.",
+      "role": "other"
+    },
+    "dotnet_module_flags": {
+      "label": "DotnetModuleFlags",
+      "type": "bitmask",
+      "description": "A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_DotnetModuleFlags); bit names are not public.",
+      "role": "other"
+    },
+    "enabled_privileges_bitmask": {
+      "label": "EnabledPrivilegesBitmask",
+      "type": "bitmask",
+      "description": "A bitmask of the Windows privileges enabled in the logon session's access token, as recorded by this user-logon event. A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_EnabledPrivilegesBitmask); bit names are not public.",
+      "role": "other"
+    },
+    "file_ecp_bitmask": {
+      "label": "FileEcpBitmask",
+      "type": "bitmask",
+      "description": "A bitmask capturing Windows filter-manager 'Extra Create Parameters' (ECP) flags present on the file-create IRP, additional create-time context such as transactional or reparse-related parameters. A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_FileEcpBitmask); bit names are not public.",
+      "role": "other"
+    },
+    "fs_operation_classification_flags": {
+      "label": "FsOperationClassificationFlags",
+      "type": "bitmask",
+      "description": "A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_FsOperationClassificationFlags); bit names are not public.",
+      "role": "other"
+    },
+    "lfo_upload_flags": {
+      "label": "LfoUploadFlags",
+      "type": "bitmask",
+      "description": "A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_LfoUploadFlags); bit names are not public.",
+      "role": "other"
+    },
+    "privileges_bitmask": {
+      "label": "PrivilegesBitmask",
+      "type": "bitmask",
+      "description": "A bitmask of the Windows privileges assigned to the logon session's access token, as recorded by this user-logon event, likely the full assigned set as opposed to the enabled subset in EnabledPrivilegesBitmask. A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_PrivilegesBitmask); bit names are not public.",
+      "role": "other"
+    },
+    "process_sxs_flags": {
+      "label": "ProcessSxsFlags",
+      "type": "bitmask",
+      "description": "A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_ProcessSxsFlags); bit names are not public.",
+      "role": "other"
+    },
+    "reg_classification_flags": {
+      "label": "RegClassificationFlags",
+      "type": "bitmask",
+      "description": "A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_RegClassificationFlags); bit names are not public.",
+      "role": "other"
+    },
+    "reg_config_flags": {
+      "label": "RegConfigFlags",
+      "type": "bitmask",
+      "description": "A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_RegConfigFlags); bit names are not public.",
+      "role": "other"
+    },
+    "sign_info_flags": {
+      "label": "SignInfoFlags",
+      "type": "bitmask",
+      "description": "A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_SignInfoFlags); bit names are not public.",
+      "role": "other"
+    },
+    "user_flags": {
+      "label": "UserFlags",
+      "type": "bitmask",
+      "description": "A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_UserFlags); bit names are not public.",
+      "role": "other"
+    },
+    "user_groups_bitmask": {
+      "label": "UserGroupsBitmask",
+      "type": "bitmask",
+      "description": "A bitmask representing the Windows group memberships encoded in the logon session's token, as recorded by this user-logon event. A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_UserGroupsBitmask); bit names are not public.",
+      "role": "other"
+    },
+    "user_logon_flags": {
+      "label": "UserLogonFlags",
+      "type": "bitmask",
+      "description": "A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_UserLogonFlags); bit names are not public.",
+      "role": "other"
+    },
+    "window_flags": {
+      "label": "WindowFlags",
+      "type": "bitmask",
+      "description": "A bitmask the Falcon TA decodes at search time (lookup crowdstrike_ta_bitmask_lookup_WindowFlags); bit names are not public.",
+      "role": "other"
+    },
+    "process_parameter_flags": {
+      "label": "Process parameter flags",
+      "type": "bitmask",
+      "description": "The Windows RTL_USER_PROCESS_PARAMETERS.Flags bitmask captured at process creation, one bit per loader and creation behaviour. 24577 (0x6001) is RTL_USER_PROC_PARAMS_NORMALIZED, RTL_USER_PROC_APP_MANIFEST_PRESENT and RTL_USER_PROC_IMAGE_KEY_MISSING together: a normalized parameter block, an application manifest present, and no Image File Execution Options key found for the process.",
+      "role": "other",
+      "provenance": "documented",
+      "cite": {
+        "url": "https://ntdoc.m417z.com/rtl_user_process_parameters",
+        "title": "RTL_USER_PROCESS_PARAMETERS, NtDoc Native API documentation over the System Informer (Process Hacker) phnt headers, the Flags field table (the Falcon TA names the field but not its bits; CrowdStrike's own dictionary sits behind the Falcon console login)",
+        "read_on": "2026-09-21"
+      },
+      "decode": {
+        "lookup": "crowdstrike_ta_bitmask_lookup_ProcessParameterFlags",
+        "values": {},
+        "flags": {
+          "0x00000001": "RTL_USER_PROC_PARAMS_NORMALIZED",
+          "0x00000002": "RTL_USER_PROC_PROFILE_USER",
+          "0x00000004": "RTL_USER_PROC_PROFILE_KERNEL",
+          "0x00000008": "RTL_USER_PROC_PROFILE_SERVER",
+          "0x00000010": "RTL_USER_PROC_UNKNOWN",
+          "0x00000020": "RTL_USER_PROC_RESERVE_1MB",
+          "0x00000040": "RTL_USER_PROC_RESERVE_16MB",
+          "0x00000080": "RTL_USER_PROC_CASE_SENSITIVE",
+          "0x00000100": "RTL_USER_PROC_DISABLE_HEAP_DECOMMIT",
+          "0x00000200": "RTL_USER_PROC_PROCESS_OR_1",
+          "0x00000400": "RTL_USER_PROC_PROCESS_OR_2",
+          "0x00001000": "RTL_USER_PROC_DLL_REDIRECTION_LOCAL",
+          "0x00002000": "RTL_USER_PROC_APP_MANIFEST_PRESENT",
+          "0x00004000": "RTL_USER_PROC_IMAGE_KEY_MISSING",
+          "0x00008000": "RTL_USER_PROC_DEV_OVERRIDE_ENABLED",
+          "0x00020000": "RTL_USER_PROC_OPTIN_PROCESS",
+          "0x00040000": "RTL_USER_PROC_SESSION_OWNER",
+          "0x00080000": "RTL_USER_PROC_HANDLE_USER_CALLBACK_EXCEPTIONS",
+          "0x00400000": "RTL_USER_PROC_PROTECTED_PROCESS",
+          "0x02000000": "RTL_USER_PROC_NO_IMAGE_EXPANSION_MITIGATION",
+          "0x04000000": "RTL_USER_PROC_APPX_LOADER_ALTERNATE_FORWARDER",
+          "0x08000000": "RTL_USER_PROC_APPX_GLOBAL_OVERRIDE",
+          "0x20000000": "RTL_USER_PROC_ONECORE_FORWARDERS_ENABLED",
+          "0x40000000": "RTL_USER_PROC_EXIT_PROCESS_NORMAL",
+          "0x80000000": "RTL_USER_PROC_SECURE_PROCESS"
+        }
+      }
+    },
+    "dll_characteristics": {
+      "label": "DLL characteristics",
+      "type": "bitmask",
+      "description": "The PE DllCharacteristics bitmask (IMAGE_DLLCHARACTERISTICS, e.g. ASLR, DEP/NX-compatible, high-entropy VA flags) of the file written, as recorded by this event.",
+      "role": "other",
+      "provenance": "documented",
+      "cite": {
+        "url": "https://learn.microsoft.com/en-us/windows/win32/debug/pe-format",
+        "title": "PE Format, Microsoft Learn: the DLL Characteristics table for the optional header's DllCharacteristics field",
+        "read_on": "2026-09-21"
+      },
+      "decode": {
+        "lookup": "crowdstrike_ta_bitmask_lookup_DllCharacteristics",
+        "values": {},
+        "flags": {
+          "0x00000020": "IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA",
+          "0x00000040": "IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE",
+          "0x00000080": "IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY",
+          "0x00000100": "IMAGE_DLLCHARACTERISTICS_NX_COMPAT",
+          "0x00000200": "IMAGE_DLLCHARACTERISTICS_NO_ISOLATION",
+          "0x00000400": "IMAGE_DLLCHARACTERISTICS_NO_SEH",
+          "0x00000800": "IMAGE_DLLCHARACTERISTICS_NO_BIND",
+          "0x00001000": "IMAGE_DLLCHARACTERISTICS_APPCONTAINER",
+          "0x00002000": "IMAGE_DLLCHARACTERISTICS_WDM_DRIVER",
+          "0x00004000": "IMAGE_DLLCHARACTERISTICS_GUARD_CF",
+          "0x00008000": "IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE"
+        }
+      }
+    },
+    "module_characteristics": {
+      "label": "Module characteristics",
+      "type": "bitmask",
+      "description": "A bitmask of PE/module characteristics flags (from IMAGE_FILE_HEADER.Characteristics, e.g. DLL, executable, large-address-aware) for a loaded or written module.",
+      "role": "other",
+      "provenance": "documented",
+      "cite": {
+        "url": "https://learn.microsoft.com/en-us/windows/win32/debug/pe-format",
+        "title": "PE Format, Microsoft Learn: the Characteristics table for the COFF file header",
+        "read_on": "2026-09-21"
+      },
+      "decode": {
+        "lookup": "crowdstrike_ta_bitmask_lookup_ModuleCharacteristics",
+        "values": {},
+        "flags": {
+          "0x00000001": "IMAGE_FILE_RELOCS_STRIPPED",
+          "0x00000002": "IMAGE_FILE_EXECUTABLE_IMAGE",
+          "0x00000004": "IMAGE_FILE_LINE_NUMS_STRIPPED",
+          "0x00000008": "IMAGE_FILE_LOCAL_SYMS_STRIPPED",
+          "0x00000010": "IMAGE_FILE_AGGRESSIVE_WS_TRIM",
+          "0x00000020": "IMAGE_FILE_LARGE_ADDRESS_AWARE",
+          "0x00000080": "IMAGE_FILE_BYTES_REVERSED_LO",
+          "0x00000100": "IMAGE_FILE_32BIT_MACHINE",
+          "0x00000200": "IMAGE_FILE_DEBUG_STRIPPED",
+          "0x00000400": "IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP",
+          "0x00000800": "IMAGE_FILE_NET_RUN_FROM_SWAP",
+          "0x00001000": "IMAGE_FILE_SYSTEM",
+          "0x00002000": "IMAGE_FILE_DLL",
+          "0x00004000": "IMAGE_FILE_UP_SYSTEM_ONLY",
+          "0x00008000": "IMAGE_FILE_BYTES_REVERSED_HI"
+        }
+      }
+    },
+    "file_attributes": {
+      "label": "File attributes",
+      "type": "bitmask",
+      "description": "The Windows file attribute bitmask (e.g. FILE_ATTRIBUTE_READONLY, HIDDEN, SYSTEM, ARCHIVE) of a file at create/open time.",
+      "role": "other",
+      "provenance": "documented",
+      "cite": {
+        "url": "https://learn.microsoft.com/en-us/windows/win32/fileio/file-attribute-constants",
+        "title": "File Attribute Constants, Microsoft Learn",
+        "read_on": "2026-09-21"
+      },
+      "decode": {
+        "lookup": "crowdstrike_ta_bitmask_lookup_FileAttributes",
+        "values": {},
+        "flags": {
+          "0x00000001": "FILE_ATTRIBUTE_READONLY",
+          "0x00000002": "FILE_ATTRIBUTE_HIDDEN",
+          "0x00000004": "FILE_ATTRIBUTE_SYSTEM",
+          "0x00000010": "FILE_ATTRIBUTE_DIRECTORY",
+          "0x00000020": "FILE_ATTRIBUTE_ARCHIVE",
+          "0x00000040": "FILE_ATTRIBUTE_DEVICE",
+          "0x00000080": "FILE_ATTRIBUTE_NORMAL",
+          "0x00000100": "FILE_ATTRIBUTE_TEMPORARY",
+          "0x00000200": "FILE_ATTRIBUTE_SPARSE_FILE",
+          "0x00000400": "FILE_ATTRIBUTE_REPARSE_POINT",
+          "0x00000800": "FILE_ATTRIBUTE_COMPRESSED",
+          "0x00001000": "FILE_ATTRIBUTE_OFFLINE",
+          "0x00002000": "FILE_ATTRIBUTE_NOT_CONTENT_INDEXED",
+          "0x00004000": "FILE_ATTRIBUTE_ENCRYPTED",
+          "0x00008000": "FILE_ATTRIBUTE_INTEGRITY_STREAM",
+          "0x00010000": "FILE_ATTRIBUTE_VIRTUAL",
+          "0x00020000": "FILE_ATTRIBUTE_NO_SCRUB_DATA",
+          "0x00040000": "FILE_ATTRIBUTE_RECALL_ON_OPEN",
+          "0x00080000": "FILE_ATTRIBUTE_PINNED",
+          "0x00100000": "FILE_ATTRIBUTE_UNPINNED",
+          "0x00400000": "FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS"
+        }
+      }
+    },
+    "volume_device_characteristics": {
+      "label": "Volume device characteristics",
+      "type": "bitmask",
+      "description": "A bitmask of Windows storage device characteristics (e.g. FILE_REMOVABLE_MEDIA, FILE_READ_ONLY_DEVICE) for a mounted volume's underlying device.",
+      "role": "other",
+      "provenance": "documented",
+      "cite": {
+        "url": "https://ntdoc.m417z.com/file_fs_device_information",
+        "title": "FILE_FS_DEVICE_INFORMATION, NtDoc Native API documentation (content from undocumented.ntinternals.net, documented by Tomasz Nowak), the Characteristics field",
+        "read_on": "2026-09-21"
+      },
+      "decode": {
+        "lookup": "crowdstrike_ta_bitmask_lookup_VolumeDeviceCharacteristics",
+        "values": {},
+        "flags": {
+          "0x00000001": "FILE_REMOVABLE_MEDIA",
+          "0x00000002": "FILE_READ_ONLY_DEVICE",
+          "0x00000004": "FILE_FLOPPY_DISKETTE",
+          "0x00000008": "FILE_WRITE_ONCE_MEDIA",
+          "0x00000010": "FILE_REMOTE_DEVICE",
+          "0x00000020": "FILE_DEVICE_IS_MOUNTED",
+          "0x00000040": "FILE_VIRTUAL_VOLUME",
+          "0x00000080": "FILE_AUTOGENERATED_DEVICE_NAME",
+          "0x00000100": "FILE_DEVICE_SECURE_OPEN"
+        }
+      }
     }
   },
   "containers": {
@@ -684,6 +987,222 @@
       "container": "crowdstrike:events:sensor",
       "column": "DesiredAccess",
       "concept": "desired_access",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "AntiTamperStateFlag",
+      "concept": "anti_tamper_state_flag",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "AsepFlags",
+      "concept": "asep_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "AssemblyFlags",
+      "concept": "assembly_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "ConfigIDPlatform",
+      "concept": "config_id_platform",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "ConfigurationDescriptorAttributes",
+      "concept": "configuration_descriptor_attributes",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "ConnectionFlags",
+      "concept": "connection_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "DcPolicyFlags",
+      "concept": "dc_policy_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "DcPolicyMassStorageBlockPermissions",
+      "concept": "dc_policy_mass_storage_block_permissions",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "DotnetModuleFlags",
+      "concept": "dotnet_module_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "EnabledPrivilegesBitmask",
+      "concept": "enabled_privileges_bitmask",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "FileEcpBitmask",
+      "concept": "file_ecp_bitmask",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "FsOperationClassificationFlags",
+      "concept": "fs_operation_classification_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "LfoUploadFlags",
+      "concept": "lfo_upload_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "PrivilegesBitmask",
+      "concept": "privileges_bitmask",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "ProcessSxsFlags",
+      "concept": "process_sxs_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "RegClassificationFlags",
+      "concept": "reg_classification_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "RegConfigFlags",
+      "concept": "reg_config_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "SignInfoFlags",
+      "concept": "sign_info_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "UserFlags",
+      "concept": "user_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "UserGroupsBitmask",
+      "concept": "user_groups_bitmask",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "UserLogonFlags",
+      "concept": "user_logon_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "WindowFlags",
+      "concept": "window_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "ProcessParameterFlags",
+      "concept": "process_parameter_flags",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "DllCharacteristics",
+      "concept": "dll_characteristics",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "ModuleCharacteristics",
+      "concept": "module_characteristics",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "FileAttributes",
+      "concept": "file_attributes",
+      "basis": "documented",
+      "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
+    },
+    {
+      "platform": "splunk",
+      "container": "crowdstrike:events:sensor",
+      "column": "VolumeDeviceCharacteristics",
+      "concept": "volume_device_characteristics",
       "basis": "documented",
       "basis_ref": "Splunk Add-on for CrowdStrike FDR field names (app/data bundle)"
     }

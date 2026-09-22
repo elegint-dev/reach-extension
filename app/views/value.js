@@ -108,7 +108,7 @@ export function valueLine({ catalogue, container, field, value }) {
     body.appendChild(h("p", { class: "r-value__meaning" }, h("code", null, row.value), ": ", row.meaning, own ? [" ", own] : null));
     if (row.note) body.appendChild(h("p", { class: "r-secondary" }, row.note));
     if (row.quote && row.cite) body.appendChild(h("p", { class: "r-dict__quote r-secondary" }, h("q", null, row.quote), " ", h("span", { class: "r-muted" }, "(the reference's words)")));
-    if (row.cite) body.appendChild(h("p", { class: "r-dict__ref r-secondary" }, h("span", { class: "r-muted" }, "Reference "), h("a", { href: row.cite.url, rel: "noreferrer", target: "_blank", class: "r-idlink" }, row.cite.title), h("span", { class: "r-muted" }, `, read ${row.cite.read_on}`)));
+    if (row.cite) body.appendChild(h("p", { class: "r-dict__ref r-secondary" }, h("span", { class: "r-muted" }, "Reference "), h("a", { href: row.cite.url, rel: "noreferrer", target: "_blank", class: "r-idlink" }, row.cite.title)));
     return true;
   };
   const drawn = whenValuesLand({ catalogue, container, el: body, fill: () => draw(catalogue.fieldOn(container, field)) });
@@ -616,6 +616,11 @@ export function render(ctx) {
   // ledger. N counts every row a click can take to the drawer.
   const edges = has("pivots") && catalogue && st && name ? catalogue.edgesFrom(st, name) : [];
   const carried = name ? facts.carried(name, value) : {};
+  // The last click's own row, when it landed on this container: its time
+  // and its other fields, for the same event binder the popups use.
+  const clickProv = st ? lastEvent.provenance(st) : null;
+  const clickFields = st ? lastEvent.recall(st) : null;
+  const clickEvent = clickProv || clickFields ? { time: clickProv && clickProv.event && clickProv.event.time, read: (n) => (clickFields || {})[n] } : null;
   const packEl = edges.length
     ? packPivots({
         ctx: { ...ctx, setDrawerParamHandler: (fn) => { packHandler = fn; } },
@@ -624,6 +629,7 @@ export function render(ctx) {
         edges,
         titled: false,
         carried,
+        event: clickEvent,
         setSel: (id) => {
           active = "pack";
           ctx.setUrl("value", { ...ctx.params, value, sel: id });
@@ -641,7 +647,7 @@ export function render(ctx) {
     const via = `${e.src} → ${e.dst || "lookup"}`;
     led.specs.set(id, {
       pivot: pivotForEdgeRow(fdrRow, name),
-      params: { value, ...baseParamsForRow(fdrRow, name, recordType) },
+      params: { value, ...facts.eventParams(clickEvent || {}), ...baseParamsForRow(fdrRow, name, recordType) },
       title: e.target_label,
       subtitle: fdrRow.viaSelf ? `${via} from ${name} on ${recordType}` : `${name} → ${via} on ${recordType}`,
       errorParams: ["value", "aid", "earliest", "latest"],
@@ -800,6 +806,10 @@ export function render(ctx) {
           })),
         errorParams: () => (spec.errorParams || []).map((n) => ({ name: n, label: n, value: userParams[n] ?? "", required: true })),
         notes: (out) => scope.notes(out.sourcetype),
+        // Any generator failure, not only the query errors it names,
+        // fails the drawer in place; a row select never throws past its
+        // own handler.
+        catchAll: true,
       },
       () => {
         let params = base;

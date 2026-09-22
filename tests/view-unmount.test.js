@@ -29,7 +29,11 @@ const notebookView = await import("../app/views/notebook.js");
 const discoverView = await import("../app/views/discover-splunk.js");
 const fieldView = await import("../app/views/field.js");
 
-const settle = () => new Promise((r) => setTimeout(r, 0));
+// Several macrotask hops, not one: the fake's storage now answers on a
+// real task, and a subscribed read-then-render chains more than one.
+const settle = async () => {
+  for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+};
 const from = { platform: "splunk", container: "crowdstrike:events:sensor", scope: "fdr", search: { text: "index=fdr", sid: "1" } };
 
 test("the notebook view stops redrawing on notebook changes once unmounted; a mounted one still does", async () => {

@@ -363,7 +363,9 @@ test("registerForGrant excludes hashlookup.circl.lu and api.first.org, the same 
   const before = registeredScripts.length;
   const splunkPattern = "https://splunk2.example.com/*";
   onPermissionsAdded({ origins: ["https://hashlookup.circl.lu/*", "https://api.first.org/*", splunkPattern] });
-  await new Promise((r) => setTimeout(r, 10));
+  // registerForGrant chains several storage/scripting awaits; the fake
+  // answers each on its own macrotask, so give it several hops' worth.
+  await new Promise((r) => setTimeout(r, 50));
   assert.equal(registeredScripts.filter((s) => s.matches[0] === "https://hashlookup.circl.lu/*").length, 0, "CIRCL never gets a content script");
   assert.equal(registeredScripts.filter((s) => s.matches[0] === "https://api.first.org/*").length, 0, "EPSS never gets a content script");
   assert.ok(registeredScripts.length > before, "an ordinary Splunk origin in the same grant still registers");

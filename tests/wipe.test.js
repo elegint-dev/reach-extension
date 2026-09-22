@@ -33,6 +33,7 @@ const layer = await import("../app/lib/layer.js");
 const notebook = await import("../app/lib/notebook.js");
 const benign = await import("../app/lib/benign.js");
 const catalogue = await import("../app/lib/catalogue.js");
+const falconDictionary = await import("../app/lib/falcon-dictionary.js");
 const discoverySweep = await import("../app/lib/discovery-sweep.js");
 const recipe = await import("../app/lib/recipe.js");
 const runbooksStore = await import("../app/lib/runbooks-store.js");
@@ -75,6 +76,7 @@ function seed() {
   local.set(`reach.${notebook.KEY}`, { investigations: [] });
   local.set(`reach.${benign.KEY}`, { entries: [] });
   local.set(`reach.${catalogue.USER_KEY}`, { fields: {} });
+  local.set(`reach.${falconDictionary.KEY}`, { v: 1, source: "falcon-fdr-schema", fields: { X: { type: "string" } }, events: {}, counts: { fields: 1, fieldsWithValues: 0, events: 0 } });
   local.set(`reach.${discoverySweep.KEY}`, { running: false });
   local.set(`reach.${recipe.WORKSPACES_KEY}`, { w1: { name: "ws" } });
   local.set(`reach.${runbooksStore.KEY}`, { v: 1, runbooks: {} });
@@ -100,6 +102,7 @@ test("run(): every listed key is gone, unrelated keys survive", async () => {
     `reach.${notebook.KEY}`,
     `reach.${benign.KEY}`,
     `reach.${catalogue.USER_KEY}`,
+    `reach.${falconDictionary.KEY}`,
     `reach.${discoverySweep.KEY}`,
     `reach.${recipe.WORKSPACES_KEY}`,
     `reach.${runbooksStore.KEY}`,
@@ -166,7 +169,12 @@ test("clearModule(id): only that module's keys go; every other module's data sur
   }
   assert.equal(localStorage.getItem("reach.devExt"), null);
   assert.equal(local.has(`reach.${catalogue.USER_KEY}`), true, "the catalogue's own layer is not discovery's");
+  assert.equal(local.has(`reach.${falconDictionary.KEY}`), true, "the imported Falcon dictionary is not discovery's either");
   assert.equal(local.has(`reach.${benign.KEY}`), true);
+
+  await wipe.clearModule("catalogue");
+  assert.equal(local.has(`reach.${falconDictionary.KEY}`), false, "clearing the catalogue module clears the imported Falcon dictionary");
+  assert.equal(local.has(`reach.${catalogue.USER_KEY}`), false);
 
   await wipe.clearModule("hold");
   assert.equal(local.has(`reach.${notebook.KEY}`), false);
@@ -219,6 +227,61 @@ test("switching a module off through the registry clears its keys and revokes it
   assert.equal(local.get("reach.modules").enabled.virustotal, false);
 });
 
+test("switching a non-credential module off leaves every key it owns; only Clear removes them (S: Off keeps data)", async () => {
+  seed();
+  const modules = await import("../app/lib/modules.js");
+  local.set("reach.catalogue.discovered.envs", { a: 1 });
+  local.set("reach.catalogue.discovery.sweep", { b: 1 });
+  local.set("reach.modules", { enabled: { discovery: true } });
+  modules.reset();
+  await modules.hydrate();
+  assert.equal(modules.on("discovery", "splunk"), true);
+  const res = await modules.setEnabled("discovery", false);
+  assert.equal(res.ok, true);
+  assert.deepEqual(res.removed, [], "discovery owns no credential or grant key");
+  assert.equal(local.has("reach.catalogue.discovered.envs"), true, "the swept environment survives Off");
+  assert.equal(local.has("reach.catalogue.discovery.sweep"), true);
+  assert.equal(modules.on("discovery", "splunk"), false, "the module is still off");
+  const cleared = await wipe.clearModule("discovery");
+  assert.ok(cleared.includes("reach.catalogue.discovered.envs"), "Clear still removes it");
+  assert.equal(local.has("reach.catalogue.discovered.envs"), false);
+});
+
+test("switching selfhosted off removes only the origin and token, not the provider it also holds (S: only secret-marked keys go on Off)", async () => {
+  seed();
+  const modules = await import("../app/lib/modules.js");
+  local.set("reach.enrich.selfhosted.origin", "https://misp.example.org");
+  local.set("reach.enrich.selfhosted.token", "tok");
+  local.set("reach.enrich.selfhosted.provider", "intelowl");
+  permitted.add("https://misp.example.org/*");
+  local.set("reach.modules", { enabled: { selfhosted: true } });
+  modules.reset();
+  await modules.hydrate();
+  assert.equal(modules.on("selfhosted", "splunk"), true);
+  const res = await modules.setEnabled("selfhosted", false);
+  assert.equal(res.ok, true);
+  assert.deepEqual(res.hostsRevoked, ["https://misp.example.org/*"]);
+  assert.deepEqual(res.removed.sort(), ["reach.enrich.selfhosted.origin", "reach.enrich.selfhosted.token"].sort());
+  assert.equal(local.has("reach.enrich.selfhosted.origin"), false);
+  assert.equal(local.has("reach.enrich.selfhosted.token"), false);
+  assert.equal(local.has("reach.enrich.selfhosted.provider"), true, "the provider choice is not a credential and survives Off");
+  assert.equal(local.get("reach.enrich.selfhosted.provider"), "intelowl");
+
+  const cleared = await wipe.clearModule("selfhosted");
+  assert.ok(cleared.includes("reach.enrich.selfhosted.provider"), "Clear removes the rest");
+  assert.equal(local.has("reach.enrich.selfhosted.provider"), false);
+});
+
+test("switching circl or epss off leaves their flag key; the worker still gates on the module set alone", async () => {
+  seed();
+  const modules = await import("../app/lib/modules.js");
+  local.set("reach.modules", { enabled: { circl: true } });
+  modules.reset();
+  await modules.hydrate();
+  const res = await modules.setEnabled("circl", false);
+  assert.deepEqual(res.removed, [], "circl's flag key is module state, not a credential");
+});
+
 test("switching verdicts off clears the fleet corpus from every discovered environment and leaves the rest of discovery in place", async () => {
   seed();
   const corpus = { at: "2026-09-20T00:00:00Z", window: "-30d", source: "splunk", columns: ["sha256", "path", "signing_id", "platform", "hosts", "events", "first_seen", "last_seen"], rows: [["ab", "/x", "", "Mac", 1, 1, 1, 1]], received: 1, kept: 1, pruned: 0 };
@@ -246,6 +309,7 @@ const KNOWN_KEY_EXPORTERS = new Set([
   "benign.js", // KEY, in storeDocKeys()
   "catalogue.js", // USER_KEY, in storeDocKeys()
   "discovery-sweep.js", // KEY, in storeDocKeys()
+  "falcon-dictionary.js", // KEY, catalogue.falcon, registered under the catalogue module
   "storage-keys.js", // KEYS, the literal chrome.storage.local and localStorage names the registry lists
   "layer.js", // PREFIX, INDEX_KEY, in storeDocKeys()
   "modules.js", // KEY, the enabled module set, in storeDocKeys()

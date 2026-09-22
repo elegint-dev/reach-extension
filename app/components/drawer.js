@@ -13,6 +13,7 @@
 //     emptyText: "…",
 //     onParam(name, value, event), onCopy(text, form), onTab(form),
 //     onRun()                              // the run link was followed
+//     onRecheck()                          // the macro tab's Re-check button
 //   })
 //
 // Element API: el.setSpl({inline, macro}), el.setState(state), el.setParams(params),
@@ -36,27 +37,49 @@
 // on stacked surfaces and brings it under the pinned frame.
 // Under the code block the advisor's line ("advisor: N notes", a fold on
 // the findings) follows every setSpl; app/components/advisor.js draws it.
-// Events (bubbling): `param` {name, value}, `copy` {text, form}, `tab` {form}.
+// Events (bubbling): `param` {name, value}, `copy` {text, form}, `tab` {form},
+// `recheck` {} (the macro tab's Re-check button; onRecheck() too).
 //
 // `$NAME$` placeholders are marked.
 //
-// setMacros({ inline: { env, needed: [{name, defined, hint}] }, macro: {...} }):
-// which of the pack's macros the tab's text calls, per Splunk instance
-// (env), and whether conf-macros found each one there. `defined` is
-// true, false, or null/undefined for "not checked" (no discovery run
-// yet). Only a macro read back as false (`defined === false`) greys Copy
-// on that tab, with a reason naming it and the environment; an unchecked
-// one is shown but never blocks. Neither tab is disabled by the other's
-// state, so the expanded form stays one click away.
+// setMacros({ inline: { env, needed: [{name, defined, hint, stanza, args,
+// definition}], confText }, macro: {...} }): which of the pack's macros
+// the tab's text calls, per Splunk instance (env), and whether conf-macros
+// found each one there. `defined` is true, false, or null/undefined for
+// "not checked" (no discovery run yet). Only a macro read back as false
+// (`defined === false`) greys Copy on that tab, with a reason naming it
+// and the environment; an unchecked one is shown but never blocks.
+// Neither tab is disabled by the other's state, so the expanded form
+// stays one click away. `stanza` (the Search-macros form's Name field,
+// "name" or "name(N)"), `args` and `definition` are the caller's own
+// (macros.js on Splunk); a macro entry without a `definition` draws its
+// name and state only, no install fields. `confText` is the macros.conf
+// text Copy macros.conf writes, every needed macro's stanza in one block.
+// Neither install control (nor the Re-check button beside them) appears
+// when `needed` is empty (Sentinel: KQL has no macros, field.js never
+// fills this in there).
 
 import { h, uid, replace } from "./h.js";
+import { foldBody } from "./foldBody.js";
 import { callout } from "./callout.js";
 import { advisorLine } from "./advisor.js";
 import * as modules from "../lib/modules.js";
 import * as settings from "../lib/settings.js";
 import * as recipe from "../lib/recipe.js";
 import * as kql from "../lib/kql.js";
+import { copyText } from "../lib/runtime.js";
 import { TERMS, isSentinel } from "../lib/platform.js";
+
+// The macros/_new form's own path: a deep link an analyst still fills in
+// and submits by hand, never a URL that writes anything on load. Splunk
+// Web's locale segment varies by instance; en-US is the one every install
+// answers to, and the page a link like this loads is where you'd land as
+// "-" too, so it is not worth reading off the current page's own path
+// (that path is index.html's, not Splunk Web's).
+const MACRO_NEW_LOCALE = "en-US";
+export function macroNewUrl(base) {
+  return base ? `${base}/${MACRO_NEW_LOCALE}/manager/search/admin/macros/_new` : "";
+}
 
 // The paste fold sits under the title block on stacked surfaces; an action
 // that fills the drawer on render (Sample search, Run) opens it there. On
@@ -146,6 +169,7 @@ export function drawer(props = {}) {
     onCopy,
     onTab,
     onRun,
+    onRecheck,
   } = props;
 
   let spl = typeof props.spl === "string" ? { inline: props.spl, macro: "" } : { inline: "", macro: "", ...(props.spl || {}) };
@@ -211,7 +235,38 @@ export function drawer(props = {}) {
   );
   const codeWrap = h("div", { class: "r-spl-wrap" }, pre, hoverCopy);
   const macroList = h("ul", { class: "r-drawer__macros", "aria-label": "Macro status" });
-  const panel = h("div", { class: "r-drawer__panel", role: "tabpanel", id: ids.panelInline, "aria-labelledby": ids.inline }, codeWrap, macroList);
+  // The guided setup: how to get the pack's own macros onto the instance,
+  // paste-and-submit only (macroNewUrl opens a blank Splunk form; nothing
+  // here ever writes to Splunk). Shown and hidden with macroList, off on
+  // Sentinel (KQL has no macros; field.js never fills this in there).
+  const macroConfCopy = h(
+    "button",
+    { type: "button", class: "r-btn r-btn--small", onClick: (e) => copyText(currentMacros().confText || "", e.currentTarget, "copied") },
+    "Copy macros.conf",
+  );
+  const macroRecheck = h(
+    "button",
+    {
+      type: "button",
+      class: "r-btn r-btn--small",
+      onClick: () => {
+        if (onRecheck) onRecheck();
+        el.dispatchEvent(new CustomEvent("recheck", { bubbles: true }));
+      },
+    },
+    "Re-check",
+  );
+  const macroInstall = h(
+    "div",
+    { class: "r-drawer__macroinstall" },
+    h(
+      "p",
+      { class: "r-muted" },
+      "Install each macro under Settings > Advanced search > Search macros (the fields below, one macro at a time), or paste the whole block into macros.conf under Splunk's local app directory and restart or reload.",
+    ),
+    h("div", { class: "r-drawer__actions" }, macroConfCopy, macroRecheck),
+  );
+  const panel = h("div", { class: "r-drawer__panel", role: "tabpanel", id: ids.panelInline, "aria-labelledby": ids.inline }, codeWrap, macroInstall, macroList);
 
   const paramsForm = h("form", { class: "r-drawer__params", onSubmit: (e) => e.preventDefault() });
   const hazardList = h("ul", { class: "r-drawer__hazards", "aria-label": "Hazards" });
@@ -294,6 +349,10 @@ export function drawer(props = {}) {
     }
   }
   settings.subscribe(renderRun);
+  // The macro tab's Create in Splunk link reads the base URL too: redraw
+  // it (and the rest of the macro status) the moment Settings sets one,
+  // not only on the next fill.
+  settings.subscribe(() => renderMacros());
 
   // The advisor's quiet line under the code: what the rules would say
   // about the text, folded, never in the way of the copy. The advisor is
@@ -317,7 +376,10 @@ export function drawer(props = {}) {
   const emptyLine = h("p", null, emptyText);
   const emptySlot = h("div", { class: "r-drawer__empty" }, emptyLine);
 
-  const el = h(
+  // On stacked surfaces this sits inside app.js's .r-paste fold, the body
+  // after its summary header (foldBody.js): no border at the top there, so
+  // no line ever falls between the fold's header and this drawer.
+  const el = foldBody(
     "aside",
     { class: "r-drawer", "aria-label": "Query" },
     h("header", { class: "r-drawer__head" }, h("p", { class: "r-drawer__kicker" }, "Query"), titleEl, subEl),
@@ -342,6 +404,42 @@ export function drawer(props = {}) {
     return macros[form] || emptyMacros();
   }
 
+  // One read-only field with its own Copy: what the Search-macros form
+  // asks for, verbatim, so pasting never means retyping.
+  function macroField(label, value, { multiline = false } = {}) {
+    const input = multiline
+      ? h("textarea", { class: "r-field__input", rows: "6", readonly: true, "aria-label": label }, value)
+      : h("input", { class: "r-field__input", type: "text", readonly: true, value, "aria-label": label, onFocus: (e) => e.currentTarget.select() });
+    const copyOne = h("button", { type: "button", class: "r-btn r-btn--small", onClick: (e) => copyText(value, e.currentTarget, "copied") }, "Copy");
+    return h("div", { class: "r-field" }, h("label", { class: "r-field__label" }, label), input, copyOne);
+  }
+
+  // The macros/_new form: an editor the analyst fills and submits, never a
+  // write Reach performs. No base URL set names where one is set instead.
+  function macroCreateLink() {
+    const base = settings.splunkBase();
+    if (!base) return h("p", { class: "r-muted" }, "set the Splunk base URL in Settings");
+    return h("a", { class: "r-btn r-btn--small", target: "_blank", rel: "noopener noreferrer", href: macroNewUrl(base) }, "Create in Splunk ", h("span", { "aria-hidden": "true" }, "↗"));
+  }
+
+  // Folded per macro: the three fields Splunk's own Search-macros form
+  // wants (Name carries the argument count the way Splunk's stanza does),
+  // and the blank form to paste them into. Absent when the caller has no
+  // definition for this name (a macro drawn only from discovery, not the
+  // pack's own allowlist).
+  function macroInstallDetail(m) {
+    if (!m.definition) return null;
+    return h(
+      "details",
+      { class: "r-drawer__macro-install" },
+      h("summary", null, "Install this macro"),
+      macroField("Name", m.stanza || m.name),
+      m.args ? macroField("Arguments", m.args) : null,
+      macroField("Definition", m.definition, { multiline: true }),
+      macroCreateLink(),
+    );
+  }
+
   function renderMacros() {
     const info = currentMacros();
     replace(
@@ -353,10 +451,12 @@ export function drawer(props = {}) {
           h("code", null, m.name),
           h("span", { class: "r-drawer__macro-state" }, macroStateText(m, info.env)),
           m.defined === false && m.hint ? h("p", { class: "r-field__hint" }, m.hint) : null,
+          macroInstallDetail(m),
         ),
       ),
     );
     macroList.hidden = !info.needed.length;
+    macroInstall.hidden = !info.needed.length;
     const pending = unbound();
     const reason = copyBlockReason(info, form) || (pending ? `Not copied: ${pending}` : "");
     const blocked = Boolean(reason);

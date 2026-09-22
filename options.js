@@ -29,7 +29,10 @@ async function main() {
 
 function landOnHash() {
   const target = location.hash ? document.getElementById(location.hash.slice(1)) : null;
-  if (target) target.scrollIntoView({ block: "start" });
+  if (!target) return;
+  const fold = target.querySelector(".r-module__fold");
+  if (fold) fold.open = true;
+  target.scrollIntoView({ block: "start" });
 }
 
 main();

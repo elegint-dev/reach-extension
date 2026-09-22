@@ -20,6 +20,7 @@ import { sourceTable } from "../components/sourceTable.js";
 import { callout } from "../components/callout.js";
 import { titleBlock, midEllipsis } from "../components/titleBlock.js";
 import * as fdr from "../lib/fdr-queries.js";
+import * as macros from "../lib/macros.js";
 import { TIME_HINT } from "../lib/spl.js";
 import { EDGE_ORDER, isAutomaticOn, edgeRowsFor, pivotForEdgeRow, baseParamsForRow } from "../lib/reachability.js";
 export { isAutomaticOn, edgeRowsFor, pivotForEdgeRow, baseParamsForRow };
@@ -42,10 +43,12 @@ import { ENTITY_ORDER, heading, headingNode } from "../lib/headings.js";
 import { LEARNED_ID } from "../lib/learned.js";
 import * as packs from "../lib/packs.js";
 import * as layer from "../lib/layer.js";
+import * as discovery from "../lib/discovery.js";
 import * as workflows from "../lib/workflows.js";
 import { valueEntry, workflowsBlock } from "../lib/popup-ui.js";
 import { verdictSection, enrichSection, patternSection, holdAction, benignAction, keepRow } from "./value.js";
 import * as runbooks from "../lib/runbooks.js";
+import * as falconDictionary from "../lib/falcon-dictionary.js";
 
 export const NO_FILL_RATES =
   "Grouped by role, then alphabetical. No fill-rate data is available for ordering.";
@@ -102,16 +105,15 @@ export function splitHazard(text) {
 
 const PID_HANDLES = new Set(["TargetProcessId", "ContextProcessId", "ParentProcessId", "RawProcessId"]);
 
-// A missing macro's one-line define hint for the drawer's macro tab. Only
-// cs_index has a definition Reach can derive (the scope index this pivot
-// resolved, or a placeholder when nothing resolved it); the TA's other
-// macros ship with the Add-on, so Reach names them without guessing their body.
+// A missing macro's one-line define hint for the drawer's macro tab. These
+// five macros are Reach's own (tools/dev/falcon_queries.py's MACROS): the
+// Splunk Add-on for CrowdStrike FDR ships props, transforms and lookups,
+// never these, so the hint never credits it. macros.js derives every body
+// but cs_index's from the same query template the inline form renders;
+// cs_index is the resolved scope index, or a placeholder to edit by hand.
 export function macroDefineHint(name, resolvedIndex) {
-  if (name === "cs_index") {
-    const def = resolvedIndex ? `index=${resolvedIndex}` : "index=<your index>";
-    return `Settings > Advanced search > Search macros: name cs_index, definition ${def}.`;
-  }
-  return `Settings > Advanced search > Search macros: name ${name} (from the CrowdStrike Falcon Add-on; Reach has no definition to suggest).`;
+  if (name === "cs_index") return `Settings > Advanced search > Search macros: name cs_index, definition ${macros.csIndexDefinition(resolvedIndex)}.`;
+  return `Settings > Advanced search > Search macros: name ${macros.stanzaName(name)}, from Reach (the drawer's Install fields below have the arguments and definition to paste).`;
 }
 
 // The pack macros a rendered form needs, checked against whatever a
@@ -120,15 +122,27 @@ export function macroDefineHint(name, resolvedIndex) {
 // assumed, matching the single-Splunk-instance model the rest of the
 // drawer (Run in Splunk's base URL) already uses; several discovered
 // environments pick the first rather than guess which one the user means.
+// Every needed name carries macros.js's own stanza/args/definition when it
+// has one (cs_index and the four the pack's queries call through), so the
+// drawer's Install fields and Copy macros.conf never have to ask twice.
 export function macroInfo(names, macroEnv, resolvedIndex) {
   const env = macroEnv ? macroEnv.origin : null;
   const known = macroEnv ? macroEnv.macros : null;
-  const needed = (names || []).map((name) => {
+  const list = names || [];
+  const needed = list.map((name) => {
     const rec = known && known[name];
     const defined = rec ? rec.defined : null;
-    return { name, defined, hint: defined === false ? macroDefineHint(name, resolvedIndex) : undefined };
+    const fields = macros.uiFields(name, { resolvedIndex });
+    return {
+      name,
+      defined,
+      hint: defined === false ? macroDefineHint(name, resolvedIndex) : undefined,
+      stanza: fields ? fields.name : name,
+      args: fields ? fields.args : "",
+      definition: fields ? fields.definition : "",
+    };
   });
-  return { env, needed };
+  return { env, needed, confText: macros.macrosConfText(list, { resolvedIndex }) };
 }
 
 // edgeRowsFor / pivotForEdgeRow / baseParamsForRow / isAutomaticOn / EDGE_ORDER
@@ -410,6 +424,12 @@ function page(ctx, { name, st, view, knownOn, rec, events, on, evRec }) {
         h("p", { class: "r-inline" }, rec.same_role_fields.flatMap((n, i) => [i ? " · " : null, fieldLink(n)])),
       )
     : null;
+  // No bundled record for this field (a container-wide import can carry
+  // far more fields than the shipped FDR bundle): the imported layer's own
+  // type and the events it rides on, with each event's description where
+  // the layer has one. Never drawn once the bundle already covers the
+  // field; the FDR ledger's own events band does that job better.
+  const falconLine = !rec && view && (!view.meaning.source || view.meaning.source === "falcon") ? falconLayerBlock(view) : null;
   sections.set(
     "meaning",
     h(
@@ -423,6 +443,7 @@ function page(ctx, { name, st, view, knownOn, rec, events, on, evRec }) {
       unsafeLine,
       disagreement,
       sameRole,
+      falconLine,
     ),
   );
   const noteEl = note;
@@ -455,7 +476,7 @@ function page(ctx, { name, st, view, knownOn, rec, events, on, evRec }) {
   const dec = compact || !rec ? null : ctx.fields.decode(rec.name);
   let valuesSection = !compact && view ? dictionaryBlock({ view, sourcetype: st, name, catalogue, skipHazard: hazard }) : null;
   if (!valuesSection && dec) valuesSection = decodeSection(dec);
-  else if (!valuesSection && !compact && view && view.decode && (!rec || (view.decode.source === "discovered" && !dec))) valuesSection = decodeSection(view.decode);
+  else if (!valuesSection && !compact && view && view.decode && (!rec || ((view.decode.source === "discovered" || view.decode.source === "falcon") && !dec))) valuesSection = decodeSection(view.decode);
   if (valuesSection && dec) {
     const head = valuesSection.querySelector("h2");
     const widget = decodeWidget({ field: rec.name, decode: dec });
@@ -566,7 +587,7 @@ function page(ctx, { name, st, view, knownOn, rec, events, on, evRec }) {
     else if (rec.tenant && !rec.tenant.seen) chips.push(chip({ kind: "trust", value: "inferred", text: "not seen in tenant run", title: `not populated on any event received in run ${(ctx.fields.manifest().observed || { run: {} }).run.id}` }));
   } else if (view.scope === "none") chips.push(chip({ kind: "trust", value: "inferred", text: "not catalogued" }));
   else if (view.packField) chips.push(chip({ kind: "trust", value: "confirmed", text: boundChipText(view, stPackId) }));
-  else chips.push(chip({ kind: "trust", value: "confirmed", text: view.user ? "your catalogue" : "discovered" }));
+  else chips.push(chip({ kind: "trust", value: "confirmed", text: view.user ? "your catalogue" : view.scope === "falcon" ? "your imported Falcon dictionary" : "discovered" }));
   const verdictChip = verdictRow ? h("span", { class: "r-chip r-chip--verdict", dataset: { tier: "pending" }, title: "the known-good verdict for this value" }, "checking…") : null;
   if (verdictChip) chips.push(verdictChip);
   if (view && view.profile && view.profile.fill !== null && view.profile.fill !== undefined) {
@@ -913,7 +934,37 @@ function fdrLedger(ctx, { rec, events, on, evRec, root, carried = {} }) {
       if (currentId) fill(currentId, false);
     };
     loadMacroEnv();
-    unmount = layer.subscribe(loadMacroEnv);
+    const unsubscribe = layer.subscribe(loadMacroEnv);
+    // The macro tab's Re-check: rerun discovery's conf-macros read
+    // (discovery.js, configs/conf-macros) for the sourcetype in hand, on
+    // the environment the tab is already reading, else the first the
+    // toolbar has enabled; then reload what it found.
+    const recheckMacros = async () => {
+      let all;
+      try {
+        all = await layer.readAll();
+      } catch {
+        all = {};
+      }
+      const origin = (macroEnv && macroEnv.origin) || Object.keys(all).find((k) => /^https?:\/\//.test(k));
+      const pack = packs.pack(fdr.PACK_ID);
+      if (origin && st && pack && pack.macros && pack.macros.length) {
+        try {
+          await discovery.provenance(origin, st, { macros: pack.macros });
+        } catch {
+          /* left as last known; loadMacroEnv below re-reads whatever is there */
+        }
+      }
+      await loadMacroEnv();
+    };
+    // A test's drawer stub carries only the fill/fail surface fillFrom
+    // needs, no real event target; the recheck wiring is a no-op there.
+    const hasEvents = typeof ctx.drawer.addEventListener === "function";
+    if (hasEvents) ctx.drawer.addEventListener("recheck", recheckMacros);
+    unmount = () => {
+      unsubscribe();
+      if (hasEvents) ctx.drawer.removeEventListener("recheck", recheckMacros);
+    };
   }
 
   function paramInputs(names, spec) {
@@ -959,6 +1010,10 @@ function fdrLedger(ctx, { rec, events, on, evRec, root, carried = {} }) {
           err.code === "unscoped_pid"
             ? `A RawProcessId search needs a host and a time window: the OS recycles PIDs, so an unscoped one matches unrelated processes. Bind aid, earliest and latest below. (${err.message})`
             : err.message,
+        // Any generator failure, not only the query errors it names,
+        // fails the drawer in place; a row select never throws past its
+        // own handler.
+        catchAll: true,
       },
       () => {
         let params = base;
@@ -1075,11 +1130,34 @@ function runbookLine() {
   return h("p", { class: "r-section r-runbook-line" }, h("a", { class: "r-btn r-btn--small", href }, `Runbook for ${rk.name || rk.keys[0].value} →`));
 }
 
+// The imported Falcon dictionary's own type line and event membership, for
+// a field the FDR bundle does not carry: "Rides on N events", each with
+// its description where the layer read one. Null once view.falcon is (no
+// container-wide dictionary imported, or this field is not in it).
+function falconLayerBlock(view) {
+  const f = view && view.falcon;
+  if (!f) return null;
+  const rows = (f.events || []).map((name) => {
+    const ev = falconDictionary.eventOn(name);
+    return h("li", null, h("code", null, name), ev && ev.description ? h("span", { class: "r-muted" }, `: ${ev.description}`) : null);
+  });
+  return h(
+    "div",
+    { class: "r-meaning__falcon" },
+    f.type ? h("p", { class: "r-secondary" }, h("span", { class: "r-muted" }, "type "), h("code", null, f.type), h("span", { class: "r-muted" }, " · your imported Falcon dictionary")) : null,
+    rows.length
+      ? h("details", { class: "r-fold" }, h("summary", null, `Rides on ${rows.length} event${rows.length === 1 ? "" : "s"}`), h("ul", { class: "r-list" }, rows))
+      : null,
+  );
+}
+
 // Values from a decode table alone (the FDR TA's lookup, or the one
 // discovery read from your Splunk): the fold names the count, the lookup
 // sits in its title.
+const DECODE_SOURCE_NOTE = { discovered: " (read from your Splunk's lookup)", falcon: " (from your imported Falcon dictionary)" };
 function decodeSection(dec) {
   const keys = Object.keys(dec.values || {});
+  const note = DECODE_SOURCE_NOTE[dec.source] || "";
   return h(
     "section",
     { class: "r-section r-dict" },
@@ -1087,8 +1165,8 @@ function decodeSection(dec) {
     h(
       "details",
       { class: "r-decode" },
-      h("summary", { title: `${keys.length} values via ${dec.lookup || "the decode table"}${dec.meaning_field ? ` → ${dec.meaning_field}` : ""}${dec.source === "discovered" ? " (read from your Splunk's lookup)" : ""}` }, heading("decode-table", keys.length)),
-      h("p", { class: "r-secondary" }, "via ", h("code", null, dec.lookup || "the decode table"), dec.meaning_field ? [" → ", h("code", null, dec.meaning_field)] : null, dec.source === "discovered" ? " (read from your Splunk's lookup)" : null),
+      h("summary", { title: `${keys.length} values via ${dec.lookup || "the decode table"}${dec.meaning_field ? ` → ${dec.meaning_field}` : ""}${note}` }, heading("decode-table", keys.length)),
+      h("p", { class: "r-secondary" }, "via ", h("code", null, dec.lookup || "the decode table"), dec.meaning_field ? [" → ", h("code", null, dec.meaning_field)] : null, note || null),
       h("ul", { class: "r-decode__list" }, keys.slice(0, 500).map((k) => h("li", null, h("code", null, k), " ", h("span", null, dec.values[k])))),
     ),
   );

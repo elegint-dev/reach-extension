@@ -436,7 +436,7 @@ export function render(ctx) {
     const originLine = rb.origin === "edited"
       ? `Edited by you${rb.edited_at ? ` on ${when(rb.edited_at)}` : ""}${seeded ? `; seeded from ${runbooks.label(seeded.source)} on the first open` : ""}${rb.learned_from ? `; ${rb.learned_from.investigations} of your investigations adopted${rb.learned_from.at ? ` on ${when(rb.learned_from.at)}` : ""}` : ""}. Reset to seed puts the bundle's runbook back.`
       : seeded
-        ? `Seeded from ${runbooks.label(seeded.source)}: the description${rb.benign_when.length ? " and the known false positives" : ""} are the author's; the pivots are the packs', bound from this row. Edit makes it yours.`
+        ? `Seeded from ${runbooks.label(seeded.source)}: the description${rb.benign_when.length ? " and the known false positives" : ""} are ${seeded.author ? `the rule's own author's (${seeded.author})` : "the author's"}; the pivots are the packs', bound from this row. Edit makes it yours.`
         : null;
     const seedLine = originLine ? h("section", { class: "r-section" }, h("p", { class: "r-secondary" }, originLine)) : null;
     const total = vm.steps.length;

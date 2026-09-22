@@ -96,10 +96,17 @@ function splunkFixtureFor(u) {
 // extraOrigins: host_permissions a test needs beyond the two fixtures (for
 // instance VirusTotal's, so a module's fetch-mode relay is permitted
 // without chrome.permissions.request(), which never resolves headless).
-export async function launch({ viewport = { width: 1280, height: 900 }, extraOrigins = [] } = {}) {
+// reuse: { stage, profile } from an earlier launch()'s handle, for a test
+// that wants a genuine browser restart (chrome.runtime.onStartup only
+// fires on one of those, never on a worker respawn alone): the extension
+// id is derived from the stage path, so the same stage plus the same
+// profile directory is the same extension with the same chrome.storage.
+// The route/registration setup below only runs for a fresh profile; a
+// reused one already has whatever the caller seeded before closing it.
+export async function launch({ viewport = { width: 1280, height: 900 }, extraOrigins = [], reuse = null } = {}) {
   const cfg = contentConfig();
-  const stage = stageExtension([`${SPLUNK_ORIGIN}/*`, ...cfg.SENTINEL.patterns, ...extraOrigins]);
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), "reach-profile-"));
+  const stage = reuse ? reuse.stage : stageExtension([`${SPLUNK_ORIGIN}/*`, ...cfg.SENTINEL.patterns, ...extraOrigins]);
+  const profile = reuse ? reuse.profile : fs.mkdtempSync(path.join(os.tmpdir(), "reach-profile-"));
   const context = await chromium.launchPersistentContext(profile, {
     channel: "chromium",
     headless: true,
@@ -122,18 +129,20 @@ export async function launch({ viewport = { width: 1280, height: 900 }, extraOri
     return route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: fixture(u.pathname === "/alerts" ? "sentinel-alerts.html" : "sentinel-logs.html") });
   });
 
-  // Registration, the way the worker does it after a grant.
-  const setup = await context.newPage();
-  await setup.goto(`chrome-extension://${id}/index.html`);
-  await setup.evaluate(
-    async ({ origin, cfg }) => {
-      const entries = [{ id: cfg.PREFIX + origin, matches: [`${origin}/*`], js: cfg.CONTENT_SCRIPTS, runAt: "document_idle" }, ...cfg.SENTINEL.entries];
-      await chrome.scripting.registerContentScripts(entries);
-      await chrome.storage.local.set({ trustedOrigins: [origin, cfg.SENTINEL.origin] });
-    },
-    { origin: SPLUNK_ORIGIN, cfg },
-  );
-  await setup.close();
+  if (!reuse) {
+    // Registration, the way the worker does it after a grant.
+    const setup = await context.newPage();
+    await setup.goto(`chrome-extension://${id}/index.html`);
+    await setup.evaluate(
+      async ({ origin, cfg }) => {
+        const entries = [{ id: cfg.PREFIX + origin, matches: [`${origin}/*`], js: cfg.CONTENT_SCRIPTS, runAt: "document_idle" }, ...cfg.SENTINEL.entries];
+        await chrome.scripting.registerContentScripts(entries);
+        await chrome.storage.local.set({ trustedOrigins: [origin, cfg.SENTINEL.origin] });
+      },
+      { origin: SPLUNK_ORIGIN, cfg },
+    );
+    await setup.close();
+  }
 
   const h = {
     context,
@@ -205,6 +214,16 @@ export async function launch({ viewport = { width: 1280, height: 900 }, extraOri
     },
   };
   return h;
+}
+
+// A genuine browser restart on the same extension and the same
+// chrome.storage: close h's context without deleting its stage/profile,
+// then launch a fresh one against them. Returns a new handle; h's own
+// close() would now double-remove the (already gone) directories, so
+// close the *returned* handle instead.
+export async function relaunch(h, opts = {}) {
+  await h.context.close().catch(() => {});
+  return launch({ ...opts, reuse: { stage: h.stage, profile: h.profile } });
 }
 
 // One screenshot per failing test, named for the test, nothing on a pass.

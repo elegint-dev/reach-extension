@@ -3,7 +3,7 @@
 // list behind it is handed back so a test reads state directly.
 //
 //   import { fakeChrome } from "./_chrome.js";
-//   const c = fakeChrome({ id, answer, permitted, registered, tabs, getURL, deferChanges, clone, storage });
+//   const c = fakeChrome({ id, answer, permitted, registered, tabs, getURL, deferChanges, clone, storage, instant });
 //   const restore = c.install();          // globalThis.chrome = c.chrome; restore() puts back what was there
 //   c.local                               // Map behind chrome.storage.local, values as stored
 //   c.messages                            // every runtime.sendMessage payload, in order
@@ -13,11 +13,22 @@
 //   c.created                             // tabs.create arguments
 //   c.fire(changes)                       // deliver a storage.onChanged by hand
 //
+// storage.local/session/sync get/set/remove/clear and permissions
+// contains/request/remove/getAll answer on a later macrotask by default
+// (a real setTimeout(0), not the same microtask an `async` function would
+// use), the way the real chrome.* APIs do: a component that paints off an
+// unawaited read passes an `async function`-shaped fake by accident and
+// fails a real page. Chained reads (a hydrate() that reads then subscribes)
+// cost one macrotask per hop; a test whose subject is not the timing can
+// pass `instant: true` to get the old same-tick resolution back, but that
+// opts out of the very thing this fake exists to catch, so reach for it
+// only once, not as a reflex.
+//
 // runtime.sendMessage(msg, cb): with `answer(msg)` given, its return is the
 // reply (spread under { ok: true } unless it says ok: false; a throw is
 // { ok: false, error, status }); without one the message goes to the
 // onMessage listeners the worker registered, the first sendResponse wins.
-// Both forms answer on a later microtask, as the real one does.
+// Both forms answer on a macrotask, as above.
 // storage.local.set fires onChanged once per call with every key, on the
 // same tick; deferChanges: true fires it on a later task, the way Chrome
 // delivers a context's own write back to it. Values are structured-cloned
@@ -28,6 +39,13 @@
 
 const DEFAULT_ID = "test-extension";
 
+// One real macrotask hop, or none when `instant` asks for the old
+// same-tick shape.
+function macrotask(instant, value) {
+  if (instant) return Promise.resolve(value);
+  return new Promise((resolve) => setTimeout(() => resolve(value), 0));
+}
+
 function keysOf(k) {
   if (k === null || k === undefined) return null;
   if (Array.isArray(k)) return k;
@@ -36,7 +54,7 @@ function keysOf(k) {
 }
 
 export function fakeChrome(opts = {}) {
-  const { id = DEFAULT_ID, answer = null, permitted = [], registered = [], tabs = [], getURL = (p) => `chrome-extension://${id}/${p}`, deferChanges = false, clone = structuredClone, storage = true } = opts;
+  const { id = DEFAULT_ID, answer = null, permitted = [], registered = [], tabs = [], getURL = (p) => `chrome-extension://${id}/${p}`, deferChanges = false, clone = structuredClone, storage = true, instant = false } = opts;
   const local = new Map();
   const changeListeners = [];
   const bgListeners = [];
@@ -96,7 +114,7 @@ export function fakeChrome(opts = {}) {
         const cb = typeof args[args.length - 1] === "function" ? args.pop() : null;
         const msg = args.length === 2 ? args[1] : args[0];
         messages.push(msg);
-        const p = reply(msg, { id });
+        const p = reply(msg, { id }).then((res) => macrotask(instant, res));
         if (!cb) return p;
         p.then((res) => cb(res));
         return undefined;
@@ -115,17 +133,23 @@ export function fakeChrome(opts = {}) {
       sendMessage: async () => undefined,
     },
     storage: {
+      // Mutation (and the onChanged it fires) happens synchronously, the
+      // same tick as the call, matching a real write landing in Chrome's
+      // in-process cache immediately (another call right behind it, awaited
+      // or not, reads its own write); only the call's own returned promise
+      // settles on a macrotask, so a caller that does not await it observes
+      // nothing yet, same as the real one.
       local: {
         get: async (k) => {
           const keys = keysOf(k);
           const out = {};
           if (keys === null) {
             for (const [key, v] of local) out[key] = clone(v);
-            return out;
+            return macrotask(instant, out);
           }
           if (k && typeof k === "object" && !Array.isArray(k)) for (const [key, v] of Object.entries(k)) out[key] = clone(v);
           for (const key of keys) if (local.has(key)) out[key] = clone(local.get(key));
-          return out;
+          return macrotask(instant, out);
         },
         set: async (obj) => {
           const changes = {};
@@ -135,6 +159,7 @@ export function fakeChrome(opts = {}) {
             changes[k] = { oldValue, newValue: clone(v) };
           }
           changed(changes);
+          return macrotask(instant);
         },
         remove: async (k) => {
           const changes = {};
@@ -144,15 +169,21 @@ export function fakeChrome(opts = {}) {
             local.delete(key);
           }
           if (Object.keys(changes).length) changed(changes);
+          return macrotask(instant);
         },
         clear: async () => {
           const changes = {};
           for (const [key, v] of local) changes[key] = { oldValue: clone(v), newValue: undefined };
           local.clear();
           if (Object.keys(changes).length) changed(changes);
+          return macrotask(instant);
         },
       },
-      sync: { get: async () => ({}), set: async () => {}, remove: async () => {} },
+      sync: {
+        get: async () => macrotask(instant, {}),
+        set: async () => macrotask(instant),
+        remove: async () => macrotask(instant),
+      },
       onChanged: {
         addListener: (fn) => changeListeners.push(fn),
         removeListener: (fn) => {
@@ -176,17 +207,17 @@ export function fakeChrome(opts = {}) {
       executeScript: async () => [],
     },
     permissions: {
-      contains: async ({ origins = [] } = {}) => origins.every((o) => permittedSet.has(o)),
+      contains: async ({ origins = [] } = {}) => macrotask(instant, origins.every((o) => permittedSet.has(o))),
       request: async ({ origins = [] } = {}) => {
         origins.forEach((o) => permittedSet.add(o));
         for (const fn of permissionListeners) fn({ origins });
-        return true;
+        return macrotask(instant, true);
       },
       remove: async ({ origins = [] } = {}) => {
         origins.forEach((o) => permittedSet.delete(o));
-        return true;
+        return macrotask(instant, true);
       },
-      getAll: async () => ({ permissions: ["scripting", "storage"], origins: Array.from(permittedSet) }),
+      getAll: async () => macrotask(instant, { permissions: ["scripting", "storage"], origins: Array.from(permittedSet) }),
       onAdded: { addListener: (fn) => permissionListeners.push(fn) },
       onRemoved: { addListener: () => {} },
     },
